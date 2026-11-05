@@ -1,0 +1,73 @@
+{
+  "kanvas": 1,
+  "title": "Unificador",
+  "groups": [
+    {
+      "id": "ES",
+      "name": "Fase 1: Especificación"
+    },
+    {
+      "id": "MC",
+      "name": "Fase 2: Motor Core"
+    },
+    {
+      "id": "AD",
+      "name": "Fase 3: Adaptadores"
+    },
+    {
+      "id": "IN",
+      "name": "Fase 4: Integración y API"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "ES-01",
+      "title": "Documentación y arquitectura detallada del Unificador",
+      "state": "proposed",
+      "group": "ES",
+      "at": "2026-11-05T11:41:02Z",
+      "by": "agent",
+      "desc": "Elaborar la especificación técnica completa: diseño modular, multi-proyecto por fases, adaptadores de IA (Claude Code, Antigravity, Codex, DeepSeek), inyección automática de prompts y sincronización Git."
+    },
+    {
+      "id": "MC-01",
+      "title": "Modelos de datos y configuración del sistema",
+      "state": "proposed",
+      "group": "MC",
+      "deps": ["ES-01"],
+      "at": "2026-11-05T11:41:02Z",
+      "by": "agent",
+      "desc": "Definir models.py y config.py con soporte para proyectos, fases, configuración de agentes y almacenamiento seguro de credenciales."
+    },
+    {
+      "id": "MC-02",
+      "title": "Motor de inyección de contexto y puente Kanvas",
+      "state": "proposed",
+      "group": "MC",
+      "deps": ["MC-01"],
+      "at": "2026-11-05T11:41:02Z",
+      "by": "agent",
+      "desc": "Implementar context_injector.py y kanvas_bridge.py para inyectar automáticamente el estado de la tarea, reglas del proyecto y contexto de fase en el mensaje antes de enviarlo al agente."
+    },
+    {
+      "id": "AD-01",
+      "title": "Adaptadores de agentes (Claude Code, Antigravity, Codex, DeepSeek)",
+      "state": "proposed",
+      "group": "AD",
+      "deps": ["MC-02"],
+      "at": "2026-11-05T11:41:02Z",
+      "by": "agent",
+      "desc": "Crear adapters/base.py y adaptadores específicos para cada entorno (CLIs locales y API directa)."
+    },
+    {
+      "id": "IN-01",
+      "title": "Integración simple con Git y servidor API backend",
+      "state": "proposed",
+      "group": "IN",
+      "deps": ["AD-01"],
+      "at": "2026-11-05T11:41:02Z",
+      "by": "agent",
+      "desc": "Implementar git_service.py, server.py con endpoints REST/WebSocket y punto de entrada main.py."
+    }
+  ]
+}
