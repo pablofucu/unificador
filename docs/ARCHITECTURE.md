@@ -31,6 +31,7 @@ unificador/
 ├── kanvas_bridge.py       # Lee kanvas.json, calcula fases/profundidades, ejecuta la CLI kanvas
 ├── context_injector.py    # Ensambla el prompt enriquecido
 ├── git_service.py         # status, commit estructurado, push
+├── conventions.py         # Reglas ramas/fases/pasos compartidas (prompt, AGENTS.md, hook)
 ├── server.py              # API HTTP (http.server, ThreadedHTTPServer)
 └── adapters/
     ├── base.py            # BaseAgentAdapter
@@ -243,6 +244,16 @@ Cada conversación es un JSON en `~/.unificador/chats/<proyecto>/<id>.json` con 
 ### Planificación por fases
 
 Con el tablero vacío, el prompt pide a la IA un plan antes de programar: una rama (grupo) por línea de trabajo y pasos con `deps`, de modo que cada tramo de dependencias sea una fase; todo con `kanvas batch` y en estado `proposed`. La persona lo ve en la tarjeta «Plan propuesto» y lo aprueba (`plan/approve`) o pide cambios en el chat.
+
+### Mismas reglas desde la terminal (`conventions.py`)
+
+Las reglas de ramas → fases → pasos y de planificar antes de programar viven solo en `conventions.py`. El prompt de Unificador las importa, y `ensure_project_files` las deja en cada proyecto para quien le hable a la IA desde la terminal:
+
+- `AGENTS.md`: bloque entre `<!-- unificador:inicio … -->` y `<!-- unificador:fin -->`, que Unificador reescribe; el resto del fichero no se toca.
+- `CLAUDE.md`: línea `@AGENTS.md` (Claude Code lee `CLAUDE.md`, no `AGENTS.md`).
+- `.claude/settings.json`: hook `SessionStart` que ejecuta `kanvas status`, así cada sesión de Claude Code empieza viendo el tablero. Se fusiona con lo que haya; un `settings.json` ilegible no se toca.
+
+Se aplica al crear un proyecto (antes del primer commit) y al arrancar `main.py serve`, en todos los proyectos registrados con `kanvas.json`.
 
 ## 10. Discrepancias pendientes
 

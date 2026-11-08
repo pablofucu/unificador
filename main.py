@@ -17,6 +17,7 @@ from unificador.kanvas_bridge import KanvasBridge
 from unificador.context_injector import ContextInjector
 from unificador.server import start_server
 from unificador.git_service import GitService
+from unificador.conventions import ensure_project_files
 
 
 def ensure_default_project():
@@ -35,8 +36,18 @@ def ensure_default_project():
         print(f"[Init] Proyecto actual registrado como '{default_proj.name}' ({default_proj.path})")
 
 
+def sync_conventions():
+    """Pone al día las reglas de ramas/fases/pasos (AGENTS.md, CLAUDE.md, hook) en cada proyecto con tablero."""
+    for p in config.get_projects():
+        if (Path(p.path) / "kanvas.json").is_file():
+            changed = ensure_project_files(p.path)
+            if changed:
+                print(f"[Init] {p.name}: reglas compartidas al día en {', '.join(changed)}")
+
+
 def cmd_serve(args):
     ensure_default_project()
+    sync_conventions()
     host = args.host or config.data.get("settings", {}).get("host", "127.0.0.1")
     port = args.port or config.data.get("settings", {}).get("port", 8766)
     start_server(host=host, port=port)

@@ -22,6 +22,7 @@ from unificador.context_injector import ContextInjector
 from unificador.adapters import get_adapter, list_adapters_status
 from unificador.git_service import GitService
 from unificador.itinerary import build_itinerary
+from unificador.conventions import ensure_project_files
 from unificador.chats import chat_store
 from unificador.adapters.base import as_event
 
@@ -331,6 +332,8 @@ class UnificadorAPIHandler(BaseHTTPRequestHandler):
             if not (proj_dir / "kanvas.json").is_file():
                 code, out = KanvasBridge.init_project(proj_dir)
                 setup.append("Tablero Kanvas creado." if code == 0 else f"No se pudo crear el tablero: {out[-300:]}")
+            # Mismas reglas de ramas/fases/pasos al hablarle a la IA desde la terminal (antes del primer commit)
+            ensure_project_files(proj_dir)
             if data.get("git", True):
                 git = GitService(proj_dir)
                 ok, out = git.init_repo()

@@ -236,6 +236,22 @@
       "at": "2026-11-08T17:44:28Z",
       "by": "claude-code",
       "desc": "El chat muestra y cambia de conversación, crea nuevas, enseña lo que hace la IA, permite abrir la conversación en Claude Code/Antigravity y aprobar el plan propuesto."
+    },
+    {
+      "id": "F6C-05",
+      "title": "Mismas reglas de ramas, fases y pasos desde la terminal",
+      "state": "proposed",
+      "group": "F6C",
+      "at": "2026-11-08T18:31:53Z",
+      "by": "claude-code",
+      "desc": "La IA planifica por ramas → fases → pasos igual si le hablas desde Unificador o desde la terminal (Claude Code / Antigravity). Unificador escribe esas reglas en un bloque de AGENTS.md de cada proyecto (y CLAUDE.md lo importa), y Claude Code ve el estado del tablero al empezar cada sesión. Terminado: abrir 'claude' en el proyecto muestra el tablero y, ante trabajo nuevo, propone un plan por fases en vez de programar directamente.",
+      "notes": [
+        {
+          "at": "2026-11-08T18:34:00Z",
+          "by": "claude-code",
+          "text": "Hecho a la espera de tu aprobación: reglas en unificador/conventions.py; Unificador las escribe en AGENTS.md (bloque gestionado), CLAUDE.md (@AGENTS.md) y un hook SessionStart que muestra el tablero. Se aplican al crear proyecto y al arrancar el servidor. 39 pruebas OK. Para comprobarlo: abre 'claude' en una terminal en el proyecto y pide algo nuevo; debe enseñarte el tablero y proponer un plan antes de programar."
+        }
+      ]
     }
   ]
 }

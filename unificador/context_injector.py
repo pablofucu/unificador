@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Tuple
 from unificador.models import Project, Phase, Task, TaskState, AgentType, ExecutionContext
+from unificador.conventions import PHASES_GUIDE, PLAN_RULES
 
 
 USER_MARKER = "[INSTRUCCIÓN DEL USUARIO]:"
@@ -47,14 +48,6 @@ KANVAS_RULES_TEMPLATE = """
 6. Aprobar propuestas y dar un paso por hecho es cosa de la persona (lo hace desde Unificador). NUNCA edites `kanvas.json` a mano.
 """
 
-PHASES_GUIDE = """
-### CÓMO SE ORGANIZA EL TRABAJO: RAMAS → FASES → PASOS
-- Cada **grupo** de Kanvas es una **rama**: un área del proyecto que puede avanzar por su cuenta (p. ej. «Interfaz», «Datos», «Despliegue»).
-- Dentro de cada rama, las **fases** salen de las dependencias: un paso que depende (`deps`) de otro de la misma rama va en la fase siguiente. Sin dependencias, todo cae en la fase 1.
-- Cada **paso** es una tarea pequeña y comprobable (una sesión de trabajo), con una `desc` que diga qué consigue y cuándo está terminada.
-- Trabaja fase a fase: no empieces un paso cuyas dependencias no estén hechas.
-"""
-
 PLAN_TEMPLATE = """
 ### PRIMERO, PLANIFICA POR FASES
 {reason} Antes de escribir código, propón el plan en el tablero con UNA sola orden `batch`:
@@ -70,11 +63,7 @@ PLAN_TEMPLATE = """
 }}
 EOF
 
-- Encadena los pasos con `deps` para que cada rama tenga entre 2 y 5 fases; evita ramas de un solo paso gigante.
-- `deps` acepta los títulos de pasos del mismo batch. Si la orden falla, lee el error y corrige el JSON.
-- En tu respuesta, resume el plan fase por fase y dile a la persona que lo apruebe con «Aprobar plan» en Unificador. Después PARA: no implementes nada hasta que esté aprobado.
-- Si la petición es una pregunta o un cambio diminuto, contesta sin planificar.
-"""
+- En tu respuesta, resume el plan fase por fase y dile a la persona que lo apruebe con «Aprobar plan» en Unificador. Después PARA: no implementes nada hasta que esté aprobado.""" + PLAN_RULES.replace("{", "{{").replace("}", "}}")
 
 NO_TOOLS_NOTE = """
 ### LIMITACIÓN
