@@ -25,6 +25,43 @@ class TaskState(str, Enum):
 
 
 @dataclass
+class AgentConfig:
+    """Configuración de un agente: comando CLI, modelo y argumentos extra."""
+    agent_type: AgentType
+    command: str = ""
+    model: str = ""
+    enabled: bool = True
+    extra_args: List[str] = field(default_factory=list)
+    # Modo de permisos al ejecutar sin ventana (claude --permission-mode / agy --mode).
+    # Sin permisos el agente no puede editar ni ejecutar `kanvas` en modo -p.
+    permission_mode: str = "auto"
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = asdict(self)
+        d["agent_type"] = self.agent_type.value
+        return d
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "AgentConfig":
+        return cls(
+            agent_type=AgentType(d["agent_type"]),
+            command=d.get("command", ""),
+            model=d.get("model", ""),
+            enabled=bool(d.get("enabled", True)),
+            extra_args=list(d.get("extra_args", [])),
+            permission_mode=str(d.get("permission_mode", "auto") or ""),
+        )
+
+
+@dataclass
+class AppSettings:
+    """Ajustes globales del servidor."""
+    host: str = "127.0.0.1"
+    port: int = 8766
+    auto_commit_on_finish: bool = False
+
+
+@dataclass
 class TaskNote:
     text: str
     author: str = "agent"
@@ -103,6 +140,9 @@ class ExecutionContext:
     active_task: Optional[Task]
     user_prompt: str
     target_agent: AgentType
-    history: List[ChatMessage] = field(default_factory=list)
+    history: List[Dict[str, Any]] = field(default_factory=list)  # mensajes previos {role, content}
     board_rules: str = ""
     final_injected_prompt: str = ""
+    # Sesión nativa del agente (Claude Code / Antigravity) para continuar la conversación
+    native_session_id: Optional[str] = None
+    chat_title: str = ""

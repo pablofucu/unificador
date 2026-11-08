@@ -1,14 +1,16 @@
 """
 Adaptador para OpenAI Codex / Cursor.
+
+No hay modo de chat por línea de órdenes: el chat lo dice claramente y «Abrir» lleva al editor.
 """
 
 from __future__ import annotations
 import shutil
 import subprocess
 import sys
-from typing import Generator, Tuple
+from typing import Iterator, Tuple
 from unificador.models import AgentType, ExecutionContext
-from unificador.adapters.base import BaseAgentAdapter
+from unificador.adapters.base import BaseAgentAdapter, Event
 
 
 class CodexAdapter(BaseAgentAdapter):
@@ -16,23 +18,22 @@ class CodexAdapter(BaseAgentAdapter):
         super().__init__(AgentType.CODEX, "Codex / Cursor")
         self.cli_command = cli_command
 
+    def _editor(self) -> str:
+        return shutil.which(self.cli_command) or shutil.which("code") or ""
+
     def is_installed(self) -> bool:
-        return shutil.which(self.cli_command) is not None or shutil.which("code") is not None
+        return bool(self._editor())
 
-    def execute_sync(self, context: ExecutionContext) -> Tuple[int, str]:
-        return 0, f"[Codex] Contexto inyectado preparado para el workspace:\n{context.final_injected_prompt[:300]}..."
-
-    def stream_execute(self, context: ExecutionContext) -> Generator[str, None, None]:
-        yield f"[Codex Adapter]: Sesión iniciada para proyecto {context.project.name}.\n"
-        yield context.final_injected_prompt
+    def stream_execute(self, context: ExecutionContext) -> Iterator[Event]:
+        yield {"type": "error", "text": "Codex / Cursor no puede chatear desde Unificador. Usa «Abrir» para "
+                                         "trabajar en el editor, o elige Claude Code, Antigravity o DeepSeek."}
 
     def launch_native_window(self, context: ExecutionContext) -> Tuple[bool, str]:
-        editor = "cursor" if shutil.which("cursor") else "code"
-        if not shutil.which(editor):
+        editor = self._editor()
+        if not editor:
             return False, "Ni Cursor ni VS Code se encuentran instalados en el sistema."
-
         try:
             subprocess.Popen([editor, str(context.project.path)], shell=(sys.platform == "win32"))
-            return True, f"Abierto workspace en {editor} con éxito."
+            return True, "Proyecto abierto en el editor."
         except Exception as e:
-            return False, f"Error al abrir {editor}: {e}"
+            return False, f"Error al abrir el editor: {e}"

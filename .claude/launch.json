@@ -1,0 +1,36 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mockups",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8790",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "design/mockups"
+      ],
+      "port": 8790
+    },
+    {
+      "name": "doujinshi-web",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8791", "--bind", "127.0.0.1", "--directory", "doujinshi-web"],
+      "port": 8791
+    },
+    {
+      "name": "unificador",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "main.py",
+        "serve",
+        "--port",
+        "8767"
+      ],
+      "port": 8767
+    }
+  ]
+}

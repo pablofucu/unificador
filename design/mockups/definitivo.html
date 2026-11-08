@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unificador · Definitivo</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+:root {
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; --mono: "Cascadia Mono", Consolas, monospace;
+  --chat-w: 410px; --approve: #e89a0c; --approve-ink: #241700;
+}
+/* ── Estilos ── */
+:root[data-style="vivo"] {
+  --bg: #e9ebfa; --bg-2: #f6f7fd; --panel: #fff; --bubble: #eceefa; --card: #fff; --dots: #c6cbe4;
+  --ink: #171a2c; --ink-2: #565d78; --ink-3: #aab0c8; --line: #dfe2f2; --line-2: #c4c9df; --mixk: #14162a;
+  --plus: #0f8a4f; --minus: #c7342f; --float: rgb(255 255 255 / .9); --shadow: rgb(40 40 110 / .16);
+}
+:root[data-style="limpio"] {
+  --bg: #eef0f4; --bg-2: #f6f7f9; --panel: #fff; --bubble: #eceef3; --card: #fff; --dots: #c9ced8;
+  --ink: #171b24; --ink-2: #5b6474; --ink-3: #aeb5c1; --line: #e0e3ea; --line-2: #c8cdd7; --mixk: #111;
+  --plus: #0f8a4f; --minus: #c7342f; --float: rgb(255 255 255 / .92); --shadow: rgb(20 26 40 / .12);
+}
+:root[data-style="noche"] {
+  --bg: #0b0d1a; --bg-2: #171a2c; --panel: #12152a; --bubble: #23273f; --card: #191d33; --dots: #2a2e49;
+  --ink: #edeffa; --ink-2: #a4aac6; --ink-3: #565c7c; --line: #272b47; --line-2: #3d4265; --mixk: #fff;
+  --plus: #4ad991; --minus: #ff7d7d; --float: rgb(18 21 42 / .9); --shadow: rgb(0 0 0 / .5); --approve: #f5b83d;
+  --focus: #fff;
+}
+
+[hidden] { display: none !important; }
+.app { display: block; position: relative; }
+.stage { position: absolute; inset: 0; }
+:root[data-style="vivo"] .stage::before { content: ''; position: absolute; inset: 0; background:
+  radial-gradient(40% 50% at 92% 8%, rgb(232 72 138 / .2), transparent 70%),
+  radial-gradient(45% 55% at 70% 96%, rgb(18 165 186 / .2), transparent 70%),
+  radial-gradient(40% 50% at 42% 20%, rgb(139 92 246 / .22), transparent 70%); }
+:root[data-style="noche"] .stage::before { content: ''; position: absolute; inset: 0; background:
+  radial-gradient(40% 50% at 90% 10%, rgb(232 72 138 / .16), transparent 70%),
+  radial-gradient(45% 55% at 42% 90%, rgb(139 92 246 / .2), transparent 70%); }
+.canvas { overflow: hidden; cursor: grab; touch-action: none; background-image: radial-gradient(var(--dots) 1px, transparent 1.2px); background-size: 22px 22px; }
+.canvas.drag { cursor: grabbing; }
+.topwrap { position: absolute; z-index: 12; top: 12px; left: calc(var(--chat-w) + 26px); right: 14px; display: flex; align-items: center; gap: 10px; background: var(--float); backdrop-filter: blur(8px); border-radius: 14px; box-shadow: 0 4px 16px var(--shadow); padding-right: 8px; }
+#tabs { flex: 1; min-width: 0; }
+.opt-btn { flex: none; padding: 6px 12px; border-radius: 9px; font-weight: 700; font-size: 13px; color: #fff; background: linear-gradient(120deg, #7c4dff, #e8488a); }
+.opt-btn:hover { filter: brightness(1.08); }
+.legend { position: absolute; z-index: 12; bottom: 12px; left: calc(var(--chat-w) + 26px); background: var(--float); border-radius: 12px; backdrop-filter: blur(8px); box-shadow: 0 2px 10px var(--shadow); align-items: center; flex-wrap: wrap; right: 170px; width: fit-content; }
+body.opts-open .legend { right: 510px; }
+.howto { font-weight: 600; color: var(--ink); padding-right: 12px; border-right: 1px solid var(--line-2); margin-right: 2px; }
+.howto b { font-family: var(--mono); padding: 1px 6px; border-radius: 5px; background: var(--bubble); }
+.zoom { position: absolute; z-index: 12; right: 14px; bottom: 12px; display: flex; gap: 2px; background: var(--float); border-radius: 10px; padding: 3px; box-shadow: 0 2px 10px var(--shadow); }
+.zoom button { padding: 3px 10px; border-radius: 7px; font-size: 13px; font-weight: 600; }
+.zoom button:hover { background: var(--bubble); }
+body.opts-open .zoom { right: 366px; }
+
+/* ── Chat ── */
+.chat { position: absolute; z-index: 20; top: 12px; left: 12px; bottom: 12px; width: var(--chat-w); border-radius: 18px; box-shadow: 0 8px 30px var(--shadow), 0 0 0 2px var(--ai); overflow: hidden; transition: box-shadow .25s; }
+:root[data-style="vivo"] .chat, :root[data-style="noche"] .chat { box-shadow: 0 10px 34px color-mix(in srgb, var(--ai) 32%, transparent), 0 0 0 2px var(--ai); }
+:root[data-chat="anclado"] .chat { top: 0; left: 0; bottom: 0; border-radius: 0; box-shadow: inset -2px 0 0 var(--ai); }
+:root[data-aiui="riel"] .chat { padding-left: 76px; }
+:root[data-aiui="riel"] .providers { position: absolute; left: 0; top: 0; bottom: 0; width: 76px; display: flex; flex-direction: column; gap: 6px; padding: 12px 8px; background: color-mix(in srgb, var(--ai) 13%, var(--bg-2)); transition: background .25s; }
+:root[data-aiui="riel"] .prov { flex-direction: column; gap: 3px; padding: 9px 2px; font-size: 10.5px; border-radius: 12px; }
+:root[data-aiui="riel"] .prov i { font-size: 19px; line-height: 1.1; }
+:root[data-aiui="riel"] .prov.on { box-shadow: 0 3px 12px color-mix(in srgb, var(--f) 50%, transparent); }
+:root[data-aiui="riel"] .prov span { width: 100%; }
+:root[data-aiui="botones"] .providers { background: var(--bg-2); border-radius: 10px; padding: 3px; }
+:root[data-aiui="cabecera"] .chat-head { background: var(--ai-fill); color: #fff; padding-bottom: 6px; transition: background .25s; }
+:root[data-aiui="cabecera"] .chat-head .crumb-p, :root[data-aiui="cabecera"] .crumb-sep, :root[data-aiui="cabecera"] .run-state { color: rgb(255 255 255 / .88); }
+:root[data-aiui="cabecera"] .crumb-t select { color: #fff; }
+:root[data-aiui="cabecera"] .crumb i { box-shadow: 0 0 0 1.5px #fff; }
+:root[data-aiui="cabecera"] .run-state::before { background: #fff !important; }
+:root[data-aiui="cabecera"] .ai-bar { background: var(--ai-fill); padding-top: 6px; transition: background .25s; }
+:root[data-aiui="cabecera"] .prov { color: #fff; border: 1px solid rgb(255 255 255 / .35); }
+:root[data-aiui="cabecera"] .prov i { color: #fff; }
+:root[data-aiui="cabecera"] .prov:hover { background: rgb(255 255 255 / .16); color: #fff; }
+:root[data-aiui="cabecera"] .prov.on { background: #fff; color: #171a2c; border-color: transparent; }
+:root[data-aiui="cabecera"] .prov.on i { color: var(--f); }
+:root[data-aiui="cabecera"] .ai-subs label { color: rgb(255 255 255 / .88); }
+:root[data-aiui="cabecera"] .ai-subs select { background: rgb(0 0 0 / .18); border-color: rgb(255 255 255 / .3); color: #fff; }
+
+/* ── Tablero de cada proyecto ── */
+.world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.world.fly { transition: transform .5s cubic-bezier(.3, .8, .25, 1); }
+.region { position: absolute; border-radius: 24px; overflow: hidden; background: color-mix(in srgb, var(--p) 7%, var(--card)); border: 1.5px solid color-mix(in srgb, var(--p) 40%, transparent); box-shadow: 0 8px 28px var(--shadow); }
+:root[data-style="vivo"] .region { background: linear-gradient(155deg, color-mix(in srgb, var(--p) 17%, var(--card)), color-mix(in srgb, var(--p) 4%, var(--card)) 60%); box-shadow: 0 12px 36px color-mix(in srgb, var(--p) 24%, transparent); }
+:root[data-style="noche"] .region { background: linear-gradient(155deg, color-mix(in srgb, var(--p) 24%, var(--panel)), var(--panel) 60%); box-shadow: 0 0 32px color-mix(in srgb, var(--p) 26%, transparent); }
+.r-head { position: absolute; left: 0; right: 0; top: 0; height: 56px; display: flex; align-items: center; gap: 11px; padding: 0 18px; width: 100%; text-align: left; }
+.r-head:hover h2 { text-decoration: underline; text-decoration-thickness: 2px; }
+.r-head h2 { font-size: 21px; font-weight: 750; color: color-mix(in srgb, var(--p) 62%, var(--mixk)); white-space: nowrap; }
+.ring { width: 28px; height: 28px; border-radius: 50%; flex: none; display: grid; place-items: center; background: conic-gradient(var(--p) calc(var(--v) * 1%), color-mix(in srgb, var(--p) 18%, transparent) 0); }
+.ring::after { content: ''; width: 18px; height: 18px; border-radius: 50%; background: var(--card); }
+.r-meta { margin-left: auto; display: flex; gap: 10px; align-items: center; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.r-flag { display: inline-flex; gap: 5px; align-items: center; font-weight: 700; color: var(--ink); }
+
+/* Columnas de fase */
+.col { position: absolute; top: 56px; bottom: 0; border-left: 1px solid color-mix(in srgb, var(--p) 18%, transparent); }
+.col.odd { background: color-mix(in srgb, var(--p) 6%, transparent); }
+.col.now { background: color-mix(in srgb, var(--p) 13%, transparent); }
+.ph { display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 12px; }
+.ph-n { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; font-size: 16px; flex: none; color: color-mix(in srgb, var(--p) 70%, var(--mixk)); background: color-mix(in srgb, var(--p) 16%, var(--card)); }
+.done > .ph .ph-n { background: color-mix(in srgb, var(--p) 80%, #000); color: #fff; }
+.now > .ph .ph-n { background: linear-gradient(140deg, var(--p), color-mix(in srgb, var(--p) 70%, #000)); color: #fff; box-shadow: 0 3px 12px color-mix(in srgb, var(--p) 55%, transparent); }
+.ph-t { min-width: 0; line-height: 1.2; }
+.ph-t strong { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ph-t small { font-size: 11px; color: var(--ink-2); }
+
+/* Filas de rama */
+.rowline { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed color-mix(in srgb, var(--p) 28%, transparent); }
+.rowhead { position: absolute; left: 12px; width: 104px; text-align: left; display: grid; justify-items: start; gap: 4px; align-content: start; padding: 3px; border-radius: 12px; }
+.rowhead:hover { background: color-mix(in srgb, var(--th) 12%, transparent); }
+.letter { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; font-weight: 800; color: #fff; background: linear-gradient(140deg, color-mix(in srgb, var(--th) 92%, #fff), color-mix(in srgb, var(--th) 68%, #000)); box-shadow: 0 3px 10px color-mix(in srgb, var(--th) 45%, transparent); }
+.rowhead strong { font-size: 13px; line-height: 1.15; }
+.rowhead small { font-size: 11px; color: var(--ai); font-weight: 600; }
+.rowhead.active .letter { outline: 3px solid var(--ink); outline-offset: 2px; }
+.ghost-c { position: absolute; font: 700 22px var(--mono); color: color-mix(in srgb, var(--th) 26%, transparent); pointer-events: none; }
+svg.edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.flow { stroke-dasharray: 7 7; }
+:root[data-motion="on"] .flow { animation: flow .7s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -14; } }
+
+/* ── Tarjetas ── */
+.node { position: absolute; width: var(--nw); height: var(--nh); text-align: left; padding: 9px 11px; display: flex; flex-direction: column; gap: 4px; background: var(--card); border-radius: 13px; border: 1.5px solid color-mix(in srgb, var(--th) 45%, transparent); box-shadow: 0 2px 6px var(--shadow); cursor: pointer; transition: box-shadow .15s, transform .15s; }
+.node:hover { box-shadow: 0 8px 22px var(--shadow); transform: translateY(-1px); }
+.n-top { display: flex; align-items: center; gap: 6px; min-height: 19px; }
+.code { font: 700 12px var(--mono); padding: 1px 7px; border-radius: 6px; color: #fff; background: color-mix(in srgb, var(--th) 75%, #000); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.n-top .a { margin-left: auto; color: var(--ai); font-size: 14px; flex: none; }
+.ti { font-weight: 650; font-size: 13px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.n-foot { margin-top: auto; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-2); min-height: 16px; }
+.n-ai { display: none; color: var(--ai); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.segs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; width: 100%; }
+.segs i { height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--ink-3) 45%, transparent); }
+.segs i.p { background: var(--ai); }
+.segs i.c { background: var(--ai); animation: pulse 1.3s infinite; }
+.mini-ok { background: var(--approve); color: var(--approve-ink); font-weight: 800; font-size: 11px; padding: 1px 9px; border-radius: 6px; margin-left: auto; }
+.mini-ok:hover { filter: brightness(1.1); }
+.node.is-done { background: color-mix(in srgb, var(--th) 15%, var(--card)); border-color: transparent; box-shadow: none; }
+.node.is-done .ti { font-weight: 500; }
+.node.is-proposed { border-style: dashed; background: color-mix(in srgb, var(--card) 45%, transparent); box-shadow: none; }
+.node.is-blocked { background: color-mix(in srgb, var(--card) 45%, transparent); color: var(--ink-2); box-shadow: none; }
+.node.is-blocked .code { background: var(--ink-3); color: var(--mixk); }
+.node.is-todo { box-shadow: none; }
+.node.is-running { border: 2px solid var(--ai); box-shadow: 0 0 0 5px color-mix(in srgb, var(--ai) 18%, transparent); }
+.node.is-review { border: 2px solid var(--approve); box-shadow: 0 0 0 5px color-mix(in srgb, var(--approve) 22%, transparent); }
+:root[data-motion="on"] .node.is-running { animation: glow 1.8s ease-in-out infinite; }
+@keyframes glow { 50% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--ai) 8%, transparent), 0 6px 22px color-mix(in srgb, var(--ai) 40%, transparent); } }
+.node.sel { outline: 2px solid var(--ink); outline-offset: 2px; }
+.node.active-th { border-color: var(--th); }
+:root[data-card="compacta"] .ti { -webkit-line-clamp: 1; }
+:root[data-card="compacta"] .node { padding: 6px 10px; gap: 2px; }
+:root[data-card="compacta"] .n-foot { position: absolute; right: 26px; top: 7px; margin: 0; }
+:root[data-card="compacta"] .n-foot .st-label { display: none; }
+:root[data-card="compacta"] .segs { width: 42px; }
+:root[data-card="ia"] .node { border-top: 5px solid var(--ai); }
+:root[data-card="ia"] .n-ai { display: inline; }
+:root[data-card="ia"] .n-foot .st-label { display: none; }
+:root[data-card="ia"] .n-foot .segs { width: 56px; margin-left: auto; }
+
+/* De lejos, solo lo que se lee */
+.world.far .n-foot, .world.far .n-top .a { display: none; }
+.world.far .code { font-size: 22px; padding: 2px 9px; border-radius: 8px; }
+.world.far .st { width: 24px; height: 24px; font-size: 15px; }
+.world.far .st-review::after { font-size: 15px; }
+.world.far .n-top { min-height: 30px; }
+.world.far .ti { font-size: 18px; line-height: 1.12; -webkit-line-clamp: 1; font-weight: 600; }
+:root[data-card="compacta"] .world.far .ti { display: none; }
+.world.far .r-head h2 { font-size: 34px; }
+.world.far .r-meta { font-size: 20px; }
+.world.far .ph-t strong { font-size: 19px; }
+.world.far .ph-t small { display: none; }
+.world.far .ph-n { width: 40px; height: 40px; font-size: 22px; }
+.world.far .rowhead strong { font-size: 19px; }
+.world.far .rowhead small { display: none; }
+.world.far .letter { width: 52px; height: 52px; font-size: 28px; }
+
+/* ── Resumen de todos los proyectos ── */
+.summary { position: absolute; inset: 0; overflow: auto; cursor: default; padding: 76px 24px 64px calc(var(--chat-w) + 40px); display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 16px; align-content: start; }
+body.opts-open .summary { padding-right: 372px; }
+.sum { border-radius: 20px; padding: 14px 16px; background: linear-gradient(155deg, color-mix(in srgb, var(--p) 16%, var(--card)), var(--card) 65%); border: 1.5px solid color-mix(in srgb, var(--p) 40%, transparent); box-shadow: 0 8px 26px color-mix(in srgb, var(--p) 20%, transparent); }
+.sum-head { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; }
+.sum-head h2 { font-size: 18px; color: color-mix(in srgb, var(--p) 62%, var(--mixk)); }
+.sum-head:hover h2 { text-decoration: underline; }
+.sum-head small { margin-left: auto; color: var(--ink-2); white-space: nowrap; }
+.mini { display: grid; gap: 4px; margin-top: 10px; align-items: center; }
+.mini .h { font-size: 11px; font-weight: 700; text-align: center; color: var(--ink-2); border-radius: 6px; padding: 2px 0; background: color-mix(in srgb, var(--p) 10%, transparent); }
+.mini .h.now { background: color-mix(in srgb, var(--p) 80%, #000); color: #fff; }
+.mini .l { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-weight: 800; font-size: 13px; color: #fff; background: color-mix(in srgb, var(--th) 78%, #000); }
+.mini .c { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-height: 20px; align-items: center; }
+.sum-todo { margin-top: 10px; display: grid; gap: 4px; }
+.sum-todo button { display: flex; align-items: center; gap: 7px; text-align: left; font-size: 12px; padding: 4px 8px; border-radius: 8px; background: color-mix(in srgb, var(--approve) 14%, transparent); }
+.sum-todo button:hover { background: color-mix(in srgb, var(--approve) 28%, transparent); }
+.sum-todo b { font-family: var(--mono); }
+
+/* ── Panel de opciones ── */
+.opts { position: absolute; z-index: 25; top: 74px; right: 14px; bottom: 12px; width: 340px; display: none; flex-direction: column; background: var(--panel); border-radius: 16px; box-shadow: 0 12px 40px var(--shadow); overflow: hidden; border: 1px solid var(--line); }
+body.opts-open .opts { display: flex; }
+.opts-head { padding: 12px 14px 8px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.opts-head h2 { font-size: 16px; }
+.opts-head p { font-size: 12px; color: var(--ink-2); margin-top: 1px; }
+.opts-body { flex: 1; overflow-y: auto; padding: 2px 14px 12px; display: grid; gap: 16px; align-content: start; }
+.og h3 { font-size: 13px; }
+.og > p { font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+.og-list { display: grid; gap: 4px; }
+.oc { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 8px; align-items: center; text-align: left; padding: 7px 9px; border-radius: 9px; border: 1.5px solid var(--line); font-size: 13px; width: 100%; }
+.oc:hover { background: var(--bg-2); }
+.oc .dot-r { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line-2); }
+.oc[aria-checked="true"] { border-color: #7c4dff; background: color-mix(in srgb, #7c4dff 9%, transparent); font-weight: 650; }
+.oc[aria-checked="true"] .dot-r { border: 4.5px solid #7c4dff; }
+.oc small { display: block; font-weight: 400; color: var(--ink-2); font-size: 11.5px; line-height: 1.25; }
+.oc code { font: 700 11.5px var(--mono); background: var(--bubble); padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
+.oc .rec { font-size: 10px; font-weight: 800; color: #6d3df0; background: color-mix(in srgb, #7c4dff 14%, transparent); padding: 1px 6px; border-radius: 6px; white-space: nowrap; }
+:root[data-style="noche"] .oc .rec { color: #c9b6ff; }
+.opts-foot { display: flex; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--line); }
+.opts-foot .primary { flex: 1; font-weight: 700; color: #fff; padding: 7px; border-radius: 8px; background: linear-gradient(120deg, #7c4dff, #e8488a); }
+.drawer { top: 74px; bottom: 12px; right: 14px; border-radius: 16px; overflow: hidden; border: 0; }
+</style>
+</head>
+<body class="opts-open">
+<div class="app">
+  <aside class="chat" id="chat" aria-label="Chat"></aside>
+  <main class="stage">
+    <div class="topwrap"><div class="topbar" id="tabs" style="padding:9px 12px"></div><button class="opt-btn" id="optBtn" aria-expanded="true">Opciones</button></div>
+    <div class="canvas" id="canvas"><div class="world" id="world"></div><div class="summary" id="summary" hidden></div></div>
+    <div class="legend" id="legend"></div>
+    <div class="zoom" id="zoom"><button id="zo" aria-label="Alejar">−</button><button id="fit">Encajar</button><button id="zi" aria-label="Acercar">+</button></div>
+    <aside class="opts" id="opts" aria-label="Opciones de diseño"></aside>
+    <aside class="drawer" id="drawer" aria-label="Informe de la tarea"></aside>
+  </main>
+</div>
+<script src="shared.js"></script>
+<script>
+const { PROJECTS, AIS, TASKS, STATES, state, tasksOf, esc, counts, tasksOfProject, threadOf, projectOfThread, task } = U;
+
+/* ── Datos: fases secuenciales y dependencias ordenadas para este mockup ── */
+PROJECTS[0].phases = ['Diseño', 'Motor', 'Conexión', 'Interfaz'];
+Object.entries({ 'ES-01': 0, 'FE-01': 0, 'MC-01': 1, 'MC-02': 1, 'IN-01': 2, 'IN-02': 2, 'AD-01': 2, 'AD-02': 2, 'AD-03': 2, 'FE-02': 3, 'FE-03': 3, 'FE-04': 3 })
+  .forEach(([id, ph]) => { task(id).phase = ph; });
+Object.assign(task('AD-03'), { deps: ['AD-02'], state: 'blocked' });
+task('FE-03').deps = ['FE-02', 'IN-02'];
+task('FE-04').deps = ['FE-03'];
+
+/* Cada tarea sabe su fase (número), su rama (letra) y su paso dentro de esa casilla. */
+const meta = {};
+PROJECTS.forEach((p) => p.threads.forEach((th, i) => {
+  th.letter = String.fromCharCode(65 + i);
+  const list = tasksOf(th.id);
+  list.forEach((x, seq) => {
+    const cell = list.filter((o) => o.phase === x.phase);
+    meta[x.id] = { letter: th.letter, step: cell.indexOf(x) + 1, inCell: cell.length, seq: seq + 1 };
+  });
+}));
+
+/* ── Opciones ── */
+const OPTIONS = [
+  { key: 'naming', title: 'Nombre de las tareas', why: 'El cambio principal: el nombre dice dónde está la tarea.', choices: [
+    { v: 'coord', label: 'Fase + rama', sub: 'Como un tablero de ajedrez: número arriba, letra al lado', code: '3B.2', rec: true },
+    { v: 'largo', label: 'Fase y rama separadas', sub: 'Más explícito, ocupa más', code: 'F3 · B2' },
+    { v: 'rama', label: 'Nombre de la rama', sub: 'Se lee como una frase, pero no dice la fase', code: 'Adaptadores 2' },
+    { v: 'titulo', label: 'Solo el título', sub: 'Sin códigos; lo más limpio', code: '—' },
+    { v: 'antiguo', label: 'Como ahora', sub: 'Para comparar', code: 'AD-02' },
+  ] },
+  { key: 'term', title: 'Cómo llamar a las filas', why: 'Se elige una palabra y se usa en toda la app.', choices: [
+    { v: 'Rama', label: 'Rama', sub: 'Encaja con Git y con la idea de bifurcar', rec: true },
+    { v: 'Línea', label: 'Línea', sub: 'Encaja con la idea de carril' },
+    { v: 'Hilo', label: 'Hilo', sub: 'La palabra que usabas al principio' },
+  ] },
+  { key: 'links', title: 'Conexiones', why: 'Cuánto dibujar entre tareas.', choices: [
+    { v: 'metro', label: 'Línea continua', sub: 'Cada rama es un trazo grueso de su color', rec: true },
+    { v: 'flechas', label: 'Flechas', sub: 'Todas las dependencias, una a una' },
+    { v: 'minimas', label: 'Solo entre ramas', sub: 'Lo más despejado' },
+  ] },
+  { key: 'card', title: 'Tarjeta de tarea', why: 'Cuánta información ver sin abrirla.', choices: [
+    { v: 'completa', label: 'Completa', sub: 'Código, título, estado y progreso', rec: true },
+    { v: 'ia', label: 'Con franja de IA', sub: 'Se ve qué IA hizo cada tarea' },
+    { v: 'compacta', label: 'Compacta', sub: 'Caben más en pantalla' },
+  ] },
+  { key: 'quick', title: 'Aprobar desde la tarjeta', why: 'Sin abrir el informe primero.', choices: [
+    { v: 'on', label: 'Con botón Aprobar', sub: 'Más rápido, pero se puede aprobar sin leer' },
+    { v: 'off', label: 'Abrir informe antes', sub: 'Obliga a mirar qué se aprueba', rec: true },
+  ] },
+  { key: 'all', title: 'Vista «Todos»', why: 'Qué ves al mirar todos los proyectos.', choices: [
+    { v: 'resumen', label: 'Resumen', sub: 'Una ficha por proyecto, con lo pendiente', rec: true },
+    { v: 'mapa', label: 'Mapa completo', sub: 'Todos los tableros en el lienzo, con zoom' },
+  ] },
+  { key: 'style', title: 'Estilo', why: 'Lo vistoso que pedías.', choices: [
+    { v: 'vivo', label: 'Vivo', sub: 'Degradados y brillos del color de cada proyecto', rec: true },
+    { v: 'noche', label: 'Noche', sub: 'Fondo oscuro con brillos' },
+    { v: 'limpio', label: 'Limpio', sub: 'Plano, como el mockup B' },
+  ] },
+  { key: 'motion', title: 'Movimiento', why: 'Conexiones y tareas activas animadas.', choices: [
+    { v: 'on', label: 'Animado', sub: 'Lo que se está ejecutando se mueve', rec: true },
+    { v: 'off', label: 'Quieto', sub: 'Sin animación en el canvas' },
+  ] },
+  { key: 'aiui', title: 'Selector de IA', why: 'Dónde se ve qué IA está elegida.', choices: [
+    { v: 'riel', label: 'Riel lateral', sub: 'Siempre a la vista, como el mockup B', rec: true },
+    { v: 'cabecera', label: 'Cabecera a color', sub: 'La IA manda en todo el panel' },
+    { v: 'botones', label: 'Botones arriba', sub: 'Lo más discreto' },
+  ] },
+  { key: 'chat', title: 'Chat', why: 'Cómo se apoya en el canvas.', choices: [
+    { v: 'flotante', label: 'Flotante', sub: 'El lienzo pasa por debajo', rec: true },
+    { v: 'anclado', label: 'Anclado al borde', sub: 'Más sobrio' },
+  ] },
+];
+const STORE = 'unificador-opciones';
+const defaults = Object.fromEntries(OPTIONS.map((g) => [g.key, g.choices.find((c) => c.rec).v]));
+let opt = { ...defaults };
+try { opt = { ...defaults, ...JSON.parse(localStorage.getItem(STORE) || '{}') }; } catch (e) { /* sin preferencias guardadas */ }
+
+const cardCode = (x) => {
+  const m = meta[x.id], ph = x.phase + 1, name = threadOf(x.thread).name;
+  return { coord: `${ph}${m.letter}${m.inCell > 1 ? `.${m.step}` : ''}`, largo: `F${ph} · ${m.letter}${m.step}`,
+    rama: `${name} ${m.seq}`, titulo: '', antiguo: x.id }[opt.naming];
+};
+U.code = (x) => cardCode(x) || x.title;
+U.threadLabel = (th) => `${th.letter} · ${th.name}`;
+U.pathOf = (x) => {
+  const p = projectOfThread(x.thread), th = threadOf(x.thread), m = meta[x.id];
+  return `${p.name} · Fase ${x.phase + 1} (${p.phases[x.phase]}) · ${opt.term} ${m.letter} (${th.name}) · Paso ${m.step}`;
+};
+
+function applyOpts() {
+  ['style', 'motion', 'aiui', 'chat', 'card'].forEach((k) => { document.documentElement.dataset[k] = opt[k]; });
+  localStorage.setItem(STORE, JSON.stringify(opt));
+}
+
+/* ── Disposición ── */
+const canvas = document.getElementById('canvas'), world = document.getElementById('world'), summary = document.getElementById('summary');
+const NW = 190, RAIL = 128, COL = NW + 40, TOP = 112, GAPV = 14;
+const nodeH = () => (opt.card === 'compacta' ? 58 : 98);
+const pos = {}, regions = {};
+
+function layout() {
+  const NH = nodeH();
+  PROJECTS.forEach((p) => {
+    let y = TOP;
+    const rows = [];
+    p.threads.forEach((th) => {
+      const list = tasksOf(th.id);
+      const tall = Math.max(1, ...p.phases.map((_, i) => list.filter((x) => x.phase === i).length));
+      list.forEach((x) => {
+        pos[x.id] = { x: RAIL + x.phase * COL + 20, y: y + 12 + (meta[x.id].step - 1) * (NH + GAPV) };
+      });
+      rows.push({ th, y });
+      y += Math.max(84, tall * (NH + GAPV) + 12);
+    });
+    regions[p.id] = { ...(regions[p.id] || {}), w: RAIL + p.phases.length * COL, h: y + 8, rows };
+  });
+  const gap = 44, cols = [['uni', 'iris'], ['yum', 'cap']];
+  const w0 = Math.max(...cols[0].map((k) => regions[k].w));
+  cols.forEach((col, ci) => {
+    let yy = 0;
+    col.forEach((k) => { regions[k].x = ci ? w0 + gap : 0; regions[k].y = yy; yy += regions[k].h + gap; });
+  });
+}
+
+const cam = { x: 0, y: 0, k: 1 };
+function apply(fly) {
+  world.classList.toggle('fly', !!fly);
+  world.classList.toggle('far', cam.k < .68);
+  world.style.transform = `translate(${cam.x}px,${cam.y}px) scale(${cam.k})`;
+  canvas.style.backgroundPosition = `${cam.x}px ${cam.y}px`;
+  canvas.style.backgroundSize = `${22 * cam.k}px ${22 * cam.k}px`;
+}
+function fit(id, fly = true) {
+  const rs = id === 'all' ? Object.values(regions) : [regions[id]];
+  const x0 = Math.min(...rs.map((r) => r.x)), y0 = Math.min(...rs.map((r) => r.y));
+  const x1 = Math.max(...rs.map((r) => r.x + r.w)), y1 = Math.max(...rs.map((r) => r.y + r.h));
+  const right = document.body.classList.contains('opts-open') ? 370 : 26;
+  const left = 450, top = 72, W = canvas.clientWidth - left - right, H = canvas.clientHeight - top - 60;
+  cam.k = Math.max(.2, Math.min(W / (x1 - x0), H / (y1 - y0), 1.05));
+  cam.x = left + (W - (x1 - x0) * cam.k) / 2 - x0 * cam.k;
+  cam.y = top + Math.max(0, (H - (y1 - y0) * cam.k) / 2) - y0 * cam.k;
+  apply(fly);
+}
+
+/* ── Conexiones ── */
+function edgePath(a, b, NH) {
+  if (a.x === b.x) return `M${a.x + NW / 2} ${a.y + NH}L${b.x + NW / 2} ${b.y}`;
+  const ax = a.x + NW, ay = a.y + NH / 2, bx = b.x, by = b.y + NH / 2, mx = Math.max(16, (bx - ax) / 2);
+  return `M${ax} ${ay}C${ax + mx} ${ay} ${bx - mx} ${by} ${bx} ${by}`;
+}
+function edges(p) {
+  const NH = nodeH();
+  let s = '', defs = '';
+  p.threads.forEach((th) => {
+    defs += `<marker id="m-${th.id}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L8 4L0 8Z" fill="${th.color}"/></marker>`;
+  });
+  if (opt.links === 'metro') {
+    p.threads.forEach((th) => {
+      const list = tasksOf(th.id);
+      list.slice(1).forEach((x, i) => {
+        const prev = list[i], lit = prev.state === 'done';
+        s += `<path d="${edgePath(pos[prev.id], pos[x.id], NH)}" fill="none" stroke="${th.color}" stroke-width="7" stroke-linecap="round" opacity="${lit ? .85 : .3}"/>`;
+        if (x.state === 'running' || prev.state === 'running') s += `<path class="flow" d="${edgePath(pos[prev.id], pos[x.id], NH)}" fill="none" stroke="#fff" stroke-width="2.5" opacity=".85"/>`;
+      });
+    });
+  }
+  tasksOfProject(p).forEach((x) => x.deps.forEach((k) => {
+    const d = task(k), same = d.thread === x.thread;
+    if (same && opt.links !== 'flechas') return;
+    const th = threadOf(x.thread), lit = d.state === 'done', active = x.state === 'running' || d.state === 'running';
+    s += `<path class="${active ? 'flow' : ''}" d="${edgePath(pos[k], pos[x.id], NH)}" fill="none" stroke="${th.color}" stroke-width="${lit ? 2.6 : 2}" ${lit || active ? '' : 'stroke-dasharray="5 5"'} opacity="${lit || active ? .95 : .6}" marker-end="url(#m-${th.id})"/>`;
+  }));
+  return `<svg class="edges" width="1" height="1"><defs>${defs}</defs>${s}</svg>`;
+}
+
+/* ── Tablero ── */
+function nodeHtml(x) {
+  const th = threadOf(x.thread), ai = AIS[x.ai], c = cardCode(x), p = pos[x.id];
+  const foot = x.state === 'running'
+    ? `<span class="segs">${[0, 1, 2, 3, 4].map((i) => `<i class="${i < x.phaseIdx ? 'p' : i === x.phaseIdx ? 'c' : ''}"></i>`).join('')}</span>`
+    : `<span class="st-label">${STATES[x.state].label}</span>`;
+  const approve = x.state === 'review' && opt.quick === 'on' ? `<button class="mini-ok" data-approve="${x.id}">Aprobar</button>` : '';
+  return `<div class="node is-${x.state} ${state.openTask === x.id ? 'sel' : ''} ${state.thread === x.thread ? 'active-th' : ''}" role="button" tabindex="0" data-task="${x.id}"
+    aria-label="${esc(c || '')} ${esc(x.title)}, ${STATES[x.state].label}" style="left:${p.x}px;top:${p.y}px;--th:${th.color};--ai:${ai.color};--nw:${NW}px;--nh:${nodeH()}px">
+    <div class="n-top">${U.mark(x)}${c ? `<span class="code">${esc(c)}</span>` : ''}<span class="a" title="${ai.name}">${ai.glyph}</span></div>
+    <div class="ti">${esc(x.title)}</div>
+    <div class="n-foot"><span class="n-ai">${ai.name}</span>${foot}${approve}</div>
+  </div>`;
+}
+
+function regionHtml(p) {
+  const r = regions[p.id], list = tasksOfProject(p), c = counts(list);
+  const cols = p.phases.map((ph, i) => {
+    const inPh = list.filter((x) => x.phase === i), done = inPh.filter((x) => x.state === 'done').length;
+    const prevDone = list.filter((x) => x.phase < i).every((x) => x.state === 'done');
+    const firstOpen = p.phases.findIndex((_, k) => list.some((x) => x.phase === k && x.state !== 'done'));
+    const cls = done === inPh.length ? 'done' : i === firstOpen ? 'now' : '';
+    return `<div class="col ${i % 2 ? 'odd' : ''} ${cls}" style="left:${RAIL + i * COL}px;width:${COL}px">
+      <div class="ph"><span class="ph-n">${done === inPh.length ? '✓' : i + 1}</span><span class="ph-t"><strong>Fase ${i + 1} · ${esc(ph)}</strong><small>${done} de ${inPh.length} hechas${cls === 'now' ? ' · en curso' : ''}</small></span></div>
+    </div>`;
+  }).join('');
+  const rows = r.rows.map(({ th, y }) => {
+    const ai = AIS[th.ai], empties = p.phases.map((_, i) => tasksOf(th.id).some((x) => x.phase === i) ? ''
+      : `<span class="ghost-c" style="left:${RAIL + i * COL + 22}px;top:${y + 12}px;--th:${th.color}">${i + 1}${th.letter}</span>`).join('');
+    return `<div class="rowline" style="top:${y}px"></div>
+      <button class="rowhead ${state.thread === th.id ? 'active' : ''}" data-thread="${th.id}" style="top:${y + 8}px;--th:${th.color};--ai:${ai.fill}" title="${opt.term} ${th.letter}: ${esc(th.name)}">
+        <span class="letter">${th.letter}</span><strong>${esc(th.name)}</strong><small>${ai.glyph} ${esc(th.model)}</small>
+      </button>${empties}`;
+  }).join('');
+  return `<section class="region" style="--p:${p.color};left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px">
+    <button class="r-head" data-p="${p.id}"><span class="ring" style="--v:${c.done / c.total * 100}"></span><h2>${esc(p.name)}</h2>
+      <span class="r-meta">${c.running ? `<span>${c.running} en ejecución</span>` : ''}${c.approve ? `<span class="r-flag"><span class="st st-review">!</span>${c.approve} por aprobar</span>` : ''}<span>${c.done}/${c.total}</span></span></button>
+    ${cols}${rows}${edges(p)}${list.map(nodeHtml).join('')}
+  </section>`;
+}
+
+/* ── Resumen de todos ── */
+function summaryHtml() {
+  return PROJECTS.map((p) => {
+    const list = tasksOfProject(p), c = counts(list);
+    const firstOpen = p.phases.findIndex((_, k) => list.some((x) => x.phase === k && x.state !== 'done'));
+    const pending = list.filter((x) => x.state === 'review' || x.state === 'proposed');
+    return `<section class="sum" style="--p:${p.color}">
+      <button class="sum-head" data-p="${p.id}"><span class="ring" style="--v:${c.done / c.total * 100}"></span><h2>${esc(p.name)}</h2><small>${c.running ? `${c.running} en ejecución · ` : ''}${c.done}/${c.total}</small></button>
+      <div class="mini" style="grid-template-columns:26px repeat(${p.phases.length},1fr)"><span></span>
+        ${p.phases.map((ph, i) => `<span class="h ${i === firstOpen ? 'now' : ''}" title="Fase ${i + 1}: ${esc(ph)}">Fase ${i + 1}</span>`).join('')}
+        ${p.threads.map((th) => `<button class="l" style="--th:${th.color}" data-thread="${th.id}" title="${opt.term} ${th.letter}: ${esc(th.name)}">${th.letter}</button>
+          ${p.phases.map((_, i) => `<span class="c">${tasksOf(th.id).filter((x) => x.phase === i).map((x) => `<button data-task="${x.id}" title="${esc(U.code(x))}: ${esc(x.title)}">${U.mark(x)}</button>`).join('')}</span>`).join('')}`).join('')}
+      </div>
+      ${pending.length ? `<div class="sum-todo">${pending.map((x) => `<button data-task="${x.id}">${U.mark(x)}<b>${esc(cardCode(x))}</b>${esc(x.title)}</button>`).join('')}</div>` : ''}
+    </section>`;
+  }).join('');
+}
+
+function render() {
+  layout();
+  const sum = state.project === 'all' && opt.all === 'resumen';
+  summary.hidden = !sum;
+  world.hidden = sum;
+  document.getElementById('zoom').hidden = sum;
+  if (sum) { const t = summary.scrollTop; summary.innerHTML = summaryHtml(); summary.scrollTop = t; }
+  else world.innerHTML = PROJECTS.filter((p) => state.project === 'all' || p.id === state.project).map(regionHtml).join('');
+  renderLegend();
+}
+
+function renderLegend() {
+  const sample = { coord: ['3B.2', 'Fase 3, ' + opt.term.toLowerCase() + ' B, paso 2'], largo: ['F3 · B2', 'Fase 3, ' + opt.term.toLowerCase() + ' B, paso 2'],
+    rama: ['Adaptadores 2', 'Segunda tarea de esa ' + opt.term.toLowerCase()], titulo: null, antiguo: null }[opt.naming];
+  document.getElementById('legend').innerHTML = (sample ? `<span class="howto"><b>${sample[0]}</b> = ${sample[1]}</span>` : '') + U.legend();
+}
+
+/* ── Panel de opciones ── */
+function renderOpts() {
+  const el = document.getElementById('opts'), scroll = el.querySelector('.opts-body')?.scrollTop || 0;
+  el.innerHTML = `<div class="opts-head"><div><h2>Elige tu versión</h2><p>Se aplica al momento y se guarda en este navegador.</p></div><button class="ghost icon" data-close aria-label="Cerrar opciones">✕</button></div>
+    <div class="opts-body">${OPTIONS.map((g) => `<section class="og"><h3>${g.title}</h3><p>${g.why}</p>
+      <div class="og-list" role="radiogroup" aria-label="${g.title}">${g.choices.map((c) => `<button class="oc" role="radio" aria-checked="${opt[g.key] === c.v}" data-k="${g.key}" data-v="${c.v}"><span class="dot-r"></span>
+        <span>${c.label}${c.rec ? ' <span class="rec">Sugerida</span>' : ''}<small>${c.sub}</small></span>${c.code ? `<code>${c.code}</code>` : '<span></span>'}</button>`).join('')}</div></section>`).join('')}</div>
+    <div class="opts-foot"><button class="primary" data-copy>Copiar mi elección</button><button class="ghost" data-reset>Restablecer</button></div>`;
+  el.querySelector('.opts-body').scrollTop = scroll;
+}
+const selectionText = () => OPTIONS.map((g) => `${g.title}: ${g.choices.find((c) => c.v === opt[g.key]).label}`).join('\n');
+document.getElementById('opts').addEventListener('click', async (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if ('close' in b.dataset) return toggleOpts(false);
+  if ('reset' in b.dataset) opt = { ...defaults };
+  if ('copy' in b.dataset) {
+    let ok = true;
+    try { await navigator.clipboard.writeText(selectionText()); } catch (err) { ok = false; }
+    b.textContent = ok ? 'Copiado' : 'No se pudo copiar';
+    setTimeout(() => { b.textContent = 'Copiar mi elección'; }, 1500);
+    return;
+  }
+  if (b.dataset.k) opt[b.dataset.k] = b.dataset.v;
+  applyOpts(); renderOpts(); render(); U.refresh();
+  if (b.dataset.k === 'card' || 'reset' in b.dataset) fit(state.project);
+});
+function toggleOpts(on) {
+  document.body.classList.toggle('opts-open', on);
+  document.getElementById('optBtn').setAttribute('aria-expanded', on);
+  fit(state.project);
+}
+document.getElementById('optBtn').onclick = () => toggleOpts(!document.body.classList.contains('opts-open'));
+
+/* ── Mover y ampliar ── */
+let drag = null;
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('button,.node,.summary')) return;
+  drag = { x: e.clientX - cam.x, y: e.clientY - cam.y };
+  canvas.classList.add('drag'); canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', (e) => { if (drag) { cam.x = e.clientX - drag.x; cam.y = e.clientY - drag.y; apply(); } });
+canvas.addEventListener('pointerup', () => { drag = null; canvas.classList.remove('drag'); });
+function zoomAt(f, px, py, fly) {
+  const k = Math.min(1.8, Math.max(.2, cam.k * f));
+  f = k / cam.k; cam.x = px - (px - cam.x) * f; cam.y = py - (py - cam.y) * f; cam.k = k; apply(fly);
+}
+canvas.addEventListener('wheel', (e) => {
+  if (e.target.closest('.summary')) return;
+  e.preventDefault();
+  const b = canvas.getBoundingClientRect();
+  zoomAt(Math.exp(-e.deltaY * .0012), e.clientX - b.left, e.clientY - b.top);
+}, { passive: false });
+document.getElementById('zi').onclick = () => zoomAt(1.2, canvas.clientWidth * .6, canvas.clientHeight / 2, true);
+document.getElementById('zo').onclick = () => zoomAt(1 / 1.2, canvas.clientWidth * .6, canvas.clientHeight / 2, true);
+document.getElementById('fit').onclick = () => fit(state.project);
+
+canvas.addEventListener('click', (e) => {
+  const ok = e.target.closest('[data-approve]');
+  if (ok) { U.approve(ok.dataset.approve); return; }
+  const n = e.target.closest('[data-p],[data-thread],[data-task]'); if (!n) return;
+  if (n.dataset.p) U.selectProject(n.dataset.p);
+  else if (n.dataset.thread) U.selectThread(n.dataset.thread);
+  else U.openTask(n.dataset.task);
+});
+canvas.addEventListener('keydown', (e) => {
+  const n = e.target.closest('.node');
+  if (n && e.target === n && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); U.openTask(n.dataset.task); }
+});
+
+U.on((k) => { if (k === 'tick') return; render(); if (k === 'project') fit(state.project); });
+applyOpts();
+U.mountChat(document.getElementById('chat'));
+U.mountTabs(document.getElementById('tabs'));
+U.mountDrawer(document.getElementById('drawer'));
+renderOpts();
+render();
+fit('all', false);
+addEventListener('resize', () => fit(state.project, false));
+</script>
+</body>
+</html>

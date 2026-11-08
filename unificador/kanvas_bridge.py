@@ -6,6 +6,7 @@ Lee tareas, organiza fases por grupos/profundidad y ejecuta comandos de actualiz
 from __future__ import annotations
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple, Any
 from unificador.models import Task, Phase, TaskState, AgentType
@@ -151,7 +152,7 @@ class KanvasBridge:
                 return t
         return None
 
-    def execute_cli(self, args: List[str]) -> Tuple[int, str]:
+    def execute_cli(self, args: List[str], stdin_text: Optional[str] = None) -> Tuple[int, str]:
         """Ejecuta un comando de la CLI oficial de Kanvas en el directorio del proyecto."""
         # Intenta usar 'kanvas' o el script local del proyecto
         local_script = self.project_path / ".agents" / "skills" / "kanvas" / "kanvas.py"
@@ -165,6 +166,8 @@ class KanvasBridge:
                 cwd=str(self.project_path),
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                input=stdin_text,
                 check=False
             )
             output = (res.stdout + "\n" + res.stderr).strip()
@@ -173,10 +176,79 @@ class KanvasBridge:
             return 1, str(e)
 
     def add_note(self, task_id: str, note_text: str, author: str = "agent") -> Tuple[int, str]:
-        return self.execute_cli(["--as", author, "note", task_id, "-m", note_text])
+        return self.execute_cli(["--as", author, "note", task_id, "--stdin"], stdin_text=note_text)
 
     def start_task(self, task_id: str, author: str = "agent") -> Tuple[int, str]:
         return self.execute_cli(["--as", author, "start", task_id])
 
     def finish_task(self, task_id: str, summary: str, author: str = "agent") -> Tuple[int, str]:
-        return self.execute_cli(["--as", author, "finish", task_id, "-m", summary])
+        return self.execute_cli(["--as", author, "finish", task_id, "--stdin"], stdin_text=summary)
+
+    # ── Decisiones de la persona (la CLI de Kanvas no las ofrece a los agentes) ──
+    def _board_module(self):
+        """Carga el kanvas.py del proyecto para escribir con su mismo bloqueo y formato."""
+        import importlib.util
+        script = self.project_path / ".agents" / "skills" / "kanvas" / "kanvas.py"
+        if not script.is_file() or not self.board_exists():
+            raise FileNotFoundError("Este proyecto no tiene tablero que se pueda modificar")
+        spec = importlib.util.spec_from_file_location(f"_kanvas_{abs(hash(str(script)))}", script)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def review_task(self, task_id: str, accept: bool, comment: str = "", author: str = "usuario") -> str:
+        """Acepta (review -> done) o devuelve (review -> doing) un paso. Devuelve el estado nuevo.
+
+        Lanza KeyError si no existe el paso, ValueError si no está pendiente de revisión.
+        """
+        mod = self._board_module()
+
+        def apply(board):
+            task = next((t for t in board["tasks"] if t["id"].upper() == task_id.upper()), None)
+            if task is None:
+                raise KeyError(task_id)
+            if task.get("state") != "review":
+                raise ValueError("Este paso no está esperando tu revisión")
+            task["state"] = "done" if accept else "doing"
+            text = comment.strip() or ("Aceptado." if accept else "Hay que cambiar algo.")
+            task.setdefault("notes", []).append({"at": mod.now_iso(), "by": author, "text": text})
+            return task["state"]
+
+        return mod.mutate(str(self.board_file), apply)
+
+
+    def approve_tasks(self, task_ids: Optional[List[str]] = None, author: str = "usuario") -> List[str]:
+        """Aprueba propuestas (proposed -> todo): las indicadas o, sin lista, todas. Devuelve sus ids.
+
+        Es la decisión de la persona sobre el plan; la toma desde Unificador con «Aprobar plan».
+        """
+        mod = self._board_module()
+        wanted = {t.upper() for t in task_ids} if task_ids else None
+
+        def apply(board):
+            approved = []
+            for task in board["tasks"]:
+                if task.get("state") != "proposed":
+                    continue
+                if wanted is not None and task["id"].upper() not in wanted:
+                    continue
+                task["state"] = "todo"
+                task.setdefault("notes", []).append({"at": mod.now_iso(), "by": author, "text": "Plan aprobado."})
+                approved.append(task["id"])
+            return approved
+
+        return mod.mutate(str(self.board_file), apply)
+
+    @staticmethod
+    def init_project(project_path: str | Path) -> Tuple[int, str]:
+        """Instala Kanvas en un proyecto (skill, kanvas.json, AGENTS.md) con el kanvas.py de Unificador."""
+        script = Path(__file__).resolve().parent.parent / ".agents" / "skills" / "kanvas" / "kanvas.py"
+        if not script.is_file():
+            return 1, f"No se encuentra {script}"
+        try:
+            proc = subprocess.run([sys.executable, str(script), "init", str(project_path)],
+                                  capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                  timeout=60, stdin=subprocess.DEVNULL)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            return 1, str(e)
+        return proc.returncode, (proc.stdout + proc.stderr).strip()

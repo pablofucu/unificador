@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unificador · B · Grafo</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+:root {
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; --mono: "Cascadia Mono", Consolas, monospace;
+  --bg: #eef0f4; --bg-2: #f6f7f9; --panel: #ffffff; --bubble: #eceef3;
+  --ink: #171b24; --ink-2: #5b6474; --ink-3: #aeb5c1; --line: #e0e3ea; --line-2: #c8cdd7;
+  --approve: #e89a0c; --approve-ink: #241700; --plus: #0f8a4f; --minus: #c7342f; --chat-w: 410px;
+}
+/* El lienzo ocupa toda la ventana y el chat flota a la izquierda. */
+.app { display: block; position: relative; }
+.stage { position: absolute; inset: 0; }
+.canvas { overflow: hidden; cursor: grab; touch-action: none; background-color: var(--bg); background-image: radial-gradient(#c9ced8 1px, transparent 1.2px); background-size: 22px 22px; }
+.canvas.drag { cursor: grabbing; }
+.topbar { position: absolute; z-index: 12; top: 12px; left: calc(var(--chat-w) + 26px); right: 14px; background: var(--panel); border-radius: 12px; box-shadow: 0 2px 10px rgb(20 26 40 / .1); }
+.legend { position: absolute; z-index: 12; bottom: 12px; left: calc(var(--chat-w) + 26px); background: rgb(255 255 255 / .88); border-radius: 10px; backdrop-filter: blur(6px); }
+
+/* Chat flotante, con riel vertical de IAs en el borde */
+.chat { position: absolute; z-index: 20; top: 12px; left: 12px; bottom: 12px; width: var(--chat-w); border-radius: 16px; box-shadow: 0 6px 28px rgb(20 26 40 / .16); padding-left: 76px; outline: 2px solid var(--ai); outline-offset: -2px; transition: outline-color .25s; overflow: hidden; }
+.ai-bar { position: static; padding: 0 16px 10px; }
+.providers { position: absolute; left: 0; top: 0; bottom: 0; width: 76px; display: flex; flex-direction: column; gap: 6px; padding: 12px 8px; background: color-mix(in srgb, var(--ai) 11%, #f3f4f7); transition: background .25s; }
+.prov { flex-direction: column; gap: 3px; padding: 9px 2px; font-size: 10.5px; border-radius: 12px; }
+.prov i { font-size: 19px; line-height: 1.1; }
+.prov.on { box-shadow: 0 3px 10px color-mix(in srgb, var(--f) 45%, transparent); }
+.prov span { width: 100%; }
+
+.world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.world.fly { transition: transform .5s cubic-bezier(.3, .8, .25, 1); }
+.region { position: absolute; border-radius: 22px; background: color-mix(in srgb, var(--p) 8%, rgb(255 255 255 / .6)); border: 1.5px solid color-mix(in srgb, var(--p) 35%, transparent); }
+.region h2 { position: absolute; left: 20px; top: 11px; font-size: 20px; color: color-mix(in srgb, var(--p) 75%, #111); }
+.region-btn { display: block; }
+.region-meta { position: absolute; right: 20px; top: 16px; font-size: 12px; color: var(--ink-2); display: flex; gap: 10px; }
+.th-label { position: absolute; font-size: 12px; font-weight: 700; display: flex; gap: 6px; align-items: center; padding: 3px 9px; border-radius: 8px; background: color-mix(in srgb, var(--th) 16%, #fff); color: color-mix(in srgb, var(--th) 62%, #111); white-space: nowrap; }
+.th-label .ai { color: var(--ai); font-size: 12px; }
+.th-label.active { box-shadow: 0 0 0 2px var(--th); }
+.node { position: absolute; width: 196px; height: 74px; text-align: left; padding: 9px 11px; display: grid; align-content: start; gap: 4px; background: #fff; border-radius: 11px; border: 1.5px solid color-mix(in srgb, var(--th) 42%, #fff); box-shadow: 0 1px 3px rgb(20 26 40 / .08); }
+.node:hover { box-shadow: 0 5px 16px rgb(20 26 40 / .16); }
+.node .top { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-2); }
+.node .top b { font-family: var(--mono); font-weight: 500; }
+.node .top .a { margin-left: auto; color: var(--ai); }
+.node .ti { font-weight: 600; font-size: 13px; line-height: 1.22; }
+.node.is-done { background: color-mix(in srgb, var(--th) 13%, #fff); border-color: transparent; }
+.node.is-done .ti { font-weight: 500; }
+.node.is-proposed { border-style: dashed; background: rgb(255 255 255 / .5); box-shadow: none; }
+.node.is-blocked { background: rgb(255 255 255 / .55); color: var(--ink-2); box-shadow: none; }
+.node.is-running { border: 2px solid var(--ai); box-shadow: 0 0 0 5px color-mix(in srgb, var(--ai) 15%, transparent); }
+.node.is-review { border: 2px solid var(--approve); box-shadow: 0 0 0 5px color-mix(in srgb, var(--approve) 18%, transparent); }
+.node.sel { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* Zoom semántico: de lejos solo queda lo que se puede leer. */
+.world.far .node { padding: 8px 12px; gap: 0; align-content: center; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; align-items: center; }
+.world.far .node .top { display: contents; }
+.world.far .node .top b, .world.far .node .top .a { display: none; }
+.world.far .node .st { width: 26px; height: 26px; font-size: 16px; }
+.world.far .node .st-review::after { font-size: 16px; }
+.world.far .node .ti { font-size: 19px; line-height: 1.12; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.world.far .region h2 { font-size: 30px; top: 6px; }
+.world.far .region-meta { font-size: 19px; top: 11px; }
+.world.far .th-label { font-size: 19px; transform: translateY(-5px); }
+svg.edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.zoom { position: absolute; z-index: 12; right: 14px; bottom: 12px; display: flex; gap: 2px; background: var(--panel); border-radius: 10px; padding: 3px; box-shadow: 0 2px 10px rgb(20 26 40 / .12); }
+.zoom button { padding: 3px 10px; border-radius: 7px; font-size: 13px; font-weight: 600; }
+.zoom button:hover { background: var(--bubble); }
+.drawer { top: 66px; bottom: 12px; right: 12px; border-radius: 14px; overflow: hidden; border: 0; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="chat" id="chat" aria-label="Chat"></aside>
+  <main class="stage">
+    <div class="topbar" id="tabs"></div>
+    <div class="canvas" id="canvas"><div class="world" id="world"></div></div>
+    <div class="legend" id="legend"></div>
+    <div class="zoom"><button id="zo" aria-label="Alejar">−</button><button id="fit">Encajar</button><button id="zi" aria-label="Acercar">+</button></div>
+    <aside class="drawer" id="drawer" aria-label="Informe de la tarea"></aside>
+  </main>
+</div>
+<script src="shared.js"></script>
+<script>
+const { PROJECTS, AIS, TASKS, state, tasksOf, esc, counts, tasksOfProject, threadOf, task } = U;
+const canvas = document.getElementById('canvas'), world = document.getElementById('world');
+const NW = 196, NH = 74, GX = 40, GY = 26, PAD = 24, HEAD = 54, LABEL = 28;
+
+/* Disposición: cada tarea avanza por profundidad de dependencias dentro de su proyecto. */
+const pos = {}, regions = {};
+(function layout() {
+  let cx = [0, 0], colY = [0, 0];
+  PROJECTS.forEach((p) => {
+    const list = tasksOfProject(p), depth = {};
+    const d = (x) => depth[x.id] ?? (depth[x.id] = x.deps.length ? 1 + Math.max(...x.deps.map((k) => d(task(k)))) : 0);
+    list.forEach(d);
+    let y = HEAD, maxX = 0;
+    const rows = [];
+    p.threads.forEach((th) => {
+      const used = {};
+      let rowsUsed = 1;
+      const startY = y + LABEL;
+      tasksOf(th.id).forEach((x) => {
+        const col = depth[x.id], r = used[col] || 0;
+        used[col] = r + 1;
+        rowsUsed = Math.max(rowsUsed, r + 1);
+        pos[x.id] = { x: PAD + col * (NW + GX), y: startY + r * (NH + 12), p: p.id };
+        maxX = Math.max(maxX, pos[x.id].x + NW);
+      });
+      rows.push({ th, y });
+      y = startY + rowsUsed * (NH + 12) + GY - 12;
+    });
+    regions[p.id] = { w: maxX + PAD, h: y + 4, rows };
+  });
+  /* Dos columnas: la región más ancha define cada columna. */
+  const gap = 40;
+  const col0 = ['uni', 'iris'], col1 = ['yum', 'cap'];
+  const w0 = Math.max(...col0.map((k) => regions[k].w));
+  [col0, col1].forEach((col, ci) => {
+    let yy = 0;
+    col.forEach((k) => { regions[k].x = ci ? w0 + gap : 0; regions[k].y = yy; yy += regions[k].h + gap; });
+  });
+})();
+
+const cam = { x: 0, y: 0, k: 1 };
+function apply(fly) { world.classList.toggle('fly', !!fly); world.style.transform = `translate(${cam.x}px,${cam.y}px) scale(${cam.k})`;
+  world.classList.toggle('far', cam.k < .68); canvas.style.backgroundPosition = `${cam.x}px ${cam.y}px`; canvas.style.backgroundSize = `${22 * cam.k}px ${22 * cam.k}px`; }
+
+function fit(id, fly = true) {
+  const rs = id === 'all' ? Object.values(regions) : [regions[id]];
+  const x0 = Math.min(...rs.map((r) => r.x)), y0 = Math.min(...rs.map((r) => r.y));
+  const x1 = Math.max(...rs.map((r) => r.x + r.w)), y1 = Math.max(...rs.map((r) => r.y + r.h));
+  const left = 410 + 40, top = 74, W = canvas.clientWidth - left - 24, H = canvas.clientHeight - top - 60;
+  cam.k = Math.min(W / (x1 - x0), H / (y1 - y0), 1.05);
+  cam.x = left + (W - (x1 - x0) * cam.k) / 2 - x0 * cam.k;
+  cam.y = top + (H - (y1 - y0) * cam.k) / 2 - y0 * cam.k;
+  apply(fly);
+}
+
+function render() {
+  let edges = '';
+  const html = PROJECTS.map((p) => {
+    const r = regions[p.id], c = counts(tasksOfProject(p));
+    const list = tasksOfProject(p);
+    list.forEach((x) => x.deps.forEach((k) => {
+      const a = pos[k], b = pos[x.id], th = threadOf(x.thread);
+      if (!a) return;
+      const ax = r.x + a.x + NW, ay = r.y + a.y + NH / 2, bx = r.x + b.x, by = r.y + b.y + NH / 2;
+      const same = task(k).thread === x.thread, mx = Math.max(24, (bx - ax) / 2);
+      const lit = task(k).state === 'done';
+      edges += `<path d="M${ax} ${ay}C${ax + mx} ${ay} ${bx - mx} ${by} ${bx} ${by}" fill="none" stroke="${th.color}" stroke-width="${lit ? 2.6 : 1.8}" ${same && lit ? '' : 'stroke-dasharray="5 5"'} opacity="${lit ? .85 : .55}"/>`;
+    }));
+    return `<section class="region" style="--p:${p.color};left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px">
+      <button class="region-btn" data-p="${p.id}"><h2>${esc(p.name)}</h2></button>
+      <div class="region-meta">${c.running ? `<span>${c.running} en ejecución</span>` : ''}<span>${c.done}/${c.total}</span></div>
+      ${r.rows.map(({ th, y }) => `<button class="th-label ${state.thread === th.id ? 'active' : ''}" data-thread="${th.id}" style="left:${PAD}px;top:${y}px;--th:${th.color};--ai:${AIS[th.ai].fill}">${esc(th.name)}<span class="ai" title="${AIS[th.ai].name}">${AIS[th.ai].glyph}</span></button>`).join('')}
+      ${list.map((x) => `<button class="node is-${x.state} ${state.openTask === x.id ? 'sel' : ''}" data-task="${x.id}" style="left:${pos[x.id].x}px;top:${pos[x.id].y}px;--th:${threadOf(x.thread).color};--ai:${AIS[x.ai].color}">
+        <span class="top">${U.mark(x)}<b>${x.id}</b><span class="a">${AIS[x.ai].glyph}</span></span>
+        <span class="ti">${esc(x.title)}</span></button>`).join('')}
+    </section>`;
+  }).join('');
+  world.innerHTML = html + `<svg class="edges" width="1" height="1">${edges}</svg>`;
+}
+
+/* Arrastrar y hacer zoom */
+let drag = null;
+canvas.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; drag = { x: e.clientX - cam.x, y: e.clientY - cam.y }; canvas.classList.add('drag'); canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', (e) => { if (!drag) return; cam.x = e.clientX - drag.x; cam.y = e.clientY - drag.y; apply(); });
+canvas.addEventListener('pointerup', () => { drag = null; canvas.classList.remove('drag'); });
+function zoomAt(f, px, py, fly) { const k = Math.min(1.8, Math.max(.25, cam.k * f)); f = k / cam.k; cam.x = px - (px - cam.x) * f; cam.y = py - (py - cam.y) * f; cam.k = k; apply(fly); }
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); const b = canvas.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * .0012), e.clientX - b.left, e.clientY - b.top); }, { passive: false });
+document.getElementById('zi').onclick = () => zoomAt(1.2, canvas.clientWidth * .6, canvas.clientHeight / 2, true);
+document.getElementById('zo').onclick = () => zoomAt(1 / 1.2, canvas.clientWidth * .6, canvas.clientHeight / 2, true);
+document.getElementById('fit').onclick = () => fit(state.project);
+
+canvas.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.p) U.selectProject(b.dataset.p);
+  if (b.dataset.thread) U.selectThread(b.dataset.thread);
+  if (b.dataset.task) U.openTask(b.dataset.task);
+});
+U.on((k) => { if (k === 'tick') return; render(); if (k === 'project') fit(state.project); });
+U.mountChat(document.getElementById('chat'));
+U.mountTabs(document.getElementById('tabs'));
+U.mountDrawer(document.getElementById('drawer'));
+document.getElementById('legend').innerHTML = U.legend();
+render();
+fit('all', false);
+addEventListener('resize', () => fit(state.project, false));
+</script>
+</body>
+</html>

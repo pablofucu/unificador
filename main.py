@@ -116,8 +116,8 @@ def main():
 
     # serve
     p_serve = subparsers.add_parser("serve", help="Inicia el servidor API backend")
-    p_serve.add_argument("--host", type=str, default="127.0.0.1", help="Host IP")
-    p_serve.add_argument("--port", type=int, default=8766, help="Puerto HTTP")
+    p_serve.add_argument("--host", type=str, default=None, help="Host IP")
+    p_serve.add_argument("--port", type=int, default=None, help="Puerto HTTP")
     p_serve.set_defaults(func=cmd_serve)
 
     # register

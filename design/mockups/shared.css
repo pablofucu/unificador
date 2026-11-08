@@ -1,0 +1,162 @@
+/* Base común. Cada mockup redefine las variables y añade su propia personalidad. */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { font: 14px/1.45 var(--font); color: var(--ink); background: var(--bg); overflow: hidden; }
+button, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+:focus-visible { outline: 2px solid var(--focus, var(--ink)); outline-offset: 2px; }
+i { font-style: normal; }
+p, h2, h3, ol, ul { margin: 0; padding: 0; }
+ol, ul { list-style: none; }
+.muted { color: var(--ink-2); font-weight: 400; }
+.mono { font-family: var(--mono); }
+
+.app { display: grid; grid-template-columns: var(--chat-w, 400px) minmax(0, 1fr); height: 100%; }
+.chat { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--panel); position: relative; }
+.stage { position: relative; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.canvas { flex: 1; min-height: 0; position: relative; overflow: auto; }
+
+/* ── Marcas de estado: la forma dice el estado, sin depender del color ── */
+.st { width: 14px; height: 14px; flex: none; display: inline-grid; place-items: center; border-radius: 50%; font-size: 10px; font-weight: 700; line-height: 1; vertical-align: -2px; color: #fff; }
+.st-proposed { border: 1.5px dashed var(--th, var(--ink-2)); }
+.st-todo { border: 1.5px solid var(--th, var(--ink-2)); }
+.st-blocked { border: 1.5px solid var(--ink-3); color: var(--ink-2); background: var(--bg-2); }
+.st-running { border: 2px solid color-mix(in srgb, var(--ai) 25%, transparent); border-top-color: var(--ai); animation: spin 1s linear infinite; }
+.st-review { background: var(--approve); color: var(--approve-ink); border-radius: 3px; transform: rotate(45deg) scale(.86); }
+.st-review { font-size: 0; position: relative; }
+.st-review::after { content: '!'; font-size: 10px; transform: rotate(-45deg); }
+.st-done { background: var(--th, var(--ink-2)); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Cabecera del chat ── */
+.chat-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; }
+.crumb { display: flex; align-items: center; gap: 6px; min-width: 0; font-weight: 600; }
+.crumb i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+.crumb-p { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--ink-2); font-weight: 500; }
+.crumb-t { display: inline-flex; align-items: center; gap: 6px; }
+.crumb-t i { border-radius: 3px; }
+.crumb-t select { background: transparent; border: 0; font-weight: 600; padding: 2px 0; max-width: 130px; }
+.crumb-t option, .ai-subs option { color: #111; background: #fff; }
+.crumb-sep { color: var(--ink-3); }
+.run-state { font-size: 12px; color: var(--ink-2); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.run-state::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); }
+.run-state.on { color: var(--ink); }
+.run-state.on::before { background: var(--ai); animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+
+/* ── Selector de IA ── */
+.ai-bar { padding: 0 16px 12px; display: flex; flex-direction: column; gap: 8px; }
+.providers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.prov { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 6px; border-radius: 8px; font-weight: 600; font-size: 13px; color: var(--ink-2); transition: background .2s, color .2s; min-width: 0; }
+.prov span { overflow: hidden; text-overflow: ellipsis; }
+.prov i { color: var(--c); font-size: 14px; }
+.prov:hover { background: color-mix(in srgb, var(--c) 12%, transparent); color: var(--ink); }
+.prov.on { background: var(--f); color: #fff; }
+.prov.on i { color: #fff; }
+.ai-subs { display: grid; grid-template-columns: 1.5fr 1fr; gap: 8px; }
+.ai-subs label { display: grid; gap: 2px; font-size: 11px; color: var(--ink-2); }
+.ai-subs select { width: 100%; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg-2); font-size: 13px; color: var(--ink); }
+
+/* ── Mensajes ── */
+.messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.msg p { white-space: pre-wrap; }
+.msg.user { align-self: flex-end; max-width: 86%; background: var(--bubble); padding: 8px 12px; border-radius: 12px 12px 3px 12px; }
+.msg.ai { padding-left: 12px; border-left: 2px solid var(--ai); }
+.who { display: flex; gap: 6px; align-items: baseline; font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+.who i { color: var(--ai); }
+.note { text-align: center; font-size: 12px; color: var(--ink-2); }
+
+/* ── Bloque Trabajando ── */
+.work { padding: 12px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--ai) 45%, var(--line)); background: color-mix(in srgb, var(--ai) 7%, var(--panel)); }
+.work-top { display: flex; align-items: center; gap: 8px; }
+.work-top .ghost { margin-left: auto; }
+.work-top .muted { font-size: 12px; font-variant-numeric: tabular-nums; }
+.spin { width: 13px; height: 13px; border-radius: 50%; flex: none; border: 2px solid color-mix(in srgb, var(--ai) 25%, transparent); border-top-color: var(--ai); animation: spin .9s linear infinite; }
+.steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin: 10px 0 8px; }
+.steps li { font-size: 11px; color: var(--ink-2); min-width: 0; }
+.steps span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.steps i { display: block; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--ink-3) 45%, transparent); margin-bottom: 4px; }
+.steps .past i { background: var(--ai); }
+.steps .now i { background: var(--ai); animation: pulse 1.4s ease-in-out infinite; }
+.steps .now { color: var(--ink); font-weight: 600; }
+.work-now { font-size: 13px; background: linear-gradient(90deg, var(--ink-2) 30%, var(--ink) 50%, var(--ink-2) 70%); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 2.4s linear infinite; }
+@keyframes shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.work-done { display: flex; gap: 8px; align-items: center; padding: 8px 12px; font-size: 13px; border-style: dashed; background: none; }
+.work-check { color: var(--ai); font-weight: 700; }
+
+/* ── Tarjetas de informe y plan ── */
+.card { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-2); overflow: hidden; }
+.card.pending { border-color: var(--approve); box-shadow: 0 0 0 1px var(--approve); }
+.card-open { display: grid; gap: 4px; text-align: left; padding: 12px; width: 100%; }
+.card-open:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.card-kicker { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
+.card-text { color: var(--ink-2); font-size: 13px; }
+.stats { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--ink-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.stats.big { margin-top: 8px; }
+.plus { color: var(--plus); } .minus { color: var(--minus); }
+.card-actions { display: flex; gap: 8px; padding: 0 12px 12px; }
+.card-state { padding: 0 12px 12px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.plan { padding-top: 12px; }
+.plan .card-kicker { padding: 0 12px; }
+.plan-list { padding: 8px 12px 12px; display: grid; gap: 4px; }
+.link { text-align: left; display: inline-flex; gap: 6px; align-items: baseline; }
+.link:hover { text-decoration: underline; }
+.link b { font-family: var(--mono); font-weight: 600; font-size: 12px; }
+
+button.approve { background: var(--approve); color: var(--approve-ink); font-weight: 700; padding: 7px 14px; border-radius: 8px; }
+button.approve:hover { filter: brightness(1.08); }
+button.launch { background: var(--ai-fill); color: #fff; font-weight: 700; padding: 7px 14px; border-radius: 8px; }
+button.ghost { padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line-2); color: var(--ink); }
+button.ghost:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+button.ghost.small { padding: 2px 8px; font-size: 12px; }
+button.ghost.icon { padding: 3px 8px; }
+
+/* ── Composer ── */
+.composer { margin: 0 12px 12px; border: 1.5px solid color-mix(in srgb, var(--ai) 65%, var(--line)); border-radius: 12px; background: var(--bg-2); transition: border-color .25s; }
+.composer:focus-within { border-color: var(--ai); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ai) 18%, transparent); }
+.composer textarea { width: 100%; border: 0; background: none; padding: 10px 12px 4px; resize: none; outline: 0; display: block; }
+.composer textarea::placeholder { color: var(--ink-2); }
+.composer-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 8px 12px; gap: 8px; }
+.composer-ctx { font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.composer-ctx i { color: var(--ai); margin-right: 5px; }
+.send { background: var(--ai-fill); color: #fff; font-weight: 700; padding: 5px 14px; border-radius: 8px; transition: background .25s; }
+
+/* ── Pestañas de proyectos ── */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; min-width: 0; }
+.tab { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 8px; font-weight: 600; font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.tab:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink); }
+.tab .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--p); }
+.tab.on { color: var(--ink); background: color-mix(in srgb, var(--p, var(--ink)) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--p, var(--ink)) 45%, transparent); }
+.tab-all { display: inline-flex; }
+.tab-all i { width: 8px; height: 8px; border-radius: 50%; margin-right: -2px; }
+.tab-all i:last-child { margin-right: 0; }
+.tab-flag { background: var(--approve); color: var(--approve-ink); font-size: 10px; min-width: 15px; height: 15px; border-radius: 8px; display: grid; place-items: center; padding: 0 3px; }
+.tallies { display: flex; gap: 12px; align-items: center; flex: none; font-size: 12px; color: var(--ink-2); }
+.tally { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.tally-btn { font-weight: 600; color: var(--ink); padding: 4px 8px; border-radius: 7px; }
+.tally-btn:hover { background: color-mix(in srgb, var(--approve) 20%, transparent); }
+
+/* ── Leyenda ── */
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 8px 14px; font-size: 12px; color: var(--ink-2); }
+.lg { display: inline-flex; gap: 6px; align-items: center; }
+
+/* ── Panel de informe ── */
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: min(380px, 92%); background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; transform: translateX(102%); transition: transform .22s ease; z-index: 30; box-shadow: -12px 0 30px rgb(0 0 0 / .14); visibility: hidden; }
+.drawer.open { transform: none; visibility: visible; }
+.dr-band { height: 5px; flex: none; }
+.dr-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 14px 16px 8px; }
+.dr-path { font-size: 12px; color: var(--ink-2); }
+.dr-head h2 { font-size: 19px; line-height: 1.25; margin-top: 2px; }
+.dr-meta { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px; }
+.pill { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; padding: 3px 9px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); }
+.ai-g { color: var(--ai); }
+.dr-body { flex: 1; overflow-y: auto; padding: 4px 16px 16px; display: grid; gap: 18px; align-content: start; }
+.dr-body h3 { font-size: 12px; color: var(--ink-2); font-weight: 600; margin-bottom: 5px; }
+.checks { display: grid; gap: 6px; }
+.checks li { padding-left: 18px; position: relative; }
+.checks li::before { content: ''; position: absolute; left: 0; top: 4px; width: 11px; height: 11px; border: 1.5px solid var(--ink-3); border-radius: 3px; }
+.deps { display: grid; gap: 4px; }
+.dr-foot { padding: 12px 16px; border-top: 1px solid var(--line); display: flex; gap: 8px; align-items: center; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }

@@ -23,13 +23,29 @@ class GitService:
                 encoding="utf-8",
                 check=False
             )
-            return res.returncode, (res.stdout + "\n" + res.stderr).strip()
+            # rstrip y no strip: la primera columna de `status --porcelain` puede ser un espacio.
+            parts = [x.rstrip() for x in (res.stdout, res.stderr) if x.strip()]
+            return res.returncode, "\n".join(parts)
         except Exception as e:
             return 1, str(e)
 
     def is_git_repo(self) -> bool:
         code, out = self._run_git(["rev-parse", "--is-inside-work-tree"])
         return code == 0 and "true" in out.lower()
+
+    def init_repo(self) -> Tuple[bool, str]:
+        """Crea el repositorio si no existe, con un primer commit para tener rama desde el principio."""
+        if self.is_git_repo():
+            return True, "Ya era un repositorio Git."
+        code, out = self._run_git(["init", "-b", "main"])
+        if code != 0:
+            return False, out
+        self._run_git(["add", "-A"])
+        commit = ["commit", "-m", "Proyecto creado con Unificador", "--allow-empty"]
+        code, out = self._run_git(commit)
+        if code != 0:  # sin identidad de Git configurada: firma Unificador
+            code, out = self._run_git(["-c", "user.name=Unificador", "-c", "user.email=unificador@localhost", *commit])
+        return code == 0, out
 
     def get_current_branch(self) -> str:
         code, out = self._run_git(["branch", "--show-current"])
@@ -43,19 +59,29 @@ class GitService:
         code, out = self._run_git(["status", "--porcelain"])
         files: List[Dict[str, str]] = []
         for line in out.splitlines():
-            line = line.strip()
-            if not line:
+            if len(line) < 4:  # el estado ocupa 2 columnas: no se puede usar strip()
                 continue
-            status_code = line[:2]
-            filename = line[3:].strip()
-            files.append({"status": status_code, "file": filename})
+            files.append({"status": line[:2].strip() or "?", "file": line[3:].strip().strip('"')})
+
+        remote_code, remotes = self._run_git(["remote"])
+        has_remote = remote_code == 0 and bool(remotes.strip())
+        ahead = 0
+        if has_remote:
+            c, o = self._run_git(["rev-list", "--count", "@{u}..HEAD"])
+            if c == 0 and o.strip().isdigit():
+                ahead = int(o.strip())
+            else:  # sin rama remota asociada: todo lo que haya está pendiente de subir
+                c, o = self._run_git(["rev-list", "--count", "HEAD"])
+                ahead = int(o.strip()) if c == 0 and o.strip().isdigit() else 0
 
         return {
             "is_repo": True,
             "branch": self.get_current_branch(),
             "clean": len(files) == 0,
             "files": files,
-            "changed_count": len(files)
+            "changed_count": len(files),
+            "has_remote": has_remote,
+            "ahead": ahead,
         }
 
     def commit_task(
@@ -93,7 +119,7 @@ class GitService:
             return False, "No es un repositorio Git."
 
         target_branch = branch or self.get_current_branch()
-        code, out = self._run_git(["push", remote, target_branch])
+        code, out = self._run_git(["push", "-u", remote, target_branch])
         if code != 0:
             return False, f"Fallo en git push: {out}"
         return True, f"Cambios sincronizados con {remote}/{target_branch}."

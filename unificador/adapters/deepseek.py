@@ -1,6 +1,8 @@
 """
-Adaptador para DeepSeek API.
-Permite llamadas directas por API REST con streaming de respuesta (SSE).
+Adaptador para la API de DeepSeek (chat con streaming SSE).
+
+No tiene herramientas: responde en el chat. Para seguir el hilo se le manda el historial
+de la conversación guardada (``context.history``).
 """
 
 from __future__ import annotations
@@ -8,13 +10,14 @@ import json
 import os
 import urllib.request
 import urllib.error
-from typing import Generator, Tuple
+from typing import Iterator, Optional, Tuple
 from unificador.models import AgentType, ExecutionContext
-from unificador.adapters.base import BaseAgentAdapter
+from unificador.adapters.base import BaseAgentAdapter, Event
 from unificador.config import config
-
+from unificador.context_injector import ContextInjector
 
 DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
+MAX_HISTORY = 20
 
 
 class DeepSeekAdapter(BaseAgentAdapter):
@@ -27,92 +30,47 @@ class DeepSeekAdapter(BaseAgentAdapter):
         return self._api_key or config.get_api_key("deepseek") or os.getenv("DEEPSEEK_API_KEY", "")
 
     def is_installed(self) -> bool:
-        # Para DeepSeek solo necesitamos tener configurada la clave API
         return bool(self.api_key.strip())
 
     def _prepare_payload(self, context: ExecutionContext, stream: bool = False) -> dict:
-        system_content = (
-            f"Eres DeepSeek Coder, un asistente experto de desarrollo. "
-            f"Estás asignado al proyecto '{context.project.name}' en la fase '{context.phase.name if context.phase else 'General'}'.\n"
-            f"{context.board_rules}"
-        )
+        system, user = ContextInjector().format_for_api(context)
+        messages = [{"role": "system", "content": system}]
+        for m in (context.history or [])[-MAX_HISTORY:]:
+            if m.get("role") in ("user", "assistant") and m.get("content"):
+                messages.append({"role": m["role"], "content": m["content"]})
+        messages.append({"role": "user", "content": user})
+        model = config.get_agent_config(self.agent_type).model or "deepseek-chat"
+        return {"model": model, "messages": messages, "stream": stream, "temperature": 0.2}
 
-        user_content = context.final_injected_prompt
+    def _request(self, payload: dict) -> urllib.request.Request:
+        return urllib.request.Request(
+            DEEPSEEK_API_URL, data=json.dumps(payload).encode("utf-8"), method="POST",
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {self.api_key}"})
 
-        return {
-            "model": "deepseek-coder",
-            "messages": [
-                {"role": "system", "content": system_content},
-                {"role": "user", "content": user_content}
-            ],
-            "stream": stream,
-            "temperature": 0.2
-        }
-
-    def execute_sync(self, context: ExecutionContext) -> Tuple[int, str]:
+    def stream_execute(self, context: ExecutionContext) -> Iterator[Event]:
         if not self.is_installed():
-            return 1, "Error: No se ha configurado la clave API de DeepSeek (DEEPSEEK_API_KEY)."
-
-        payload = self._prepare_payload(context, stream=False)
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
-        }
-
-        req = urllib.request.Request(
-            DEEPSEEK_API_URL,
-            data=json.dumps(payload).encode("utf-8"),
-            headers=headers,
-            method="POST"
-        )
-
-        try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                content = data["choices"][0]["message"]["content"]
-                return 0, content
-        except urllib.error.HTTPError as e:
-            err_body = e.read().decode("utf-8", errors="ignore")
-            return e.code, f"Error HTTP {e.code} de DeepSeek: {err_body}"
-        except Exception as e:
-            return 1, f"Error de conexión con DeepSeek API: {e}"
-
-    def stream_execute(self, context: ExecutionContext) -> Generator[str, None, None]:
-        if not self.is_installed():
-            yield "Error: No se ha configurado la clave API de DeepSeek. Por favor, añádela en la configuración.\n"
+            yield {"type": "error", "text": "No se ha configurado la clave API de DeepSeek. Añádela en Ajustes."}
             return
-
-        payload = self._prepare_payload(context, stream=True)
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
-        }
-
-        req = urllib.request.Request(
-            DEEPSEEK_API_URL,
-            data=json.dumps(payload).encode("utf-8"),
-            headers=headers,
-            method="POST"
-        )
-
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
-                for raw_line in resp:
-                    line = raw_line.decode("utf-8").strip()
-                    if line.startswith("data: "):
-                        data_str = line[6:]
-                        if data_str == "[DONE]":
-                            break
-                        try:
-                            chunk = json.loads(data_str)
-                            delta = chunk["choices"][0].get("delta", {})
-                            content = delta.get("content", "")
-                            if content:
-                                yield content
-                        except Exception:
-                            continue
+            with urllib.request.urlopen(self._request(self._prepare_payload(context, True)), timeout=120) as resp:
+                for raw in resp:
+                    line = raw.decode("utf-8").strip()
+                    if not line.startswith("data: "):
+                        continue
+                    data = line[6:]
+                    if data == "[DONE]":
+                        break
+                    try:
+                        content = json.loads(data)["choices"][0].get("delta", {}).get("content", "")
+                    except (ValueError, KeyError, IndexError):
+                        continue
+                    if content:
+                        yield content
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="ignore")
+            yield {"type": "error", "text": f"Error HTTP {e.code} de DeepSeek: {body[:300]}"}
         except Exception as e:
-            yield f"\n[DeepSeek Stream Error]: {e}\n"
+            yield {"type": "error", "text": f"Error de conexión con DeepSeek: {e}"}
 
     def launch_native_window(self, context: ExecutionContext) -> Tuple[bool, str]:
-        return False, "DeepSeek se ejecuta directamente vía API en la interfaz del Unificador (no tiene aplicación local de escritorio)."
+        return False, "DeepSeek se usa por API desde el chat de Unificador (no tiene aplicación de escritorio)."

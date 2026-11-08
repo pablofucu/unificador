@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unificador · Mockups</title>
+<style>
+html, body { height: 100%; margin: 0; }
+body { display: flex; flex-direction: column; background: #111; color: #eee; font: 13px/1.3 "Segoe UI", system-ui, sans-serif; }
+nav { display: flex; align-items: center; gap: 4px; padding: 5px 10px; flex: none; }
+nav strong { margin-right: 10px; }
+a { color: #bbb; text-decoration: none; padding: 4px 11px; border-radius: 6px; }
+a:hover { color: #fff; background: #2a2a2a; }
+a.on { background: #eee; color: #111; font-weight: 600; }
+iframe { flex: 1; border: 0; width: 100%; background: #fff; }
+</style>
+</head>
+<body>
+<nav aria-label="Mockups">
+  <strong>Unificador</strong>
+  <a href="#itinerario" data-f="itinerario">Itinerario</a>
+  <a href="#definitivo" data-f="definitivo">Definitivo</a>
+  <a href="#a-carriles" data-f="a-carriles">A · Carriles</a>
+  <a href="#b-grafo" data-f="b-grafo">B · Grafo</a>
+  <a href="#c-metro" data-f="c-metro">C · Metro</a>
+</nav>
+<iframe id="f" title="Mockup"></iframe>
+<script>
+function go() {
+  const name = location.hash.slice(1) || 'itinerario';
+  document.getElementById('f').src = name + '.html';
+  document.querySelectorAll('a').forEach((a) => a.classList.toggle('on', a.dataset.f === name));
+}
+addEventListener('hashchange', go); go();
+</script>
+</body>
+</html>

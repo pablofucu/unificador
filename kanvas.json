@@ -17,57 +17,225 @@
     {
       "id": "IN",
       "name": "Fase 4: Integración y API"
+    },
+    {
+      "id": "FE",
+      "name": "Fase 5: Frontend"
+    },
+    {
+      "id": "F6C",
+      "name": "Fase 6: Chat y proyectos"
     }
   ],
   "tasks": [
     {
       "id": "ES-01",
       "title": "Documentación y arquitectura detallada del Unificador",
-      "state": "proposed",
+      "state": "done",
       "group": "ES",
       "at": "2026-11-05T11:41:02Z",
       "by": "agent",
-      "desc": "Elaborar la especificación técnica completa: diseño modular, multi-proyecto por fases, adaptadores de IA (Claude Code, Antigravity, Codex, DeepSeek), inyección automática de prompts y sincronización Git."
+      "desc": "Elaborar la especificación técnica completa: diseño modular, multi-proyecto por fases, adaptadores de IA (Claude Code, Antigravity, Codex, DeepSeek), inyección automática de prompts y sincronización Git.",
+      "notes": [
+        {
+          "at": "2026-11-06T12:55:08Z",
+          "by": "claude-code",
+          "text": "`docs/ARCHITECTURE.md` pasa de un esqueleto de 35 líneas a la especificación completa, escrita a partir del código real de `unificador/`.\n- Cubre: módulos y dependencias, modelos de datos, formato de `config.json`, derivación de fases, puente con Kanvas, formato exacto del prompt inyectado, contrato de los 4 adaptadores, Git y tabla de rutas de la API.\n- Lo no implementado va marcado **[Pendiente]**.\n- Para decidir: la sección 10 lista 7 discrepancias entre código y diseño. La más seria es que `KanvasBridge.add_note` y las reglas que se inyectan a los agentes usan `kanvas note ID -m`, y la CLI real espera el texto posicional, así que fallan. Propongo corregirlas en MC-02.\n- Verificado: contrastado con el código y con `kanvas note --help`. No hay código modificado ni pruebas ejecutadas."
+        }
+      ]
     },
     {
       "id": "MC-01",
       "title": "Modelos de datos y configuración del sistema",
-      "state": "proposed",
+      "state": "done",
       "group": "MC",
       "deps": ["ES-01"],
       "at": "2026-11-05T11:41:02Z",
       "by": "agent",
-      "desc": "Definir models.py y config.py con soporte para proyectos, fases, configuración de agentes y almacenamiento seguro de credenciales."
+      "desc": "Definir models.py y config.py con soporte para proyectos, fases, configuración de agentes y almacenamiento seguro de credenciales.",
+      "notes": [
+        {
+          "at": "2026-11-06T12:56:53Z",
+          "by": "claude-code",
+          "text": "Plan: models.py (Project, Phase, AgentConfig) y config.py (carga/guardado de config y credenciales vía keyring con fallback a variables de entorno)"
+        },
+        {
+          "at": "2026-11-06T12:58:17Z",
+          "by": "claude-code",
+          "text": "Los modelos y la configuración ya cubren agentes y credenciales por separado.\n- models.py: nuevos `AgentConfig` (comando, modelo, activado, args extra) y `AppSettings` (host, puerto, auto-commit).\n- config.py: los agentes se configuran en `config.json`; las claves API van a `~/.unificador/credentials.json` (permisos restringidos). Las variables de entorno tienen prioridad y ya no se vuelcan al fichero (antes sí). Escritura atómica y migración automática del formato antiguo (`api_keys`, `cli_paths`).\n- Verificado con un script en carpeta temporal: migración, claves, agentes y proyectos; `unificador.server` importa sin errores.\n- Para revisar: al ser Windows, el permiso 0600 apenas protege; si quieres cifrado real (keyring/DPAPI) lo propongo como tarea aparte. Los adaptadores aún no leen `get_agent_config` (eso es MC-02 o posterior).\n- docs/ARCHITECTURE.md §4 actualizado."
+        }
+      ]
     },
     {
       "id": "MC-02",
       "title": "Motor de inyección de contexto y puente Kanvas",
-      "state": "proposed",
+      "state": "done",
       "group": "MC",
       "deps": ["MC-01"],
       "at": "2026-11-05T11:41:02Z",
       "by": "agent",
-      "desc": "Implementar context_injector.py y kanvas_bridge.py para inyectar automáticamente el estado de la tarea, reglas del proyecto y contexto de fase en el mensaje antes de enviarlo al agente."
+      "desc": "Implementar context_injector.py y kanvas_bridge.py para inyectar automáticamente el estado de la tarea, reglas del proyecto y contexto de fase en el mensaje antes de enviarlo al agente.",
+      "notes": [
+        {
+          "at": "2026-11-06T12:59:58Z",
+          "by": "claude-code",
+          "text": "Plan: revisar y corregir context_injector.py y kanvas_bridge.py (sintaxis CLI de note/ask, imports, fases con progreso, notas), y añadir pruebas."
+        },
+        {
+          "at": "2026-11-06T13:00:33Z",
+          "by": "claude-code",
+          "text": "Corregidos `context_injector.py` y `kanvas_bridge.py`; las órdenes que se inyectan a los agentes y que ejecuta el puente ahora funcionan con la CLI real de Kanvas.\n- `kanvas note/finish` se invocaban con `-m`, que la CLI no admite: ahora el texto va por stdin (soporta tildes y varias líneas). Las reglas inyectadas dicen `kanvas note ID \"texto\"`.\n- Falta el import de `Tuple`; `format_for_api` separa ahora de forma robusta (marcador único) y la etiqueta \"Dependencias completadas\" pasa a \"Dependencias\" (no siempre lo están).\n- Verificado: `tests/test_mc02.py` (fases, progreso, inyección, división system/user) pasa ejecutado a mano (pytest no está instalado) y el puente añadió una nota multilínea en un tablero temporal real.\n- Para revisar: ¿quieres que añada pytest a las dependencias? Las pruebas nuevas están en `tests/`."
+        }
+      ]
     },
     {
       "id": "AD-01",
       "title": "Adaptadores de agentes (Claude Code, Antigravity, Codex, DeepSeek)",
-      "state": "proposed",
+      "state": "done",
       "group": "AD",
       "deps": ["MC-02"],
       "at": "2026-11-05T11:41:02Z",
       "by": "agent",
-      "desc": "Crear adapters/base.py y adaptadores específicos para cada entorno (CLIs locales y API directa)."
+      "desc": "Crear adapters/base.py y adaptadores específicos para cada entorno (CLIs locales y API directa).",
+      "notes": [
+        {
+          "at": "2026-11-06T13:01:25Z",
+          "by": "claude-code",
+          "text": "Plan: crear adapters/base.py (interfaz común) y adaptadores para Claude Code, Antigravity, Codex y DeepSeek."
+        },
+        {
+          "at": "2026-11-06T13:01:46Z",
+          "by": "claude-code",
+          "text": "Los cuatro adaptadores (Claude Code, Antigravity, Codex/Cursor, DeepSeek API) ya cuelgan de la interfaz común adapters/base.py y se registran en adapters/__init__.py (get_adapter, list_adapters_status). Los he revisado, corregido un import que faltaba en deepseek.py y añadido tests/test_ad01.py (registro completo, DeepSeek sin clave, Codex). Los tests pasan ejecutados a mano (pytest no está instalado). Para revisar: no he lanzado las CLIs reales ni llamado a la API de DeepSeek (sin clave); Codex solo prepara el contexto y abre el editor."
+        }
+      ]
     },
     {
       "id": "IN-01",
       "title": "Integración simple con Git y servidor API backend",
-      "state": "proposed",
+      "state": "done",
       "group": "IN",
       "deps": ["AD-01"],
       "at": "2026-11-05T11:41:02Z",
       "by": "agent",
-      "desc": "Implementar git_service.py, server.py con endpoints REST/WebSocket y punto de entrada main.py."
+      "desc": "Implementar git_service.py, server.py con endpoints REST/WebSocket y punto de entrada main.py.",
+      "notes": [
+        {
+          "at": "2026-11-06T13:02:53Z",
+          "by": "claude-code",
+          "text": "Plan: revisar git_service.py, server.py y main.py existentes, completar lo que falte y probar."
+        },
+        {
+          "at": "2026-11-06T13:04:25Z",
+          "by": "claude-code",
+          "text": "La API backend queda completa: git_service, server y main.py ya existían; he añadido lo que faltaba.\n- Nuevo `POST /api/git/push` (antes no había ruta para push).\n- Nuevo `POST /api/chat/stream` con streaming SSE (decisión: SSE en vez de WebSocket, suficiente para el chat y sin dependencias; ya figuraba como pendiente en la arquitectura).\n- Un agente inválido ahora da 400 en vez de romper la petición; las 4 rutas de chat comparten un solo constructor de contexto.\n- `main.py serve` ahora respeta host/puerto de la configuración (antes los valores por defecto de argparse los ignoraban).\n- Verificado: tests/test_in01.py (servidor real en puerto efímero: git status/commit/push, errores de chat, SSE); 8 tests pasan en total.\n- A revisar: si prefieres WebSocket de verdad, o dejar SSE. `git add .` en commit sigue pendiente de limitarse (documentado)."
+        }
+      ]
+    },
+    {
+      "id": "FE-01",
+      "title": "Mockups de diseño del frontend",
+      "state": "done",
+      "group": "FE",
+      "at": "2026-11-05T12:05:27Z",
+      "by": "claude-code",
+      "desc": "Elegir la dirección visual de la app antes de programarla: chat a la izquierda con selector de IA por color, y canvas de proyectos a la derecha.\nTerminado cuando haya varios mockups HTML navegables en design/mockups y se haya elegido uno.",
+      "notes": [
+        {
+          "at": "2026-11-05T12:08:47Z",
+          "by": "claude-code",
+          "text": "Mockups listos en design/mockups (A Carriles, B Grafo, C Metro), pendientes de que elijas uno."
+        },
+        {
+          "at": "2026-11-05T17:02:20Z",
+          "by": "claude-code",
+          "text": "Mockup definitivo en design/mockups/definitivo.html, basado en B · Grafo: tareas nombradas por fase + rama (3B.2), estilo más vistoso y panel de opciones para que Pablo elija. Pendiente de su elección."
+        },
+        {
+          "at": "2026-11-06T13:06:08Z",
+          "by": "claude-code",
+          "text": "Plan: retomar los mockups ya hechos en design/mockups y dejarlos listos para que elijas."
+        },
+        {
+          "at": "2026-11-06T13:06:12Z",
+          "by": "claude-code",
+          "text": "Hay cuatro mockups HTML navegables en design/mockups: A Carriles, B Grafo, C Metro y el definitivo (basado en B · Grafo, con panel de opciones). Se abren desde design/mockups/index.html.\n- Para revisar: abre index.html y prueba el definitivo.\n- Decisión tuya: elige la dirección (A, B, C o el definitivo). Si te vale el definitivo, acepta la tarea; si no, devuélvela diciendo cuál prefieres."
+        },
+        {
+          "at": "2026-11-06T13:07:52Z",
+          "by": "human",
+          "text": "Sent back: Hay yna version más nueva que hemos hecho hoy que es la nueva base"
+        },
+        {
+          "at": "2026-11-06T13:08:16Z",
+          "by": "claude-code",
+          "text": "Plan: fijar itinerario.html (la versión de hoy) como base y dejarla por defecto en el índice."
+        },
+        {
+          "at": "2026-11-06T13:08:16Z",
+          "by": "claude-code",
+          "text": "Elegido como base: design/mockups/itinerario.html (la versión de hoy); el índice lo abre por defecto y los mockups anteriores siguen disponibles para comparar.\n- Para revisar: abre design/mockups/index.html.\n- Si te vale, acepta; FE-02 (el detalle de ese mockup) queda por aprobar aparte."
+        }
+      ]
+    },
+    {
+      "id": "FE-02",
+      "title": "Mockup itinerario: ramas, fases y pasos",
+      "state": "done",
+      "group": "FE",
+      "deps": ["FE-01"],
+      "at": "2026-11-06T12:44:06Z",
+      "by": "claude-code",
+      "desc": "Nuevo mockup del frontend pensado para estudiantes sin experiencia informática, en un único modo.\n\n- Lienzo: cada rama es una fila horizontal con sus propias fases (cápsulas con un punto por paso). Al hacer clic en una fase se despliegan sus pasos. Las ramas se juntan al final en «Juntarlo todo».\n- Palabras: Rama · Fase · Paso. Sin códigos tipo 3B.2.\n- Cuatro estados: Pendiente, Trabajando, Te toca, Hecho.\n- Chat como ahora, con IA, modelo y esfuerzo.\n- Informes en lenguaje llano con «¿Te vale?» → «Sí, sigue» / «Cambia esto…».\n- Un proyecto a la vez, con una pantalla de inicio para elegirlo.\n\nTerminado cuando: design/mockups/itinerario.html se abre desde el índice de mockups y se puede navegar.",
+      "notes": [
+        {
+          "at": "2026-11-06T13:10:08Z",
+          "by": "claude-code",
+          "text": "Plan: crear design/mockups/itinerario.html (HTML autocontenido, navegable) y enlazarlo desde el índice de mockups."
+        },
+        {
+          "at": "2026-11-06T13:10:37Z",
+          "by": "claude-code",
+          "text": "El mockup nuevo está en design/mockups/itinerario.html y es la pestaña «Itinerario» (primera) del índice design/mockups/index.html.\n- Probado en el navegador: carga sin errores, las fases se despliegan al hacer clic, «Sí, sigue» resuelve un aviso «Te toca» (contador 2 → 1) y «Juntarlo todo» aparece al final de las ramas.\n- Para revisar: abre index.html en un navegador normal (en el panel de vista previa el iframe del índice sale vacío; itinerario.html se ve bien directo). Comprueba el texto llano, los cuatro estados y la pantalla «Mis proyectos».\n- El archivo ya existía sin commit en design/ (untracked); no lo he modificado."
+        }
+      ]
+    },
+    {
+      "id": "F6C-01",
+      "title": "Conversaciones guardadas y multi-turno",
+      "state": "proposed",
+      "group": "F6C",
+      "at": "2026-11-08T17:44:28Z",
+      "by": "claude-code",
+      "desc": "Las conversaciones se guardan en ~/.unificador/chats y cada una conserva la sesión nativa del agente (Claude Code --resume, Antigravity --conversation), de modo que el chat sigue el hilo y la misma conversación se puede continuar desde la terminal o el cliente de escritorio. Hecho: al recargar la app se ven las conversaciones y la IA recuerda los mensajes anteriores."
+    },
+    {
+      "id": "F6C-02",
+      "title": "Adaptadores con streaming real y permisos",
+      "state": "proposed",
+      "group": "F6C",
+      "at": "2026-11-08T17:44:28Z",
+      "by": "claude-code",
+      "desc": "Claude Code y Antigravity usan stream-json: texto en directo, avisos de herramientas, id de sesión y errores claros. Usan el comando y el modo de permisos de config.json para que puedan editar y ejecutar kanvas sin colgarse."
+    },
+    {
+      "id": "F6C-03",
+      "title": "Proyectos nuevos listos para planificar por fases",
+      "state": "proposed",
+      "group": "F6C",
+      "at": "2026-11-08T17:44:28Z",
+      "by": "claude-code",
+      "desc": "Crear un proyecto instala Kanvas (kanvas init) e inicia Git. El prompt inyectado empuja a la IA a planificar en ramas y fases con kanvas batch antes de programar, y la app permite aprobar el plan propuesto."
+    },
+    {
+      "id": "F6C-04",
+      "title": "Frontend: lista de conversaciones, aprobar plan, abrir en cliente",
+      "state": "proposed",
+      "group": "F6C",
+      "deps": ["F6C-01", "F6C-03"],
+      "at": "2026-11-08T17:44:28Z",
+      "by": "claude-code",
+      "desc": "El chat muestra y cambia de conversación, crea nuevas, enseña lo que hace la IA, permite abrir la conversación en Claude Code/Antigravity y aprobar el plan propuesto."
     }
   ]
 }

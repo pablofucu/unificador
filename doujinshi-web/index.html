@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Luciérnagas de Medianoche · Doujinshi</title>
+  <meta name="description" content="Web del doujinshi original «Luciérnagas de Medianoche»: sinopsis, personajes, galería y lector de páginas.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <a class="logo" href="#inicio">蛍 Luciérnagas</a>
+    <nav>
+      <a href="#sinopsis">Sinopsis</a>
+      <a href="#personajes">Personajes</a>
+      <a href="#lector">Leer</a>
+      <a href="#circulo">Círculo</a>
+    </nav>
+    <button id="tema" aria-label="Cambiar tema">☾</button>
+  </header>
+
+  <main>
+    <section id="inicio" class="hero">
+      <p class="tag">Doujinshi original · 32 páginas · Comiket 108</p>
+      <h1>Luciérnagas de Medianoche</h1>
+      <p class="lead">Una historia corta sobre dos amigas, un verano que se acaba y una promesa hecha junto al río.</p>
+      <a class="btn" href="#lector">Empezar a leer</a>
+    </section>
+
+    <section id="sinopsis">
+      <h2>Sinopsis</h2>
+      <p>Cada verano, Haru y Mio se escapan al río para ver las luciérnagas. Este año es el último: Mio se muda a la ciudad al terminar agosto. Entre fuegos artificiales, helados derretidos y cosas que nunca se dicen, ambas deberán decidir qué hacer con la luz que dejan atrás.</p>
+      <ul class="datos">
+        <li><b>Género</b> Slice of life · Drama</li>
+        <li><b>Formato</b> B5, blanco y negro</li>
+        <li><b>Lectura</b> De derecha a izquierda</li>
+      </ul>
+    </section>
+
+    <section id="personajes">
+      <h2>Personajes</h2>
+      <div class="grid" id="cards"></div>
+    </section>
+
+    <section id="lector">
+      <h2>Lector</h2>
+      <div class="lector">
+        <div class="pagina" id="pagina" aria-live="polite"></div>
+        <div class="controles">
+          <button id="sig">← Siguiente</button>
+          <span id="contador"></span>
+          <button id="ant">Anterior →</button>
+        </div>
+      </div>
+      <p class="nota">Páginas de muestra generadas como marcador de posición; sustitúyelas por tus imágenes en <code>script.js</code>.</p>
+    </section>
+
+    <section id="circulo">
+      <h2>Círculo y contacto</h2>
+      <p>Círculo <b>Hotaru Studio</b> · Pasillo B, mesa 42. Pedidos por correo o en la tienda del evento.</p>
+      <form id="form">
+        <input name="email" type="email" placeholder="Tu correo para avisos de reimpresión" required>
+        <button class="btn" type="submit">Avisarme</button>
+        <p id="gracias" hidden>¡Gracias! Te avisaremos.</p>
+      </form>
+    </section>
+  </main>
+
+  <footer>© 2026 Hotaru Studio · Obra original de ficción. Contenido apto para todos los públicos.</footer>
+  <script src="script.js"></script>
+</body>
+</html>
