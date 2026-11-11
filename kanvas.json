@@ -25,6 +25,26 @@
     {
       "id": "F6C",
       "name": "Fase 6: Chat y proyectos"
+    },
+    {
+      "id": "PS",
+      "name": "Plan sencillo"
+    },
+    {
+      "id": "CN",
+      "name": "Conversaciones"
+    },
+    {
+      "id": "SR",
+      "name": "Servidor"
+    },
+    {
+      "id": "IT",
+      "name": "Interfaz"
+    },
+    {
+      "id": "LM",
+      "name": "Limpieza"
     }
   ],
   "tasks": [
@@ -201,55 +221,261 @@
       ]
     },
     {
-      "id": "F6C-01",
-      "title": "Conversaciones guardadas y multi-turno",
-      "state": "proposed",
-      "group": "F6C",
-      "at": "2026-11-08T17:44:28Z",
+      "id": "PS-01",
+      "title": "Formato propio del plan y mini-CLI",
+      "state": "done",
+      "group": "PS",
+      "at": "2026-11-11T11:11:16Z",
       "by": "claude-code",
-      "desc": "Las conversaciones se guardan en ~/.unificador/chats y cada una conserva la sesión nativa del agente (Claude Code --resume, Antigravity --conversation), de modo que el chat sigue el hilo y la misma conversación se puede continuar desde la terminal o el cliente de escritorio. Hecho: al recargar la app se ven las conversaciones y la IA recuerda los mensajes anteriores."
-    },
-    {
-      "id": "F6C-02",
-      "title": "Adaptadores con streaming real y permisos",
-      "state": "proposed",
-      "group": "F6C",
-      "at": "2026-11-08T17:44:28Z",
-      "by": "claude-code",
-      "desc": "Claude Code y Antigravity usan stream-json: texto en directo, avisos de herramientas, id de sesión y errores claros. Usan el comando y el modo de permisos de config.json para que puedan editar y ejecutar kanvas sin colgarse."
-    },
-    {
-      "id": "F6C-03",
-      "title": "Proyectos nuevos listos para planificar por fases",
-      "state": "proposed",
-      "group": "F6C",
-      "at": "2026-11-08T17:44:28Z",
-      "by": "claude-code",
-      "desc": "Crear un proyecto instala Kanvas (kanvas init) e inicia Git. El prompt inyectado empuja a la IA a planificar en ramas y fases con kanvas batch antes de programar, y la app permite aprobar el plan propuesto."
-    },
-    {
-      "id": "F6C-04",
-      "title": "Frontend: lista de conversaciones, aprobar plan, abrir en cliente",
-      "state": "proposed",
-      "group": "F6C",
-      "deps": ["F6C-01", "F6C-03"],
-      "at": "2026-11-08T17:44:28Z",
-      "by": "claude-code",
-      "desc": "El chat muestra y cambia de conversación, crea nuevas, enseña lo que hace la IA, permite abrir la conversación en Claude Code/Antigravity y aprobar el plan propuesto."
-    },
-    {
-      "id": "F6C-05",
-      "title": "Mismas reglas de ramas, fases y pasos desde la terminal",
-      "state": "proposed",
-      "group": "F6C",
-      "at": "2026-11-08T18:31:53Z",
-      "by": "claude-code",
-      "desc": "La IA planifica por ramas → fases → pasos igual si le hablas desde Unificador o desde la terminal (Claude Code / Antigravity). Unificador escribe esas reglas en un bloque de AGENTS.md de cada proyecto (y CLAUDE.md lo importa), y Claude Code ve el estado del tablero al empezar cada sesión. Terminado: abrir 'claude' en el proyecto muestra el tablero y, ante trabajo nuevo, propone un plan por fases en vez de programar directamente.",
+      "desc": "Sustituye Kanvas como motor por un fichero `unificador.json` dentro del proyecto: ramas → fases CON NOMBRE → pasos, con solo tres estados (pendiente, en curso, hecho) y notas. Una CLI pequeña (`uni plan`, `start`, `done`, `note`, `status`) que la IA usa para escribirlo. Terminado cuando la CLI crea un plan desde JSON, cambia estados, rechaza datos mal formados y tiene pruebas.",
       "notes": [
         {
-          "at": "2026-11-08T18:34:00Z",
+          "at": "2026-11-11T11:25:03Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Plan aprobado."
+        },
+        {
+          "at": "2026-11-11T11:27:22Z",
           "by": "claude-code",
-          "text": "Hecho a la espera de tu aprobación: reglas en unificador/conventions.py; Unificador las escribe en AGENTS.md (bloque gestionado), CLAUDE.md (@AGENTS.md) y un hook SessionStart que muestra el tablero. Se aplican al crear proyecto y al arrancar el servidor. 39 pruebas OK. Para comprobarlo: abre 'claude' en una terminal en el proyecto y pide algo nuevo; debe enseñarte el tablero y proponer un plan antes de programar."
+          "text": "Plan: módulo autocontenido unificador/plan.py (formato unificador.json + CLI uni), que luego se copia a cada proyecto como .unificador/uni.py; pruebas en tests/test_plan.py"
+        },
+        {
+          "at": "2026-11-11T11:28:09Z",
+          "by": "claude-code",
+          "text": "Nuevo unificador/plan.py: formato unificador.json (ramas → fases con nombre → pasos, 3 estados, notas, cambios pedidos) y CLI uni (status, show, plan, add, start, done, note, reopen, archive, drop). Rechaza nombres de fase genéricos tipo «Fase 1» y planes mal formados sin guardar nada. 13 pruebas en tests/test_plan.py, todas pasan."
+        },
+        {
+          "at": "2026-11-11T11:28:10Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Aceptado."
+        }
+      ]
+    },
+    {
+      "id": "PS-02",
+      "title": "Reglas para la IA sin aprobaciones obligatorias",
+      "state": "todo",
+      "group": "PS",
+      "deps": ["PS-01"],
+      "at": "2026-11-11T11:11:16Z",
+      "by": "claude-code",
+      "desc": "Reescribe el bloque de AGENTS.md, el CLAUDE.md y el hook de inicio de sesión para el formato nuevo: la IA planifica en ramas y fases con nombres reconocibles y trabaja de forma autónoma, sin parar a pedir aprobación ni revisión de cada paso (solo si tú activas «revisar plan antes»). Terminado cuando una sesión nueva de Claude Code en un proyecto de prueba crea el plan y lo va marcando sola desde la terminal.",
+      "notes": [
+        {
+          "at": "2026-11-11T11:25:03Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Plan aprobado."
+        }
+      ]
+    },
+    {
+      "id": "PS-03",
+      "title": "Convertir un tablero Kanvas al formato nuevo",
+      "state": "todo",
+      "group": "PS",
+      "deps": ["PS-01"],
+      "at": "2026-11-11T11:11:16Z",
+      "by": "claude-code",
+      "desc": "Orden `uni import-kanvas` que pasa un kanvas.json existente (grupos → ramas, dependencias → fases, estados) al formato nuevo, para no perder los proyectos ya empezados. Terminado cuando convierte el tablero de este mismo repositorio y el resultado se ve bien.",
+      "notes": [
+        {
+          "at": "2026-11-11T11:25:03Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Plan aprobado."
+        }
+      ]
+    },
+    {
+      "id": "CN-01",
+      "title": "Leer las sesiones reales de Claude Code",
+      "state": "todo",
+      "group": "CN",
+      "at": "2026-11-11T11:11:16Z",
+      "by": "claude-code",
+      "desc": "La lista de conversaciones sale directamente de las sesiones que guarda Claude Code para la carpeta del proyecto (terminal y app de escritorio), sin copia propia. Así lo escrito fuera aparece en la web sin sincronizar nada. Terminado cuando la API lista las sesiones del proyecto con título y fecha y devuelve los turnos de cualquiera, incluidas las que no se crearon desde Unificador; se comprueba expresamente con una sesión de la app de escritorio.",
+      "notes": [
+        {
+          "at": "2026-11-11T11:25:03Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Plan aprobado."
+        }
+      ]
+    },
+    {
+      "id": "CN-02",
+      "title": "Enviar desde la web sin inyectar contexto",
+      "state": "todo",
+      "group": "CN",
+      "deps": ["CN-01"],
+      "at": "2026-11-11T11:11:16Z",
+      "by": "claude-code",
+      "desc": "El mensaje se envía tal cual a la sesión elegida (o a una nueva) con streaming; las reglas ya las lee el agente de AGENTS.md. Desaparecen el almacén de chats propio, el inyector de prompt y el bloque gigante que hoy ensucia cada conversación. Terminado cuando una conversación empezada en la web se continúa en la terminal y vuelta, y en ambos lados se ve solo lo que escribiste.",
+      "notes": [
+        {
+          "at": "2026-11-11T11:25:03Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Plan aprobado."
+        }
+      ]
+    },
+    {
+      "id": "CN-03",
+      "title": "Selector de modelo y esfuerzo que funcione",
+      "state": "todo",
+      "group": "CN",
+      "deps": ["CN-02"],
+      "at": "2026-11-11T11:11:16Z",
+      "by": "claude-code",
+      "desc": "Cada agente ofrece sus modelos reales (Claude: sus modelos y nivel de esfuerzo; Antigravity: la lista de `agy models`; Codex: los suyos) y lo elegido se pasa de verdad a la CLI y se recuerda por proyecto. Hoy los desplegables Modelo y Esfuerzo son decorativos. Terminado cuando cambiar de modelo en la web cambia el modelo que responde.",
+      "notes": [
+        {
+          "at": "2026-11-11T11:25:03Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Plan aprobado."
+        }
+      ]
+    },
+    {
+      "id": "CN-04",
+      "title": "Antigravity: ver y continuar sus conversaciones",
+      "state": "todo",
+      "group": "CN",
+      "deps": ["CN-02"],
+      "at": "2026-11-11T11:11:16Z",
+      "by": "claude-code",
+      "desc": "Igual que con Claude: listar y leer las conversaciones que guarda `agy` para el proyecto y enviar a ellas. Hay que investigar primero cómo las guarda; si no se pueden leer, se dice claramente y solo se listan las iniciadas desde la web. Terminado cuando una conversación de agy se ve y se continúa desde la web.",
+      "notes": [
+        {
+          "at": "2026-11-11T11:25:03Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Plan aprobado."
+        }
+      ]
+    },
+    {
+      "id": "CN-05",
+      "title": "Codex de verdad (CLI `codex`)",
+      "state": "proposed",
+      "group": "CN",
+      "deps": ["CN-02"],
+      "at": "2026-11-11T11:11:16Z",
+      "by": "claude-code",
+      "desc": "Sustituye el adaptador actual, que solo abre Cursor y no chatea, por uno que use la CLI de Codex en modo no interactivo con streaming y reanudación de sesión. Necesita que instales `codex` en este ordenador para probarlo. Terminado cuando se chatea con Codex desde la web y la sesión se retoma en su terminal."
+    },
+    {
+      "id": "SR-01",
+      "title": "Servidor por proyecto y seguro",
+      "state": "todo",
+      "group": "SR",
+      "at": "2026-11-11T11:11:16Z",
+      "by": "claude-code",
+      "desc": "Un solo comando `unificador` lanzado dentro de la carpeta de cualquier proyecto lo abre en el navegador, sin registro global ni «crear proyecto». Rutas en una tabla en vez de una cadena de if, y se cierra el agujero actual: hoy cualquier página web abierta en tu navegador puede ordenar a los agentes que ejecuten cosas en tu ordenador (CORS abierto a todos). Terminado cuando el servidor arranca en dos proyectos distintos, rechaza peticiones de otros orígenes y pasa pruebas.",
+      "notes": [
+        {
+          "at": "2026-11-11T11:25:03Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Plan aprobado."
+        }
+      ]
+    },
+    {
+      "id": "SR-02",
+      "title": "Cambios en vivo",
+      "state": "todo",
+      "group": "SR",
+      "deps": ["SR-01"],
+      "at": "2026-11-11T11:11:16Z",
+      "by": "claude-code",
+      "desc": "El servidor avisa a la web cuando cambia el plan o una sesión (porque la IA trabaja desde la terminal o la app), en lugar de recargar todo cada 3 segundos. Terminado cuando marcar un paso desde la terminal se refleja en la web en un par de segundos sin tocar nada.",
+      "notes": [
+        {
+          "at": "2026-11-11T11:25:03Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Plan aprobado."
+        }
+      ]
+    },
+    {
+      "id": "IT-01",
+      "title": "Vista del plan: ramas, fases con nombre y pasos",
+      "state": "todo",
+      "group": "IT",
+      "deps": ["PS-01", "SR-01"],
+      "at": "2026-11-11T11:11:16Z",
+      "by": "claude-code",
+      "desc": "La vista actual de carriles de colores se conserva pero simplificada y leyendo el formato nuevo: cada rama con su color, fases con su nombre, pasos con tres estados y progreso de un vistazo. Fuera el panel de Git y el bloque «Juntarlo todo». Terminado cuando un plan de ejemplo con 3 ramas se entiende sin explicación, en pantalla grande y estrecha.",
+      "notes": [
+        {
+          "at": "2026-11-11T11:25:03Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Plan aprobado."
+        }
+      ]
+    },
+    {
+      "id": "IT-02",
+      "title": "Chat sobre sesiones nativas",
+      "state": "todo",
+      "group": "IT",
+      "deps": ["IT-01", "CN-02"],
+      "at": "2026-11-11T11:11:16Z",
+      "by": "claude-code",
+      "desc": "Panel de chat con la lista de sesiones reales, elección de agente y modelo, respuesta en streaming con las acciones del agente, parar, y errores claros. Terminado cuando se puede llevar una conversación completa y retomar una antigua de la terminal.",
+      "notes": [
+        {
+          "at": "2026-11-11T11:25:03Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Plan aprobado."
+        }
+      ]
+    },
+    {
+      "id": "IT-03",
+      "title": "Corregir desde la web",
+      "state": "todo",
+      "group": "IT",
+      "deps": ["IT-02"],
+      "at": "2026-11-11T11:11:16Z",
+      "by": "claude-code",
+      "desc": "Desde un paso: «pedir un cambio» (manda el encargo a la IA en la sesión activa, con el paso como referencia), y marcar hecho o reabrir a mano. Es opcional: nada te obliga a revisar. Terminado cuando pedir un cambio en un paso hecho lo reabre y la IA lo retoma.",
+      "notes": [
+        {
+          "at": "2026-11-11T11:25:03Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Plan aprobado."
+        }
+      ]
+    },
+    {
+      "id": "LM-01",
+      "title": "Quitar lo que sobra",
+      "state": "todo",
+      "group": "LM",
+      "at": "2026-11-11T11:11:16Z",
+      "by": "claude-code",
+      "desc": "Fuera del repositorio: la web de prueba `doujinshi-web`, los 6 mockups descartados (se queda el definitivo como referencia), el adaptador DeepSeek, y las pruebas que escriben en tu carpeta real `~/.unificador` (han dejado 22 chats falsos, que se borran). Terminado cuando las pruebas pasan sin tocar nada fuera de carpetas temporales.",
+      "notes": [
+        {
+          "at": "2026-11-11T11:25:03Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Plan aprobado."
+        }
+      ]
+    },
+    {
+      "id": "LM-02",
+      "title": "Retirar Kanvas y documentar la instalación",
+      "state": "todo",
+      "group": "LM",
+      "deps": ["LM-01", "PS-03", "IT-03", "SR-02"],
+      "at": "2026-11-11T11:11:16Z",
+      "by": "claude-code",
+      "desc": "Este repositorio pasa a seguirse con su propio formato, se eliminan el puente con Kanvas, el módulo de itinerario y la copia de kanvas.py, y se reescriben README y ARCHITECTURE con la instalación en un proyecto en dos pasos. Terminado cuando un proyecto nuevo se pone en marcha siguiendo solo el README.",
+      "notes": [
+        {
+          "at": "2026-11-11T11:25:03Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Plan aprobado."
         }
       ]
     }
