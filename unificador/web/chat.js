@@ -204,7 +204,15 @@ function renderLog(keep) {
   const log = $("chat-log");
   const stick = !keep || log.scrollHeight - log.scrollTop - log.clientHeight < 40;
   const items = turns.map(bubble);
-  for (const n of notices) items.push(el("div", "notice", n));
+  for (const n of notices) {
+    if (typeof n === "string") { items.push(el("div", "notice", n)); continue; }
+    const box = el("div", "notice", n.text + " ");
+    const b = el("button", "notice-btn", n.label);
+    b.type = "button";
+    b.addEventListener("click", n.action);
+    box.append(b);
+    items.push(box);
+  }
   if (!items.length) {
     const e = el("div", "chat-empty");
     e.append(el("div", "big", "💬"), el("p", null, "¡Hola! Cuéntale al agente qué quieres hacer."),
@@ -258,6 +266,12 @@ export async function sendToActive(text) {
       else if (ev.type === "text") reply.text += ev.text;
       else if (ev.type === "tool") reply.tools.push(ev.text);
       else if (ev.type === "error") notices.push(`⚠️ ${ev.text}`);
+      else if (ev.type === "denied") {
+        notices.push(ev.retry ? {
+          text: `🔒 ${ev.text}`, label: "Repetir en modo Autónomo",
+          action: () => { (settings.agents[agent] ||= {}).mode = "auto"; saveSettings(); renderBar(); sendToActive(text); },
+        } : `🔒 ${ev.text}`);
+      }
       else if (ev.type === "stopped") notices.push("⏹ Parado. Puedes seguir cuando quieras.");
       reply.pending = ev.type !== "done" && ev.type !== "stopped";
       renderLog(true);

@@ -154,3 +154,4 @@ h1 { margin: 0; font-size: 1.9rem; }
   .tabs button[aria-pressed="true"] { color: var(--c0); box-shadow: inset 0 3px 0 var(--c0); }
   .total { text-align: left; }
 }
+.notice-btn { margin-left: 6px; border: 0; border-radius: 999px; padding: 4px 12px; font: inherit; font-weight: 600; cursor: pointer; background: var(--c1); color: #fff; }

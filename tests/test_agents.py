@@ -61,6 +61,38 @@ class CommandTest(unittest.TestCase):
         cmd, _ = G.build_command("antigravity", "agy", "hola", "c1", False)
         self.assertEqual(cmd[cmd.index("--conversation") + 1], "c1")
 
+    def test_agy_autonomous_on_windows_approves_everything(self):
+        with mock.patch.object(G.sys, "platform", "win32"):
+            cmd, _ = G.build_command("antigravity", "agy", "hola", "", True)
+            self.assertIn("--dangerously-skip-permissions", cmd)
+            self.assertNotIn("--mode", cmd)
+            cmd, _ = G.build_command("antigravity", "agy", "hola", "", True, mode="plan")
+            self.assertNotIn("--dangerously-skip-permissions", cmd)
+        with mock.patch.object(G.sys, "platform", "linux"):
+            cmd, _ = G.build_command("antigravity", "agy", "hola", "", True)
+            self.assertEqual(cmd[cmd.index("--mode") + 1], "auto")
+
+    def test_agy_new_tool_format_and_denials(self):
+        parse = G.agy_parser({"mode": "acceptEdits"})
+        step = {"conversation_id": "c", "step_index": 2, "state": "ACTIVE", "step_type": "tool",
+                "tool_name": "run_command", "tool_info": {"name": "run_command",
+                                                          "parameters": {"CommandLine": "python uni.py status"}}}
+        events = list(parse({"event": "step_update", "step_update": step}))
+        self.assertEqual(events[-1], {"type": "tool", "text": "Ejecuta python uni.py status"})
+        self.assertEqual(list(parse({"event": "step_update", "step_update": {**step, "state": "ERROR"}})), [])
+        events = list(parse({"event": "result", "result": {"status": "SUCCESS", "response": "", "denied_actions": [
+            {"action": "command", "display_name": "RunCommand"}]}}))
+        self.assertEqual([e["type"] for e in events], ["denied"])
+        self.assertIn("ejecutar órdenes", events[0]["text"])
+        self.assertTrue(events[0]["retry"])
+
+    def test_claude_denials(self):
+        parse = G.claude_parser({"mode": "auto"})
+        events = list(parse({"type": "result", "subtype": "success", "result": "ok",
+                             "permission_denials": [{"tool_name": "Bash"}]}))
+        self.assertEqual(events[0]["type"], "denied")
+        self.assertFalse(events[0]["retry"])
+
     def test_models_and_settings(self):
         out = "Fetching available models...\ngemini-4-argon-high\tGemini 4 Argon (High)\nraro; rm\tX\n\n"
         self.assertEqual(G.parse_agy_models(out), [{"id": "gemini-4-argon-high", "name": "Gemini 4 Argon (High)"}])

@@ -844,6 +844,177 @@
         }
       ],
       "archived": true
+    },
+    {
+      "key": "IDC",
+      "name": "Instalación desde cero",
+      "goal": "Instalar en un proyecto cualquiera y que funcione a la primera, también con Antigravity y modelos flojos",
+      "icon": "🧰",
+      "color": 1,
+      "created": "2026-11-11T19:50:06+01:00",
+      "by": "claude",
+      "next_id": 13,
+      "phases": [
+        {
+          "name": "Que el agente pueda trabajar",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IDC-1",
+              "title": "Antigravity puede ejecutar órdenes desde la web",
+              "desc": "En Windows el modo auto de agy no existe y deniega todo en silencio. Hecho cuando «hazme un planning» crea la rama sin pedir nada.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T20:19:44+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-11T20:22:41+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "En Windows el modo Autónomo de Antigravity usa --dangerously-skip-permissions (su modo auto no existe allí y denegaba todo). Probado de verdad: carpeta vacía + Gemini Flash Low + «hazme un planning» crea la rama."
+                },
+                {
+                  "at": "2026-11-11T20:22:42+01:00",
+                  "by": "claude",
+                  "kind": "note",
+                  "text": "Las reglas finas de permiso de agy (--settings con permissions.allow) no se respetan en modo sin ventana: en «Edita sin preguntar» y «Solo planifica» Antigravity no puede ejecutar órdenes en Windows; el chat lo avisa."
+                }
+              ],
+              "updated": "2026-11-11T20:22:42+01:00",
+              "result": "En Windows el modo Autónomo de Antigravity usa --dangerously-skip-permissions (su modo auto no existe allí y denegaba todo). Probado de verdad: carpeta vacía + Gemini Flash Low + «hazme un planning» crea la rama."
+            },
+            {
+              "id": "IDC-2",
+              "title": "Avisar cuando el agente pide permiso",
+              "desc": "Si algo se deniega, el chat lo dice claro y ofrece permitirlo; nunca una respuesta vacía ni un «confirma sí o no» sin botones.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T20:22:41+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-11T20:22:42+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Si al agente se le deniega algo, el chat lo dice (🔒) y ofrece «Repetir en modo Autónomo». Vale para Antigravity y Claude Code. Con pruebas."
+                }
+              ],
+              "updated": "2026-11-11T20:22:42+01:00",
+              "result": "Si al agente se le deniega algo, el chat lo dice (🔒) y ofrece «Repetir en modo Autónomo». Vale para Antigravity y Claude Code. Con pruebas."
+            },
+            {
+              "id": "IDC-3",
+              "title": "Enseñar bien qué herramienta usa Antigravity",
+              "desc": "Hoy sale «tool». Hecho cuando se lee «Ejecuta…», «Edita…».",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T20:22:42+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-11T20:22:42+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "El chat lee el formato nuevo de Antigravity: «Ejecuta python …» en vez de «tool». Con prueba y visto en la ejecución real."
+                }
+              ],
+              "updated": "2026-11-11T20:22:42+01:00",
+              "result": "El chat lee el formato nuevo de Antigravity: «Ejecuta python …» en vez de «tool». Con prueba y visto en la ejecución real."
+            }
+          ]
+        },
+        {
+          "name": "Arranque sin configurar",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IDC-4",
+              "title": "Encontrar Claude Code y Antigravity aunque no estén en el PATH",
+              "desc": "Buscar en sus carpetas habituales de instalación y dejar elegir la ruta desde la web si no aparecen.",
+              "state": "pending",
+              "notes": []
+            },
+            {
+              "id": "IDC-5",
+              "title": "Primer mensaje con valores que funcionan",
+              "desc": "Agente y modelo por defecto válidos sin tocar ningún desplegable; si un agente falta, se elige el otro.",
+              "state": "pending",
+              "notes": []
+            },
+            {
+              "id": "IDC-6",
+              "title": "Comprobación de instalación",
+              "desc": "`unificador doctor`: dice qué agentes ve, con qué modo y qué falta, en lenguaje llano.",
+              "state": "pending",
+              "notes": []
+            }
+          ]
+        },
+        {
+          "name": "Plan a prueba de modelos flojos",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IDC-7",
+              "title": "Órdenes de plan que valgan en PowerShell",
+              "desc": "Crear una rama sin heredoc (desde fichero o con argumentos). Los errores dicen qué escribir a continuación.",
+              "state": "pending",
+              "notes": []
+            },
+            {
+              "id": "IDC-8",
+              "title": "Reglas más cortas y con ejemplo que funciona en Windows",
+              "desc": "El bloque de AGENTS.md, repasado probándolo con Gemini Flash.",
+              "state": "pending",
+              "notes": []
+            },
+            {
+              "id": "IDC-9",
+              "title": "Prueba real de instalación desde cero",
+              "desc": "Carpeta vacía → instalar → pedir un planning a Antigravity con el modelo pequeño → aparece la rama en la web.",
+              "state": "pending",
+              "notes": []
+            }
+          ]
+        },
+        {
+          "name": "Interfaz como la que teníamos",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IDC-10",
+              "title": "Recuperar el diseño «definitivo»",
+              "desc": "Chat a la izquierda con la barra de agentes, lienzo a la derecha con ramas en filas y fases en columnas, tema claro.",
+              "state": "pending",
+              "notes": []
+            },
+            {
+              "id": "IDC-11",
+              "title": "El lienzo se mueve solo",
+              "desc": "Los pasos cambian en vivo mientras el agente trabaja, se escriba desde la web o desde fuera.",
+              "state": "pending",
+              "notes": []
+            },
+            {
+              "id": "IDC-12",
+              "title": "Repaso visual con capturas",
+              "desc": "Escritorio y móvil, comparado con la maqueta.",
+              "state": "pending",
+              "notes": []
+            }
+          ]
+        }
+      ]
     }
   ]
 }

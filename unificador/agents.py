@@ -8,7 +8,7 @@ proyecto ya están en AGENTS.md y las lee el propio agente.
 ``stream`` va dando eventos (dict con ``type``):
 ``run`` (id para poder parar), ``session`` (id de la sesión nativa), ``model`` (el que contesta
 de verdad), ``text``, ``tool``,
-``error`` y, siempre el último, ``done``.
+``denied`` (el agente necesitaba un permiso que no tenía), ``error`` y, siempre el último, ``done``.
 """
 
 from __future__ import annotations
@@ -56,6 +56,11 @@ STEP_LABELS = {"run_command": "Ejecuta", "write_to_file": "Escribe", "replace_fi
                "multi_replace_file_content": "Edita", "view_file": "Lee", "list_dir": "Mira la carpeta",
                "grep_search": "Busca", "find_by_name": "Busca", "search_web": "Busca en la web",
                "read_url_content": "Abre"}
+TOOL_DETAIL = ("CommandLine", "command", "TargetFile", "AbsolutePath", "file_path", "DirectoryPath",
+               "SearchPath", "Query", "query", "Url", "url")
+DENIED_LABELS = {"command": "ejecutar órdenes", "write_file": "escribir ficheros", "read_url": "abrir páginas web",
+                 "Bash": "ejecutar órdenes", "Write": "escribir ficheros", "Edit": "editar ficheros",
+                 "WebFetch": "abrir páginas web", "WebSearch": "buscar en la web"}
 HIDDEN_STEPS = {"user_input", "system_message", "ephemeral_message", "checkpoint", "conversation_history",
                 "planner_response", "error_message"}
 
@@ -167,6 +172,27 @@ def read_session(project_path: str | Path, agent: str, session_id: str) -> Dict[
 
 # ----------------------------------------------------------------------------- enviar
 
+def denied_event(name: str, actions: List[str], mode: str) -> Event:
+    """Aviso de que el agente no ha podido hacer algo por falta de permiso, dicho en llano."""
+    what = []
+    for a in actions:
+        label = DENIED_LABELS.get(a, a)
+        if label and label not in what:
+            what.append(label)
+    text = f"{name} necesitaba permiso para {' y '.join(what) or 'hacer algo'} y no lo tenía, así que no lo ha hecho."
+    return {"type": "denied", "text": text, "retry": mode != "auto"}
+
+
+def _agy_tool_text(inner: Dict[str, Any]) -> str:
+    """«Ejecuta python …» a partir de un paso de Antigravity, en su formato nuevo o en el antiguo."""
+    info = inner.get("tool_info") if isinstance(inner.get("tool_info"), dict) else {}
+    name = str(inner.get("tool_name") or info.get("name") or inner.get("step_type") or "")
+    params = info.get("parameters") if isinstance(info.get("parameters"), dict) else {}
+    detail = next((str(params[k]) for k in TOOL_DETAIL if params.get(k)), "")
+    detail = detail or inner.get("command") or inner.get("file_path") or inner.get("summary") or ""
+    return S.short(f"{STEP_LABELS.get(name, name.replace('_', ' ').capitalize())} {detail}".strip())
+
+
 def claude_parser(state: Dict[str, Any]) -> Callable[[Dict[str, Any]], Iterator[Event]]:
     """Convierte las líneas ``stream-json`` de Claude Code en eventos."""
     def parse(d: Dict[str, Any]) -> Iterator[Event]:
@@ -193,6 +219,9 @@ def claude_parser(state: Dict[str, Any]) -> Callable[[Dict[str, Any]], Iterator[
                 if isinstance(b, dict) and b.get("type") == "tool_use":
                     yield {"type": "tool", "text": S.describe_tool(str(b.get("name") or ""), b.get("input"))}
         elif kind == "result":
+            denials = [str(x.get("tool_name") or "") for x in d.get("permission_denials") or [] if isinstance(x, dict)]
+            if denials:
+                yield denied_event("Claude Code", denials, state.get("mode", "auto"))
             if d.get("is_error") or d.get("subtype") not in (None, "success"):
                 state["failed"] = True
                 yield {"type": "error", "text": S.short(d.get("result") or d.get("subtype") or "Claude ha fallado.", 400)}
@@ -220,9 +249,12 @@ def agy_parser(state: Dict[str, Any]) -> Callable[[Dict[str, Any]], Iterator[Eve
                     yield {"type": "text", "text": inner["text_delta"]}
             elif step and step not in HIDDEN_STEPS and inner.get("step_index") not in seen:
                 seen.add(inner.get("step_index"))
-                detail = inner.get("command") or inner.get("file_path") or inner.get("summary") or ""
-                yield {"type": "tool", "text": S.short(f"{STEP_LABELS.get(step, step.replace('_', ' '))} {detail}".strip())}
+                yield {"type": "tool", "text": _agy_tool_text(inner)}
         elif ev == "result":
+            denied = [str(x.get("action") or x.get("display_name") or "") for x in inner.get("denied_actions") or []
+                      if isinstance(x, dict)]
+            if denied:
+                yield denied_event("Antigravity", denied, state.get("mode", "auto"))
             if inner.get("status") not in (None, "SUCCESS"):
                 state["failed"] = True
                 yield {"type": "error", "text": S.short(f"Antigravity: {inner.get('response') or inner.get('status')}", 400)}
@@ -243,7 +275,13 @@ def build_command(agent: str, exe: str, text: str, session_id: str, new_session:
             cmd += ["--effort", effort]
         cmd += ["--session-id", session_id] if new_session else ["--resume", session_id]
         return cmd, text
-    cmd = [exe, "--output-format", "stream-json", "--mode", AGY_MODES[mode]]
+    cmd = [exe, "--output-format", "stream-json"]
+    if mode == "auto" and sys.platform == "win32":
+        # En Windows agy no tiene su modo «auto» (le falta el aislamiento de la terminal) y, sin nadie a
+        # quien preguntar, deniega cada orden. «Autónomo» significa aquí aprobarlo todo.
+        cmd.append("--dangerously-skip-permissions")
+    else:
+        cmd += ["--mode", AGY_MODES[mode]]
     if model:
         cmd += ["--model", model]
     if session_id:
@@ -310,7 +348,7 @@ def _stream(project_path, agent, text, session_id, model, effort, mode) -> Itera
     cmd, stdin_text = build_command(agent, exe, text, session_id, new_session, **chosen)
     if stdin_text is None and exe.lower().endswith((".cmd", ".bat")):
         raise AgentError(f"{name} está instalado como script y no es seguro pasarle el mensaje. Usa su terminal.")
-    state: Dict[str, Any] = {"session": session_id}
+    state: Dict[str, Any] = {"session": session_id, "mode": chosen["mode"]}
     parse = (claude_parser if agent == "claude" else agy_parser)(state)
     try:
         proc = subprocess.Popen(
