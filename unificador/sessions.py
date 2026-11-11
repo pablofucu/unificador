@@ -173,8 +173,11 @@ def read_turns(path: Path) -> List[Dict[str, Any]]:
         if not text and not tools:
             continue
         if not turns or turns[-1]["role"] != "assistant":
-            turns.append({"role": "assistant", "text": "", "tools": [], "at": at})
+            turns.append({"role": "assistant", "text": "", "tools": [], "at": at, "model": ""})
         last = turns[-1]
+        model = str((e.get("message") or {}).get("model") or "")
+        if model and not model.startswith("<"):
+            last["model"] = model
         if text:
             last["text"] += ("\n\n" if last["text"] else "") + text
         last["tools"] += tools

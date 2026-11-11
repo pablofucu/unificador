@@ -376,7 +376,7 @@
     {
       "id": "CN-03",
       "title": "Selector de modelo y esfuerzo que funcione",
-      "state": "todo",
+      "state": "done",
       "group": "CN",
       "deps": ["CN-02"],
       "at": "2026-11-11T11:11:16Z",
@@ -387,6 +387,16 @@
           "at": "2026-11-11T11:25:03Z",
           "by": "pablo (delegado en claude-code)",
           "text": "Plan aprobado."
+        },
+        {
+          "at": "2026-11-11T15:24:23Z",
+          "by": "claude-code",
+          "text": "Modelo, esfuerzo y modo se guardan por proyecto en .unificador/local.json y llegan de verdad a la CLI (comprobado: --model haiku queda en el transcript como claude-haiku-5-5). Cada respuesta informa del modelo real (evento model y campo model en los turnos)."
+        },
+        {
+          "at": "2026-11-11T15:24:23Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Aceptado."
         }
       ]
     },

@@ -6,7 +6,8 @@ escribe aquí aparece en la app o la terminal, y al revés. No se inyecta contex
 proyecto ya están en AGENTS.md y las lee el propio agente.
 
 ``stream`` va dando eventos (dict con ``type``):
-``run`` (id para poder parar), ``session`` (id de la sesión nativa), ``text``, ``tool``,
+``run`` (id para poder parar), ``session`` (id de la sesión nativa), ``model`` (el que contesta
+de verdad), ``text``, ``tool``,
 ``error`` y, siempre el último, ``done``.
 """
 
@@ -177,6 +178,10 @@ def claude_parser(state: Dict[str, Any]) -> Callable[[Dict[str, Any]], Iterator[
                     state["wrote"] = True
                     yield {"type": "text", "text": text}
         elif kind == "assistant" and not d.get("parent_tool_use_id"):
+            model = str((d.get("message") or {}).get("model") or "")
+            if model and not model.startswith("<") and model != state.get("model"):
+                state["model"] = model
+                yield {"type": "model", "id": model}
             for b in (d.get("message") or {}).get("content") or []:
                 if isinstance(b, dict) and b.get("type") == "tool_use":
                     yield {"type": "tool", "text": S.describe_tool(str(b.get("name") or ""), b.get("input"))}

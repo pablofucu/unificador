@@ -80,7 +80,7 @@ class StreamTest(FakeAgents, unittest.TestCase):
     def test_claude_message_goes_untouched(self):
         text = "Arregla   esto\n  «con» \"comillas\" & cosas raras %PATH% ñ"
         events = list(G.stream(self.tmp.name, "claude", text, model="sonnet", effort="low"))
-        self.assertEqual([e["type"] for e in events], ["run", "session", "text", "tool", "text", "done"])
+        self.assertEqual([e["type"] for e in events], ["run", "session", "text", "model", "tool", "text", "done"])
         self.assertEqual("".join(e["text"] for e in events if e["type"] == "text"), "Hola \n\nmundo")
         got = self.received()
         self.assertEqual(got["stdin"], text)
@@ -155,7 +155,7 @@ class ChatRouteTest(FakeAgents, ServerCase):
         self.assertEqual(status, 200)
         self.assertIn("ndjson", r.getheader("Content-Type"))
         events = [json.loads(line) for line in raw.splitlines()]
-        self.assertEqual([e["type"] for e in events], ["run", "session", "text", "tool", "text", "done"])
+        self.assertEqual([e["type"] for e in events], ["run", "session", "text", "model", "tool", "text", "done"])
         got = self.received()
         self.assertEqual(got["stdin"], "hola")
         args = got["args"]

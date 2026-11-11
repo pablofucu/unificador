@@ -32,7 +32,7 @@ elif kind == "claude":
     say({"type": "stream_event", "event": {"type": "message_start"}})
     delta("Hola ")
     delta("AYUDANTE", parent_tool_use_id="x")
-    say({"type": "assistant", "message": {"content": [
+    say({"type": "assistant", "message": {"model": "claude-prueba-1", "content": [
         {"type": "tool_use", "name": "Bash", "input": {"command": "ls", "description": "Lista"}}]}})
     say({"type": "stream_event", "event": {"type": "message_start"}})
     delta("mundo")
