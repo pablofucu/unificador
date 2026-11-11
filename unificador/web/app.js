@@ -1,5 +1,6 @@
 // Vista del plan: rama → fases → pasos. Solo lectura; se repinta en vivo.
 import { renderPlan } from "./plan.js";
+import { initChat, onSessionsChanged } from "./chat.js";
 
 const $ = (id) => document.getElementById(id);
 const getJSON = (url) => fetch(url).then((r) => { if (!r.ok) throw new Error(url); return r.json(); });
@@ -9,6 +10,7 @@ async function loadProject() {
     const p = await getJSON("/api/project");
     $("project-name").textContent = p.name || "Mi proyecto";
     document.title = `${p.name || "Proyecto"} · Unificador`;
+    initChat(p);
   } catch { /* sin nombre, se queda el título por defecto */ }
 }
 
@@ -28,7 +30,7 @@ for (const b of document.querySelectorAll(".tabs button")) {
 // En vivo
 const events = new EventSource("/api/events");
 events.addEventListener("plan", loadPlan);
-events.addEventListener("sessions", () => { /* gancho: el chat refrescará aquí sus conversaciones */ });
+events.addEventListener("sessions", onSessionsChanged);
 
 loadProject();
 loadPlan();

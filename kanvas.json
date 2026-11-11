@@ -525,7 +525,7 @@
     {
       "id": "IT-02",
       "title": "Chat sobre sesiones nativas",
-      "state": "todo",
+      "state": "done",
       "group": "IT",
       "deps": ["IT-01", "CN-02"],
       "at": "2026-11-11T11:11:16Z",
@@ -536,6 +536,16 @@
           "at": "2026-11-11T11:25:03Z",
           "by": "pablo (delegado en claude-code)",
           "text": "Plan aprobado."
+        },
+        {
+          "at": "2026-11-11T15:35:37Z",
+          "by": "claude-code",
+          "text": "Chat en la web sobre sesiones nativas: agente, modelo, esfuerzo y modo; streaming, parar, lista de conversaciones y móvil comprobados en navegador con Claude Code real."
+        },
+        {
+          "at": "2026-11-11T15:35:37Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Aceptado."
         }
       ]
     },

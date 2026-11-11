@@ -22,7 +22,14 @@
       <div id="branches"></div>
     </main>
     <aside id="chat" aria-label="Chat">
-      <div class="chat-empty">💬<br>Aquí irá el chat</div>
+      <div id="chat-bar" class="chat-bar"></div>
+      <div id="chat-list" class="chat-list" hidden></div>
+      <div id="chat-log" class="chat-log" role="log" aria-live="polite"></div>
+      <div id="chat-toast" class="chat-toast" role="status" hidden></div>
+      <form id="chat-form" class="composer">
+        <textarea id="chat-input" rows="1" placeholder="Escribe aquí… (Enter envía, Shift+Enter salta de línea)" aria-label="Mensaje"></textarea>
+        <button id="chat-send" type="submit" data-mode="send">Enviar ➤</button>
+      </form>
     </aside>
   </div>
   <nav class="tabs" aria-label="Secciones">
