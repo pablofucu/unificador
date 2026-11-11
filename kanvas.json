@@ -288,7 +288,7 @@
     {
       "id": "CN-01",
       "title": "Leer las sesiones reales de Claude Code",
-      "state": "todo",
+      "state": "done",
       "group": "CN",
       "at": "2026-11-11T11:11:16Z",
       "by": "claude-code",
@@ -298,6 +298,21 @@
           "at": "2026-11-11T11:25:03Z",
           "by": "pablo (delegado en claude-code)",
           "text": "Plan aprobado."
+        },
+        {
+          "at": "2026-11-11T11:30:31Z",
+          "by": "claude-code",
+          "text": "Plan: unificador/sessions.py lee ~/.claude/projects/<ruta>/*.jsonl (lista con título y fecha, y turnos sin ruido)"
+        },
+        {
+          "at": "2026-11-11T11:32:32Z",
+          "by": "claude-code",
+          "text": "unificador/sessions.py lista y lee las sesiones reales de ~/.claude/projects (título, fecha, origen app/terminal/web, turnos sin ruido de herramientas ni avisos). 7 pruebas; comprobado con las 20 sesiones reales de este proyecto (creadas en la app de escritorio) en 0,25 s."
+        },
+        {
+          "at": "2026-11-11T11:32:32Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Aceptado."
         }
       ]
     },
