@@ -286,7 +286,7 @@
     {
       "id": "PS-03",
       "title": "Convertir un tablero Kanvas al formato nuevo",
-      "state": "todo",
+      "state": "done",
       "group": "PS",
       "deps": ["PS-01"],
       "at": "2026-11-11T11:11:16Z",
@@ -297,6 +297,21 @@
           "at": "2026-11-11T11:25:03Z",
           "by": "pablo (delegado en claude-code)",
           "text": "Plan aprobado."
+        },
+        {
+          "at": "2026-11-11T11:34:59Z",
+          "by": "claude-code",
+          "text": "Plan: unificador/kanvas_import.py + orden import-kanvas"
+        },
+        {
+          "at": "2026-11-11T11:35:59Z",
+          "by": "claude-code",
+          "text": "unificador/kanvas_import.py convierte kanvas.json en unificador.json: grupos→ramas (sin el prefijo «Fase N:»), dependencias→fases con nombre, estados y notas conservados, mismos identificadores, ramas ya terminadas archivadas; no toca kanvas.json. 4 pruebas y comprobado con el tablero real de este proyecto (10 ramas, 5 archivadas). La orden «unificador import-kanvas» se engancha en la CLI nueva de SR-01."
+        },
+        {
+          "at": "2026-11-11T11:35:59Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Aceptado."
         }
       ]
     },
