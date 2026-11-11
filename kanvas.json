@@ -349,7 +349,7 @@
     {
       "id": "CN-02",
       "title": "Enviar desde la web sin inyectar contexto",
-      "state": "todo",
+      "state": "done",
       "group": "CN",
       "deps": ["CN-01"],
       "at": "2026-11-11T11:11:16Z",
@@ -360,6 +360,16 @@
           "at": "2026-11-11T11:25:03Z",
           "by": "pablo (delegado en claude-code)",
           "text": "Plan aprobado."
+        },
+        {
+          "at": "2026-11-11T15:23:40Z",
+          "by": "claude-code",
+          "text": "Rutas /api/chat (NDJSON), /api/chat/stop y /api/open-native; el mensaje va tal cual a la sesion nativa. Probado con Claude real: sesion nueva, continuar y leer del transcript. Retirados chat propio, inyector, servidor y adaptadores viejos. 44 pruebas OK."
+        },
+        {
+          "at": "2026-11-11T15:23:41Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Aceptado."
         }
       ]
     },

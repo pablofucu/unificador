@@ -27,7 +27,7 @@ from unificador import sessions as S
 
 Event = Dict[str, Any]
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform == "win32" else 0
-MODEL_ID = re.compile(r"^[\w.\-\[\]]{1,80}$")
+MODEL_ID = re.compile(r"^\w[\w.\-\[\]]{0,79}$")
 MAX_ARG_PROMPT = 24000  # agy recibe el mensaje como argumento
 
 MODES = [{"id": "auto", "name": "Autónomo"}, {"id": "acceptEdits", "name": "Edita sin preguntar"},
@@ -296,6 +296,8 @@ def _stream(project_path, agent, text, session_id, model, effort, mode) -> Itera
     if agent == "claude" and new_session:
         session_id = str(uuid.uuid4())
     cmd, stdin_text = build_command(agent, exe, text, session_id, new_session, **chosen)
+    if stdin_text is None and exe.lower().endswith((".cmd", ".bat")):
+        raise AgentError(f"{name} está instalado como script y no es seguro pasarle el mensaje. Usa su terminal.")
     state: Dict[str, Any] = {"session": session_id}
     parse = (claude_parser if agent == "claude" else agy_parser)(state)
     try:

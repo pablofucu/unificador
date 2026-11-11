@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import queue
 import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -18,6 +19,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 from urllib.parse import parse_qs, unquote, urlsplit
 
+from unificador import agents as G
 from unificador import plan as P
 from unificador import rules as R
 from unificador import sessions as S
@@ -121,9 +123,8 @@ def _text(body: Dict[str, Any], key: str, limit: int = 20000) -> str:
 
 @route("GET", "/api/project")
 def get_project(project, args, query, body):
-    from unificador import agents
-    return {"name": project.name, "path": str(project.path), "agents": agents.available(),
-            "settings": agents.clean_settings(project.settings())}
+    return {"name": project.name, "path": str(project.path), "agents": G.available(),
+            "settings": G.clean_settings(project.settings())}
 
 
 @route("GET", "/api/plan")
@@ -147,20 +148,62 @@ def post_step_change(project, args, query, body):
 
 @route("GET", "/api/sessions")
 def get_sessions(project, args, query, body):
-    from unificador import agents
-    return {"sessions": agents.list_sessions(project.path, query.get("agent", ""))}
+    return {"sessions": G.list_sessions(project.path, query.get("agent", ""))}
 
 
 @route("GET", "/api/sessions/([a-z]+)/([^/]+)")
 def get_session(project, args, query, body):
-    from unificador import agents
-    return agents.read_session(project.path, args[0], args[1])
+    return G.read_session(project.path, args[0], args[1])
 
 
 @route("POST", "/api/settings")
 def post_settings(project, args, query, body):
-    from unificador import agents
-    return project.save_settings(agents.clean_settings({**project.settings(), **body}))
+    return project.save_settings(G.clean_settings({**project.settings(), **body}))
+
+
+def _detached(events: Iterator[Dict[str, Any]]) -> Iterator[Dict[str, Any]]:
+    """Recorre ``events`` en un hilo aparte: si la página se cierra, el agente termina su trabajo."""
+    box: "queue.Queue[Optional[Dict[str, Any]]]" = queue.Queue()
+
+    def work() -> None:
+        try:
+            for ev in events:
+                box.put(ev)
+        finally:
+            box.put(None)
+
+    threading.Thread(target=work, daemon=True).start()
+    while True:
+        ev = box.get()
+        if ev is None:
+            return
+        yield ev
+
+
+@route("POST", "/api/chat")
+def post_chat(project, args, query, body):
+    """Envía el mensaje tal cual al agente y va devolviendo su respuesta, un evento JSON por línea."""
+    saved = G.clean_settings(project.settings())
+    agent = _text(body, "agent", 40) or saved["agent"]
+    if agent not in G.AGENTS:
+        raise ApiError(f"No conozco el agente «{agent}».")
+    text = _text(body, "text", 200000)
+    if not text:
+        raise ApiError("Escribe algo para enviar.")
+    chosen = {k: (_text(body, k, 80) if k in body else saved["agents"][agent][k])
+              for k in ("model", "effort", "mode")}
+    events = _detached(G.stream(project.path, agent, text, _text(body, "session", 80), **chosen))
+    return Stream(json.dumps(ev, ensure_ascii=False) + "\n" for ev in events)
+
+
+@route("POST", "/api/chat/stop")
+def post_chat_stop(project, args, query, body):
+    return {"stopped": G.stop(_text(body, "run", 80))}
+
+
+@route("POST", "/api/open-native")
+def post_open_native(project, args, query, body):
+    return {"message": G.open_native(project.path, _text(body, "agent", 40), _text(body, "session", 80))}
 
 
 # ----------------------------------------------------------------------------- servidor
@@ -265,7 +308,7 @@ class Handler(BaseHTTPRequestHandler):
                 result = fn(self.project, args, query, self._body() if method == "POST" else {})
             except ApiError as e:
                 return self._json({"error": str(e)}, e.status)
-            except (P.PlanError, S.SessionError) as e:
+            except (P.PlanError, S.SessionError, G.AgentError) as e:
                 return self._json({"error": str(e)}, 400)
             except Exception as e:  # un fallo nuestro no debe tirar el servidor
                 return self._json({"error": f"Error interno: {e}"}, 500)
