@@ -1,27 +1,36 @@
 # Agent instructions
 
-Plan and track work on the Kanvas board; follow .agents/skills/kanvas/SKILL.md.
+Este proyecto es Unificador y se sigue con su propio plan (abajo). Cómo está hecho: docs/ARCHITECTURE.md.
 
 <!-- unificador:inicio (lo mantiene Unificador; los cambios aquí se pierden) -->
-## Trabajo por ramas, fases y pasos (Unificador)
+## El plan del proyecto (Unificador)
 
-La persona sigue este proyecto en Unificador, que muestra el tablero Kanvas como ramas → fases → pasos,
-y también te habla desde la terminal. Trabaja igual en los dos sitios:
+La persona sigue este proyecto en Unificador, que enseña el plan como **ramas → fases → pasos**.
+El plan vive en `unificador.json` y se toca solo con `python .unificador/uni.py` (nunca edites el JSON a mano).
+Vale igual si te hablan desde la web, la terminal o la app.
 
-1. Al empezar, mira el tablero (`python .agents/skills/kanvas/kanvas.py status`) y cuéntale a la persona qué le toca revisar,
-   qué está en curso y qué sigue.
-2. Todo trabajo nuevo que no esté ya en el tablero se planifica antes de programar: propón los pasos con
-   **una sola** orden `batch` (llegan como propuestas), resume el plan fase a fase y **para** hasta que la
-   persona lo apruebe en Unificador o en el tablero.
-3. Haz cada paso con `start` → `note` → `finish` (firma con `--as`); no programes trabajo que no tenga paso.
+- **Al empezar**, mira cómo va: `python .unificador/uni.py status`. Si un paso dice «PIDE CAMBIOS», atiéndelo lo primero.
+- **Trabajo nuevo** (algo más que una pregunta o un retoque): apúntalo como una rama y ponte con él.
+  No hace falta que nadie lo apruebe; la persona te corregirá si algo no le encaja.
 
-### CÓMO SE ORGANIZA EL TRABAJO: RAMAS → FASES → PASOS
-- Cada **grupo** de Kanvas es una **rama**: un área del proyecto que puede avanzar por su cuenta (p. ej. «Interfaz», «Datos», «Despliegue»). Nombra los grupos por el área, no por el orden: nada de «Fase 1: …».
-- Dentro de cada rama, las **fases** salen de las dependencias: un paso que depende (`deps`) de otro de la misma rama va en la fase siguiente. Sin dependencias, todo cae en la fase 1.
-- Cada **paso** es una tarea pequeña y comprobable (una sesión de trabajo), con una `desc` que diga qué consigue y cuándo está terminada.
-- Trabaja fase a fase: no empieces un paso cuyas dependencias no estén hechas.
+  ```
+  python .unificador/uni.py plan <<'EOF'
+  {"branches": [{
+    "name": "Carrito de compra", "icon": "🛒", "goal": "Poder comprar desde la web",
+    "phases": [
+      {"name": "Cimientos", "steps": [{"title": "Modelo del carrito", "desc": "Hecho cuando se guarda y se recupera"}]},
+      {"name": "Pagos", "steps": [{"title": "Pasarela de pago"}, {"title": "Recibo por correo"}]}
+    ]}]}
+  EOF
+  ```
 
-- Encadena los pasos con `deps` para que cada rama tenga entre 2 y 5 fases; evita ramas de un solo paso gigante.
-- `deps` acepta los títulos de pasos del mismo batch. Si la orden falla, lee el error y corrige el JSON.
-- Si la petición es una pregunta o un cambio diminuto, contesta sin planificar.
+  - Una **rama** es un cambio o un área que avanza por su cuenta. Ponle un emoji en `icon`.
+  - Entre 2 y 4 **fases** por rama, en orden, con un nombre que se reconozca de un vistazo
+    («Cimientos», «Pagos», «Pulido»). «Fase 1» o «Etapa 2» se rechazan.
+  - **Pasos** pequeños y comprobables, con título corto en lenguaje llano.
+  - Para añadir un paso suelto a una rama que ya existe: `python .unificador/uni.py add RAMA "Fase" "Título" -d "…"`.
+- **En cada paso**: `python .unificador/uni.py start ID` → trabaja → `python .unificador/uni.py done ID -m "qué ha cambiado y cómo lo has comprobado"`.
+  Si descubres algo que la persona deba saber, `python .unificador/uni.py note ID "…"`. Termina las fases en orden.
+- Firma con `--as <tu nombre>` (por ejemplo `--as claude`) salvo que `UNI_AGENT` ya esté puesto.
+- Preguntas y cambios diminutos: contesta sin tocar el plan.
 <!-- unificador:fin -->

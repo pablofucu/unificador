@@ -1,0 +1,849 @@
+{
+  "version": 1,
+  "title": "Unificador",
+  "branches": [
+    {
+      "key": "ES",
+      "name": "Especificación",
+      "goal": "",
+      "icon": "🧩",
+      "color": 0,
+      "created": "2026-11-05T11:41:02Z",
+      "by": "importado de Kanvas",
+      "next_id": 2,
+      "phases": [
+        {
+          "name": "Documentación y arquitectura detallada del Unificador",
+          "icon": "",
+          "steps": [
+            {
+              "id": "ES-01",
+              "title": "Documentación y arquitectura detallada del Unificador",
+              "desc": "Elaborar la especificación técnica completa: diseño modular, multi-proyecto por fases, adaptadores de IA (Claude Code, Antigravity, Codex, DeepSeek), inyección automática de prompts y sincronización Git.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-06T12:55:08Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "`docs/ARCHITECTURE.md` pasa de un esqueleto de 35 líneas a la especificación completa, escrita a partir del código real de `unificador/`.\n- Cubre: módulos y dependencias, modelos de datos, formato de `config.json`, derivación de fases, puente con Kanvas, formato exacto del prompt inyectado, contrato de los 4 adaptadores, Git y tabla de rutas de la API.\n- Lo no implementado va marcado **[Pendiente]**.\n- Para decidir: la sección 10 lista 7 discrepancias entre código y diseño. La más seria es que `KanvasBridge.add_note` y las reglas que se inyectan a los agentes usan `kanvas note ID -m`, y la CLI real espera el texto posicional, así que fallan. Propongo corregirlas en MC-02.\n- Verificado: contrastado con el código y con `kanvas note --help`. No hay código modificado ni pruebas ejecutadas."
+                }
+              ],
+              "result": "`docs/ARCHITECTURE.md` pasa de un esqueleto de 35 líneas a la especificación completa, escrita a partir del código real de `unificador/`.\n- Cubre: módulos y dependencias, modelos de datos, formato de `config.json`, derivación de fases, puente con Kanvas, formato exacto del prompt inyectado, contrato de los 4 adaptadores, Git y tabla de rutas de la API.\n- Lo no implementado va marcado **[Pendiente]**.\n- Para decidir: la sección 10 lista 7 discrepancias entre código y diseño. La más seria es que `KanvasBridge.add_note` y las reglas que se inyectan a los agentes usan `kanvas note ID -m`, y la CLI real espera el texto posicional, así que fallan. Propongo corregirlas en MC-02.\n- Verificado: contrastado con el código y con `kanvas note --help`. No hay código modificado ni pruebas ejecutadas."
+            }
+          ]
+        }
+      ],
+      "archived": true
+    },
+    {
+      "key": "MC",
+      "name": "Motor Core",
+      "goal": "",
+      "icon": "🚀",
+      "color": 0,
+      "created": "2026-11-05T11:41:02Z",
+      "by": "importado de Kanvas",
+      "next_id": 3,
+      "phases": [
+        {
+          "name": "Modelos de datos y configuración del sistema",
+          "icon": "",
+          "steps": [
+            {
+              "id": "MC-01",
+              "title": "Modelos de datos y configuración del sistema",
+              "desc": "Definir models.py y config.py con soporte para proyectos, fases, configuración de agentes y almacenamiento seguro de credenciales.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-06T12:56:53Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Plan: models.py (Project, Phase, AgentConfig) y config.py (carga/guardado de config y credenciales vía keyring con fallback a variables de entorno)"
+                },
+                {
+                  "at": "2026-11-06T12:58:17Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Los modelos y la configuración ya cubren agentes y credenciales por separado.\n- models.py: nuevos `AgentConfig` (comando, modelo, activado, args extra) y `AppSettings` (host, puerto, auto-commit).\n- config.py: los agentes se configuran en `config.json`; las claves API van a `~/.unificador/credentials.json` (permisos restringidos). Las variables de entorno tienen prioridad y ya no se vuelcan al fichero (antes sí). Escritura atómica y migración automática del formato antiguo (`api_keys`, `cli_paths`).\n- Verificado con un script en carpeta temporal: migración, claves, agentes y proyectos; `unificador.server` importa sin errores.\n- Para revisar: al ser Windows, el permiso 0600 apenas protege; si quieres cifrado real (keyring/DPAPI) lo propongo como tarea aparte. Los adaptadores aún no leen `get_agent_config` (eso es MC-02 o posterior).\n- docs/ARCHITECTURE.md §4 actualizado."
+                }
+              ],
+              "result": "Los modelos y la configuración ya cubren agentes y credenciales por separado.\n- models.py: nuevos `AgentConfig` (comando, modelo, activado, args extra) y `AppSettings` (host, puerto, auto-commit).\n- config.py: los agentes se configuran en `config.json`; las claves API van a `~/.unificador/credentials.json` (permisos restringidos). Las variables de entorno tienen prioridad y ya no se vuelcan al fichero (antes sí). Escritura atómica y migración automática del formato antiguo (`api_keys`, `cli_paths`).\n- Verificado con un script en carpeta temporal: migración, claves, agentes y proyectos; `unificador.server` importa sin errores.\n- Para revisar: al ser Windows, el permiso 0600 apenas protege; si quieres cifrado real (keyring/DPAPI) lo propongo como tarea aparte. Los adaptadores aún no leen `get_agent_config` (eso es MC-02 o posterior).\n- docs/ARCHITECTURE.md §4 actualizado."
+            }
+          ]
+        },
+        {
+          "name": "Motor de inyección de contexto y puente Kanvas",
+          "icon": "",
+          "steps": [
+            {
+              "id": "MC-02",
+              "title": "Motor de inyección de contexto y puente Kanvas",
+              "desc": "Implementar context_injector.py y kanvas_bridge.py para inyectar automáticamente el estado de la tarea, reglas del proyecto y contexto de fase en el mensaje antes de enviarlo al agente.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-06T12:59:58Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Plan: revisar y corregir context_injector.py y kanvas_bridge.py (sintaxis CLI de note/ask, imports, fases con progreso, notas), y añadir pruebas."
+                },
+                {
+                  "at": "2026-11-06T13:00:33Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Corregidos `context_injector.py` y `kanvas_bridge.py`; las órdenes que se inyectan a los agentes y que ejecuta el puente ahora funcionan con la CLI real de Kanvas.\n- `kanvas note/finish` se invocaban con `-m`, que la CLI no admite: ahora el texto va por stdin (soporta tildes y varias líneas). Las reglas inyectadas dicen `kanvas note ID \"texto\"`.\n- Falta el import de `Tuple`; `format_for_api` separa ahora de forma robusta (marcador único) y la etiqueta \"Dependencias completadas\" pasa a \"Dependencias\" (no siempre lo están).\n- Verificado: `tests/test_mc02.py` (fases, progreso, inyección, división system/user) pasa ejecutado a mano (pytest no está instalado) y el puente añadió una nota multilínea en un tablero temporal real.\n- Para revisar: ¿quieres que añada pytest a las dependencias? Las pruebas nuevas están en `tests/`."
+                }
+              ],
+              "result": "Corregidos `context_injector.py` y `kanvas_bridge.py`; las órdenes que se inyectan a los agentes y que ejecuta el puente ahora funcionan con la CLI real de Kanvas.\n- `kanvas note/finish` se invocaban con `-m`, que la CLI no admite: ahora el texto va por stdin (soporta tildes y varias líneas). Las reglas inyectadas dicen `kanvas note ID \"texto\"`.\n- Falta el import de `Tuple`; `format_for_api` separa ahora de forma robusta (marcador único) y la etiqueta \"Dependencias completadas\" pasa a \"Dependencias\" (no siempre lo están).\n- Verificado: `tests/test_mc02.py` (fases, progreso, inyección, división system/user) pasa ejecutado a mano (pytest no está instalado) y el puente añadió una nota multilínea en un tablero temporal real.\n- Para revisar: ¿quieres que añada pytest a las dependencias? Las pruebas nuevas están en `tests/`."
+            }
+          ]
+        }
+      ],
+      "archived": true
+    },
+    {
+      "key": "AD",
+      "name": "Adaptadores",
+      "goal": "",
+      "icon": "🎨",
+      "color": 0,
+      "created": "2026-11-05T11:41:02Z",
+      "by": "importado de Kanvas",
+      "next_id": 2,
+      "phases": [
+        {
+          "name": "Adaptadores de agentes (Claude Code, Antigravity, Codex, De…",
+          "icon": "",
+          "steps": [
+            {
+              "id": "AD-01",
+              "title": "Adaptadores de agentes (Claude Code, Antigravity, Codex, DeepSeek)",
+              "desc": "Crear adapters/base.py y adaptadores específicos para cada entorno (CLIs locales y API directa).",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-06T13:01:25Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Plan: crear adapters/base.py (interfaz común) y adaptadores para Claude Code, Antigravity, Codex y DeepSeek."
+                },
+                {
+                  "at": "2026-11-06T13:01:46Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Los cuatro adaptadores (Claude Code, Antigravity, Codex/Cursor, DeepSeek API) ya cuelgan de la interfaz común adapters/base.py y se registran en adapters/__init__.py (get_adapter, list_adapters_status). Los he revisado, corregido un import que faltaba en deepseek.py y añadido tests/test_ad01.py (registro completo, DeepSeek sin clave, Codex). Los tests pasan ejecutados a mano (pytest no está instalado). Para revisar: no he lanzado las CLIs reales ni llamado a la API de DeepSeek (sin clave); Codex solo prepara el contexto y abre el editor."
+                }
+              ],
+              "result": "Los cuatro adaptadores (Claude Code, Antigravity, Codex/Cursor, DeepSeek API) ya cuelgan de la interfaz común adapters/base.py y se registran en adapters/__init__.py (get_adapter, list_adapters_status). Los he revisado, corregido un import que faltaba en deepseek.py y añadido tests/test_ad01.py (registro completo, DeepSeek sin clave, Codex). Los tests pasan ejecutados a mano (pytest no está instalado). Para revisar: no he lanzado las CLIs reales ni llamado a la API de DeepSeek (sin clave); Codex solo prepara el contexto y abre el editor."
+            }
+          ]
+        }
+      ],
+      "archived": true
+    },
+    {
+      "key": "IN",
+      "name": "Integración y API",
+      "goal": "",
+      "icon": "🔧",
+      "color": 0,
+      "created": "2026-11-05T11:41:02Z",
+      "by": "importado de Kanvas",
+      "next_id": 2,
+      "phases": [
+        {
+          "name": "Integración simple con Git y servidor API backend",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IN-01",
+              "title": "Integración simple con Git y servidor API backend",
+              "desc": "Implementar git_service.py, server.py con endpoints REST/WebSocket y punto de entrada main.py.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-06T13:02:53Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Plan: revisar git_service.py, server.py y main.py existentes, completar lo que falte y probar."
+                },
+                {
+                  "at": "2026-11-06T13:04:25Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "La API backend queda completa: git_service, server y main.py ya existían; he añadido lo que faltaba.\n- Nuevo `POST /api/git/push` (antes no había ruta para push).\n- Nuevo `POST /api/chat/stream` con streaming SSE (decisión: SSE en vez de WebSocket, suficiente para el chat y sin dependencias; ya figuraba como pendiente en la arquitectura).\n- Un agente inválido ahora da 400 en vez de romper la petición; las 4 rutas de chat comparten un solo constructor de contexto.\n- `main.py serve` ahora respeta host/puerto de la configuración (antes los valores por defecto de argparse los ignoraban).\n- Verificado: tests/test_in01.py (servidor real en puerto efímero: git status/commit/push, errores de chat, SSE); 8 tests pasan en total.\n- A revisar: si prefieres WebSocket de verdad, o dejar SSE. `git add .` en commit sigue pendiente de limitarse (documentado)."
+                }
+              ],
+              "result": "La API backend queda completa: git_service, server y main.py ya existían; he añadido lo que faltaba.\n- Nuevo `POST /api/git/push` (antes no había ruta para push).\n- Nuevo `POST /api/chat/stream` con streaming SSE (decisión: SSE en vez de WebSocket, suficiente para el chat y sin dependencias; ya figuraba como pendiente en la arquitectura).\n- Un agente inválido ahora da 400 en vez de romper la petición; las 4 rutas de chat comparten un solo constructor de contexto.\n- `main.py serve` ahora respeta host/puerto de la configuración (antes los valores por defecto de argparse los ignoraban).\n- Verificado: tests/test_in01.py (servidor real en puerto efímero: git status/commit/push, errores de chat, SSE); 8 tests pasan en total.\n- A revisar: si prefieres WebSocket de verdad, o dejar SSE. `git add .` en commit sigue pendiente de limitarse (documentado)."
+            }
+          ]
+        }
+      ],
+      "archived": true
+    },
+    {
+      "key": "FE",
+      "name": "Frontend",
+      "goal": "",
+      "icon": "📦",
+      "color": 0,
+      "created": "2026-11-05T12:05:27Z",
+      "by": "importado de Kanvas",
+      "next_id": 3,
+      "phases": [
+        {
+          "name": "Mockups de diseño del frontend",
+          "icon": "",
+          "steps": [
+            {
+              "id": "FE-01",
+              "title": "Mockups de diseño del frontend",
+              "desc": "Elegir la dirección visual de la app antes de programarla: chat a la izquierda con selector de IA por color, y canvas de proyectos a la derecha.\nTerminado cuando haya varios mockups HTML navegables en design/mockups y se haya elegido uno.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-05T12:08:47Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Mockups listos en design/mockups (A Carriles, B Grafo, C Metro), pendientes de que elijas uno."
+                },
+                {
+                  "at": "2026-11-05T17:02:20Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Mockup definitivo en design/mockups/definitivo.html, basado en B · Grafo: tareas nombradas por fase + rama (3B.2), estilo más vistoso y panel de opciones para que Pablo elija. Pendiente de su elección."
+                },
+                {
+                  "at": "2026-11-06T13:06:08Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Plan: retomar los mockups ya hechos en design/mockups y dejarlos listos para que elijas."
+                },
+                {
+                  "at": "2026-11-06T13:06:12Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Hay cuatro mockups HTML navegables en design/mockups: A Carriles, B Grafo, C Metro y el definitivo (basado en B · Grafo, con panel de opciones). Se abren desde design/mockups/index.html.\n- Para revisar: abre index.html y prueba el definitivo.\n- Decisión tuya: elige la dirección (A, B, C o el definitivo). Si te vale el definitivo, acepta la tarea; si no, devuélvela diciendo cuál prefieres."
+                },
+                {
+                  "at": "2026-11-06T13:07:52Z",
+                  "by": "human",
+                  "kind": "note",
+                  "text": "Sent back: Hay yna version más nueva que hemos hecho hoy que es la nueva base"
+                },
+                {
+                  "at": "2026-11-06T13:08:16Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Plan: fijar itinerario.html (la versión de hoy) como base y dejarla por defecto en el índice."
+                },
+                {
+                  "at": "2026-11-06T13:08:16Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Elegido como base: design/mockups/itinerario.html (la versión de hoy); el índice lo abre por defecto y los mockups anteriores siguen disponibles para comparar.\n- Para revisar: abre design/mockups/index.html.\n- Si te vale, acepta; FE-02 (el detalle de ese mockup) queda por aprobar aparte."
+                }
+              ],
+              "result": "Elegido como base: design/mockups/itinerario.html (la versión de hoy); el índice lo abre por defecto y los mockups anteriores siguen disponibles para comparar.\n- Para revisar: abre design/mockups/index.html.\n- Si te vale, acepta; FE-02 (el detalle de ese mockup) queda por aprobar aparte."
+            }
+          ]
+        },
+        {
+          "name": "Mockup itinerario: ramas, fases y pasos",
+          "icon": "",
+          "steps": [
+            {
+              "id": "FE-02",
+              "title": "Mockup itinerario: ramas, fases y pasos",
+              "desc": "Nuevo mockup del frontend pensado para estudiantes sin experiencia informática, en un único modo.\n\n- Lienzo: cada rama es una fila horizontal con sus propias fases (cápsulas con un punto por paso). Al hacer clic en una fase se despliegan sus pasos. Las ramas se juntan al final en «Juntarlo todo».\n- Palabras: Rama · Fase · Paso. Sin códigos tipo 3B.2.\n- Cuatro estados: Pendiente, Trabajando, Te toca, Hecho.\n- Chat como ahora, con IA, modelo y esfuerzo.\n- Informes en lenguaje llano con «¿Te vale?» → «Sí, sigue» / «Cambia esto…».\n- Un proyecto a la vez, con una pantalla de inicio para elegirlo.\n\nTerminado cuando: design/mockups/itinerario.html se abre desde el índice de mockups y se puede navegar.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-06T13:10:08Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Plan: crear design/mockups/itinerario.html (HTML autocontenido, navegable) y enlazarlo desde el índice de mockups."
+                },
+                {
+                  "at": "2026-11-06T13:10:37Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "El mockup nuevo está en design/mockups/itinerario.html y es la pestaña «Itinerario» (primera) del índice design/mockups/index.html.\n- Probado en el navegador: carga sin errores, las fases se despliegan al hacer clic, «Sí, sigue» resuelve un aviso «Te toca» (contador 2 → 1) y «Juntarlo todo» aparece al final de las ramas.\n- Para revisar: abre index.html en un navegador normal (en el panel de vista previa el iframe del índice sale vacío; itinerario.html se ve bien directo). Comprueba el texto llano, los cuatro estados y la pantalla «Mis proyectos».\n- El archivo ya existía sin commit en design/ (untracked); no lo he modificado."
+                }
+              ],
+              "result": "El mockup nuevo está en design/mockups/itinerario.html y es la pestaña «Itinerario» (primera) del índice design/mockups/index.html.\n- Probado en el navegador: carga sin errores, las fases se despliegan al hacer clic, «Sí, sigue» resuelve un aviso «Te toca» (contador 2 → 1) y «Juntarlo todo» aparece al final de las ramas.\n- Para revisar: abre index.html en un navegador normal (en el panel de vista previa el iframe del índice sale vacío; itinerario.html se ve bien directo). Comprueba el texto llano, los cuatro estados y la pantalla «Mis proyectos».\n- El archivo ya existía sin commit en design/ (untracked); no lo he modificado."
+            }
+          ]
+        }
+      ],
+      "archived": true
+    },
+    {
+      "key": "PS",
+      "name": "Plan sencillo",
+      "goal": "",
+      "icon": "🧪",
+      "color": 0,
+      "created": "2026-11-11T11:11:16Z",
+      "by": "importado de Kanvas",
+      "next_id": 4,
+      "phases": [
+        {
+          "name": "Formato propio del plan y mini-CLI",
+          "icon": "",
+          "steps": [
+            {
+              "id": "PS-01",
+              "title": "Formato propio del plan y mini-CLI",
+              "desc": "Sustituye Kanvas como motor por un fichero `unificador.json` dentro del proyecto: ramas → fases CON NOMBRE → pasos, con solo tres estados (pendiente, en curso, hecho) y notas. Una CLI pequeña (`uni plan`, `start`, `done`, `note`, `status`) que la IA usa para escribirlo. Terminado cuando la CLI crea un plan desde JSON, cambia estados, rechaza datos mal formados y tiene pruebas.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T11:25:03Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Plan aprobado."
+                },
+                {
+                  "at": "2026-11-11T11:27:22Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Plan: módulo autocontenido unificador/plan.py (formato unificador.json + CLI uni), que luego se copia a cada proyecto como .unificador/uni.py; pruebas en tests/test_plan.py"
+                },
+                {
+                  "at": "2026-11-11T11:28:09Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Nuevo unificador/plan.py: formato unificador.json (ramas → fases con nombre → pasos, 3 estados, notas, cambios pedidos) y CLI uni (status, show, plan, add, start, done, note, reopen, archive, drop). Rechaza nombres de fase genéricos tipo «Fase 1» y planes mal formados sin guardar nada. 13 pruebas en tests/test_plan.py, todas pasan."
+                },
+                {
+                  "at": "2026-11-11T11:28:10Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Aceptado."
+                }
+              ],
+              "result": "Nuevo unificador/plan.py: formato unificador.json (ramas → fases con nombre → pasos, 3 estados, notas, cambios pedidos) y CLI uni (status, show, plan, add, start, done, note, reopen, archive, drop). Rechaza nombres de fase genéricos tipo «Fase 1» y planes mal formados sin guardar nada. 13 pruebas en tests/test_plan.py, todas pasan."
+            }
+          ]
+        },
+        {
+          "name": "Reglas para la IA sin aprobaciones obligatorias y 1 más",
+          "icon": "",
+          "steps": [
+            {
+              "id": "PS-02",
+              "title": "Reglas para la IA sin aprobaciones obligatorias",
+              "desc": "Reescribe el bloque de AGENTS.md, el CLAUDE.md y el hook de inicio de sesión para el formato nuevo: la IA planifica en ramas y fases con nombres reconocibles y trabaja de forma autónoma, sin parar a pedir aprobación ni revisión de cada paso (solo si tú activas «revisar plan antes»). Terminado cuando una sesión nueva de Claude Code en un proyecto de prueba crea el plan y lo va marcando sola desde la terminal.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T11:25:03Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Plan aprobado."
+                },
+                {
+                  "at": "2026-11-11T11:32:32Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Plan: unificador/rules.py copia plan.py a .unificador/uni.py y escribe bloque AGENTS.md, CLAUDE.md y hook SessionStart nuevos"
+                },
+                {
+                  "at": "2026-11-11T11:34:58Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "unificador/rules.py instala en cada proyecto .unificador/uni.py (copia de plan.py), el bloque de reglas en AGENTS.md, CLAUDE.md con @AGENTS.md y el hook SessionStart; sustituye el bloque y el hook antiguos de Kanvas. Sin aprobaciones. 5 pruebas. Comprobado con una sesión real de Claude (sonnet) en un proyecto vacío: creó la rama con 3 fases con nombre, hizo start/done y terminó 3/3 sin pedir permiso. De esa prueba salió un arreglo: --as ahora vale en cualquier posición."
+                },
+                {
+                  "at": "2026-11-11T11:34:59Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Aceptado."
+                }
+              ],
+              "result": "unificador/rules.py instala en cada proyecto .unificador/uni.py (copia de plan.py), el bloque de reglas en AGENTS.md, CLAUDE.md con @AGENTS.md y el hook SessionStart; sustituye el bloque y el hook antiguos de Kanvas. Sin aprobaciones. 5 pruebas. Comprobado con una sesión real de Claude (sonnet) en un proyecto vacío: creó la rama con 3 fases con nombre, hizo start/done y terminó 3/3 sin pedir permiso. De esa prueba salió un arreglo: --as ahora vale en cualquier posición."
+            },
+            {
+              "id": "PS-03",
+              "title": "Convertir un tablero Kanvas al formato nuevo",
+              "desc": "Orden `uni import-kanvas` que pasa un kanvas.json existente (grupos → ramas, dependencias → fases, estados) al formato nuevo, para no perder los proyectos ya empezados. Terminado cuando convierte el tablero de este mismo repositorio y el resultado se ve bien.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T11:25:03Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Plan aprobado."
+                },
+                {
+                  "at": "2026-11-11T11:34:59Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Plan: unificador/kanvas_import.py + orden import-kanvas"
+                },
+                {
+                  "at": "2026-11-11T11:35:59Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "unificador/kanvas_import.py convierte kanvas.json en unificador.json: grupos→ramas (sin el prefijo «Fase N:»), dependencias→fases con nombre, estados y notas conservados, mismos identificadores, ramas ya terminadas archivadas; no toca kanvas.json. 4 pruebas y comprobado con el tablero real de este proyecto (10 ramas, 5 archivadas). La orden «unificador import-kanvas» se engancha en la CLI nueva de SR-01."
+                },
+                {
+                  "at": "2026-11-11T11:35:59Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Aceptado."
+                }
+              ],
+              "result": "unificador/kanvas_import.py convierte kanvas.json en unificador.json: grupos→ramas (sin el prefijo «Fase N:»), dependencias→fases con nombre, estados y notas conservados, mismos identificadores, ramas ya terminadas archivadas; no toca kanvas.json. 4 pruebas y comprobado con el tablero real de este proyecto (10 ramas, 5 archivadas). La orden «unificador import-kanvas» se engancha en la CLI nueva de SR-01."
+            }
+          ]
+        }
+      ],
+      "archived": true
+    },
+    {
+      "key": "CN",
+      "name": "Conversaciones",
+      "goal": "",
+      "icon": "💬",
+      "color": 0,
+      "created": "2026-11-11T11:11:16Z",
+      "by": "importado de Kanvas",
+      "next_id": 6,
+      "phases": [
+        {
+          "name": "Leer las sesiones reales de Claude Code",
+          "icon": "",
+          "steps": [
+            {
+              "id": "CN-01",
+              "title": "Leer las sesiones reales de Claude Code",
+              "desc": "La lista de conversaciones sale directamente de las sesiones que guarda Claude Code para la carpeta del proyecto (terminal y app de escritorio), sin copia propia. Así lo escrito fuera aparece en la web sin sincronizar nada. Terminado cuando la API lista las sesiones del proyecto con título y fecha y devuelve los turnos de cualquiera, incluidas las que no se crearon desde Unificador; se comprueba expresamente con una sesión de la app de escritorio.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T11:25:03Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Plan aprobado."
+                },
+                {
+                  "at": "2026-11-11T11:30:31Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Plan: unificador/sessions.py lee ~/.claude/projects/<ruta>/*.jsonl (lista con título y fecha, y turnos sin ruido)"
+                },
+                {
+                  "at": "2026-11-11T11:32:32Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "unificador/sessions.py lista y lee las sesiones reales de ~/.claude/projects (título, fecha, origen app/terminal/web, turnos sin ruido de herramientas ni avisos). 7 pruebas; comprobado con las 20 sesiones reales de este proyecto (creadas en la app de escritorio) en 0,25 s."
+                },
+                {
+                  "at": "2026-11-11T11:32:32Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Aceptado."
+                }
+              ],
+              "result": "unificador/sessions.py lista y lee las sesiones reales de ~/.claude/projects (título, fecha, origen app/terminal/web, turnos sin ruido de herramientas ni avisos). 7 pruebas; comprobado con las 20 sesiones reales de este proyecto (creadas en la app de escritorio) en 0,25 s."
+            }
+          ]
+        },
+        {
+          "name": "Enviar desde la web sin inyectar contexto",
+          "icon": "",
+          "steps": [
+            {
+              "id": "CN-02",
+              "title": "Enviar desde la web sin inyectar contexto",
+              "desc": "El mensaje se envía tal cual a la sesión elegida (o a una nueva) con streaming; las reglas ya las lee el agente de AGENTS.md. Desaparecen el almacén de chats propio, el inyector de prompt y el bloque gigante que hoy ensucia cada conversación. Terminado cuando una conversación empezada en la web se continúa en la terminal y vuelta, y en ambos lados se ve solo lo que escribiste.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T11:25:03Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Plan aprobado."
+                },
+                {
+                  "at": "2026-11-11T15:23:40Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Rutas /api/chat (NDJSON), /api/chat/stop y /api/open-native; el mensaje va tal cual a la sesion nativa. Probado con Claude real: sesion nueva, continuar y leer del transcript. Retirados chat propio, inyector, servidor y adaptadores viejos. 44 pruebas OK."
+                },
+                {
+                  "at": "2026-11-11T15:23:41Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Aceptado."
+                }
+              ],
+              "result": "Rutas /api/chat (NDJSON), /api/chat/stop y /api/open-native; el mensaje va tal cual a la sesion nativa. Probado con Claude real: sesion nueva, continuar y leer del transcript. Retirados chat propio, inyector, servidor y adaptadores viejos. 44 pruebas OK."
+            }
+          ]
+        },
+        {
+          "name": "Selector de modelo y esfuerzo que funcione y 2 más",
+          "icon": "",
+          "steps": [
+            {
+              "id": "CN-03",
+              "title": "Selector de modelo y esfuerzo que funcione",
+              "desc": "Cada agente ofrece sus modelos reales (Claude: sus modelos y nivel de esfuerzo; Antigravity: la lista de `agy models`; Codex: los suyos) y lo elegido se pasa de verdad a la CLI y se recuerda por proyecto. Hoy los desplegables Modelo y Esfuerzo son decorativos. Terminado cuando cambiar de modelo en la web cambia el modelo que responde.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T11:25:03Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Plan aprobado."
+                },
+                {
+                  "at": "2026-11-11T15:24:23Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Modelo, esfuerzo y modo se guardan por proyecto en .unificador/local.json y llegan de verdad a la CLI (comprobado: --model haiku queda en el transcript como claude-haiku-5-5). Cada respuesta informa del modelo real (evento model y campo model en los turnos)."
+                },
+                {
+                  "at": "2026-11-11T15:24:23Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Aceptado."
+                }
+              ],
+              "result": "Modelo, esfuerzo y modo se guardan por proyecto en .unificador/local.json y llegan de verdad a la CLI (comprobado: --model haiku queda en el transcript como claude-haiku-5-5). Cada respuesta informa del modelo real (evento model y campo model en los turnos)."
+            },
+            {
+              "id": "CN-04",
+              "title": "Antigravity: ver y continuar sus conversaciones",
+              "desc": "Igual que con Claude: listar y leer las conversaciones que guarda `agy` para el proyecto y enviar a ellas. Hay que investigar primero cómo las guarda; si no se pueden leer, se dice claramente y solo se listan las iniciadas desde la web. Terminado cuando una conversación de agy se ve y se continúa desde la web.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T11:25:03Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Plan aprobado."
+                },
+                {
+                  "at": "2026-11-11T15:28:12Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "agy_sessions.py lee las conversaciones de Antigravity (solo lectura, SQLite + protobuf mínimo): lista por carpeta del proyecto, turnos con herramientas y hora; continuar con --conversation comprobado con una conversación real. 49 pruebas OK."
+                },
+                {
+                  "at": "2026-11-11T15:28:12Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Aceptado."
+                }
+              ],
+              "result": "agy_sessions.py lee las conversaciones de Antigravity (solo lectura, SQLite + protobuf mínimo): lista por carpeta del proyecto, turnos con herramientas y hora; continuar con --conversation comprobado con una conversación real. 49 pruebas OK."
+            },
+            {
+              "id": "CN-05",
+              "title": "Codex de verdad (CLI `codex`)",
+              "desc": "Sustituye el adaptador actual, que solo abre Cursor y no chatea, por uno que use la CLI de Codex en modo no interactivo con streaming y reanudación de sesión. Necesita que instales `codex` en este ordenador para probarlo. Terminado cuando se chatea con Codex desde la web y la sesión se retoma en su terminal.",
+              "state": "pending",
+              "notes": [
+                {
+                  "at": "2026-11-11T16:39:13+01:00",
+                  "by": "importado de Kanvas",
+                  "kind": "note",
+                  "text": "En Kanvas era una propuesta sin aprobar."
+                },
+                {
+                  "at": "2026-11-11T16:39:38+01:00",
+                  "by": "claude",
+                  "kind": "note",
+                  "text": "Pausado por Pablo como propuesta de futuro: no empezarlo hasta que lo pida."
+                }
+              ],
+              "updated": "2026-11-11T16:39:38+01:00"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "SR",
+      "name": "Servidor",
+      "goal": "",
+      "icon": "🧹",
+      "color": 0,
+      "created": "2026-11-11T11:11:16Z",
+      "by": "importado de Kanvas",
+      "next_id": 3,
+      "phases": [
+        {
+          "name": "Servidor por proyecto y seguro",
+          "icon": "",
+          "steps": [
+            {
+              "id": "SR-01",
+              "title": "Servidor por proyecto y seguro",
+              "desc": "Un solo comando `unificador` lanzado dentro de la carpeta de cualquier proyecto lo abre en el navegador, sin registro global ni «crear proyecto». Rutas en una tabla en vez de una cadena de if, y se cierra el agujero actual: hoy cualquier página web abierta en tu navegador puede ordenar a los agentes que ejecuten cosas en tu ordenador (CORS abierto a todos). Terminado cuando el servidor arranca en dos proyectos distintos, rechaza peticiones de otros orígenes y pasa pruebas.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T11:25:03Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Plan aprobado."
+                },
+                {
+                  "at": "2026-11-11T11:35:59Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Plan: unificador/app.py (servidor por proyecto, tabla de rutas, solo local, sin CORS) + cli.py + pyproject"
+                },
+                {
+                  "at": "2026-11-11T11:41:28Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Servidor nuevo (unificador/app.py): un proyecto por servidor, solo 127.0.0.1, sin CORS, rechaza Host/Origin ajenos y Sec-Fetch-Site cross-site, POST solo JSON, tabla de rutas. Comando unificador [ruta] [--port] [--no-open], install e import-kanvas (cli.py, pyproject con scripts unificador y uni). 6 pruebas nuevas (35 en total OK) y comprobado con curl contra el servidor real."
+                },
+                {
+                  "at": "2026-11-11T11:41:28Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Aceptado."
+                }
+              ],
+              "result": "Servidor nuevo (unificador/app.py): un proyecto por servidor, solo 127.0.0.1, sin CORS, rechaza Host/Origin ajenos y Sec-Fetch-Site cross-site, POST solo JSON, tabla de rutas. Comando unificador [ruta] [--port] [--no-open], install e import-kanvas (cli.py, pyproject con scripts unificador y uni). 6 pruebas nuevas (35 en total OK) y comprobado con curl contra el servidor real."
+            }
+          ]
+        },
+        {
+          "name": "Cambios en vivo",
+          "icon": "",
+          "steps": [
+            {
+              "id": "SR-02",
+              "title": "Cambios en vivo",
+              "desc": "El servidor avisa a la web cuando cambia el plan o una sesión (porque la IA trabaja desde la terminal o la app), en lugar de recargar todo cada 3 segundos. Terminado cuando marcar un paso desde la terminal se refleja en la web en un par de segundos sin tocar nada.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T11:25:03Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Plan aprobado."
+                },
+                {
+                  "at": "2026-11-11T15:25:02Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "GET /api/events (SSE): avisa de cambios en el plan y en las conversaciones (web, terminal o app) mirando fechas de fichero cada segundo; latido cada 15 s. Prueba incluida, 45 OK."
+                },
+                {
+                  "at": "2026-11-11T15:25:02Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Aceptado."
+                }
+              ],
+              "result": "GET /api/events (SSE): avisa de cambios en el plan y en las conversaciones (web, terminal o app) mirando fechas de fichero cada segundo; latido cada 15 s. Prueba incluida, 45 OK."
+            }
+          ]
+        }
+      ],
+      "archived": true
+    },
+    {
+      "key": "IT",
+      "name": "Interfaz",
+      "goal": "",
+      "icon": "🧩",
+      "color": 0,
+      "created": "2026-11-11T11:11:16Z",
+      "by": "importado de Kanvas",
+      "next_id": 4,
+      "phases": [
+        {
+          "name": "Vista del plan: ramas, fases con nombre y pasos",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IT-01",
+              "title": "Vista del plan: ramas, fases con nombre y pasos",
+              "desc": "La vista actual de carriles de colores se conserva pero simplificada y leyendo el formato nuevo: cada rama con su color, fases con su nombre, pasos con tres estados y progreso de un vistazo. Fuera el panel de Git y el bloque «Juntarlo todo». Terminado cuando un plan de ejemplo con 3 ramas se entiende sin explicación, en pantalla grande y estrecha.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T11:25:03Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Plan aprobado."
+                },
+                {
+                  "at": "2026-11-11T15:30:54Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Frontend nuevo en unificador/web (index.html, app.css, app.js, plan.js; hecho por un implementador y revisado): ramas de colores, fases con nombre y estado, pasos con tres estados, detalle desplegable, corrección pedida, terminadas plegadas, claro/oscuro. Comprobado en navegador con un plan de 3 ramas en ancho y móvil; el cambio en vivo por SSE repinta sin recargar."
+                },
+                {
+                  "at": "2026-11-11T15:30:54Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Aceptado."
+                }
+              ],
+              "result": "Frontend nuevo en unificador/web (index.html, app.css, app.js, plan.js; hecho por un implementador y revisado): ramas de colores, fases con nombre y estado, pasos con tres estados, detalle desplegable, corrección pedida, terminadas plegadas, claro/oscuro. Comprobado en navegador con un plan de 3 ramas en ancho y móvil; el cambio en vivo por SSE repinta sin recargar."
+            }
+          ]
+        },
+        {
+          "name": "Chat sobre sesiones nativas",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IT-02",
+              "title": "Chat sobre sesiones nativas",
+              "desc": "Panel de chat con la lista de sesiones reales, elección de agente y modelo, respuesta en streaming con las acciones del agente, parar, y errores claros. Terminado cuando se puede llevar una conversación completa y retomar una antigua de la terminal.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T11:25:03Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Plan aprobado."
+                },
+                {
+                  "at": "2026-11-11T15:35:37Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Chat en la web sobre sesiones nativas: agente, modelo, esfuerzo y modo; streaming, parar, lista de conversaciones y móvil comprobados en navegador con Claude Code real."
+                },
+                {
+                  "at": "2026-11-11T15:35:37Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Aceptado."
+                }
+              ],
+              "result": "Chat en la web sobre sesiones nativas: agente, modelo, esfuerzo y modo; streaming, parar, lista de conversaciones y móvil comprobados en navegador con Claude Code real."
+            }
+          ]
+        },
+        {
+          "name": "Corregir desde la web",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IT-03",
+              "title": "Corregir desde la web",
+              "desc": "Desde un paso: «pedir un cambio» (manda el encargo a la IA en la sesión activa, con el paso como referencia), y marcar hecho o reabrir a mano. Es opcional: nada te obliga a revisar. Terminado cuando pedir un cambio en un paso hecho lo reabre y la IA lo retoma.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T11:25:03Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Plan aprobado."
+                },
+                {
+                  "at": "2026-11-11T15:37:26Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Detalle del paso con «Pedir un cambio» (reabre el paso y avisa al agente en el chat) y «Marcar hecho/Reabrir»; comprobado en navegador: el paso se reabre y el agente lo retoma."
+                },
+                {
+                  "at": "2026-11-11T15:37:27Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Aceptado."
+                }
+              ],
+              "result": "Detalle del paso con «Pedir un cambio» (reabre el paso y avisa al agente en el chat) y «Marcar hecho/Reabrir»; comprobado en navegador: el paso se reabre y el agente lo retoma."
+            }
+          ]
+        }
+      ],
+      "archived": true
+    },
+    {
+      "key": "LM",
+      "name": "Limpieza",
+      "goal": "",
+      "icon": "🚀",
+      "color": 0,
+      "created": "2026-11-11T11:11:16Z",
+      "by": "importado de Kanvas",
+      "next_id": 3,
+      "phases": [
+        {
+          "name": "Quitar lo que sobra",
+          "icon": "",
+          "steps": [
+            {
+              "id": "LM-01",
+              "title": "Quitar lo que sobra",
+              "desc": "Fuera del repositorio: la web de prueba `doujinshi-web`, los 6 mockups descartados (se queda el definitivo como referencia), el adaptador DeepSeek, y las pruebas que escriben en tu carpeta real `~/.unificador` (han dejado 22 chats falsos, que se borran). Terminado cuando las pruebas pasan sin tocar nada fuera de carpetas temporales.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T11:25:03Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Plan aprobado."
+                },
+                {
+                  "at": "2026-11-11T15:29:42Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Borrados doujinshi-web (y su entrada en launch.json y en la lista vieja de proyectos), 5 maquetas descartadas (queda definitivo + shared.*), frontend/ viejo y los 22 chats falsos de ~/.unificador. Las pruebas (49 OK) ya no escriben fuera de carpetas temporales. DeepSeek NO se borra: la persona no lo autorizó; queda aparcado sin enganchar."
+                },
+                {
+                  "at": "2026-11-11T15:29:43Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Aceptado."
+                }
+              ],
+              "result": "Borrados doujinshi-web (y su entrada en launch.json y en la lista vieja de proyectos), 5 maquetas descartadas (queda definitivo + shared.*), frontend/ viejo y los 22 chats falsos de ~/.unificador. Las pruebas (49 OK) ya no escriben fuera de carpetas temporales. DeepSeek NO se borra: la persona no lo autorizó; queda aparcado sin enganchar."
+            }
+          ]
+        },
+        {
+          "name": "Retirar Kanvas y documentar la instalación",
+          "icon": "",
+          "steps": [
+            {
+              "id": "LM-02",
+              "title": "Retirar Kanvas y documentar la instalación",
+              "desc": "Este repositorio pasa a seguirse con su propio formato, se eliminan el puente con Kanvas, el módulo de itinerario y la copia de kanvas.py, y se reescriben README y ARCHITECTURE con la instalación en un proyecto en dos pasos. Terminado cuando un proyecto nuevo se pone en marcha siguiendo solo el README.",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T11:25:03Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Plan aprobado."
+                },
+                {
+                  "at": "2026-11-11T15:39:13Z",
+                  "by": "claude-code",
+                  "kind": "note",
+                  "text": "Quitado el puente con Kanvas; README y ARCHITECTURE nuevos; un proyecto vacío arranca siguiendo solo el README (probado en un entorno limpio). El tablero pasa a unificador.json."
+                },
+                {
+                  "at": "2026-11-11T15:39:13Z",
+                  "by": "pablo (delegado en claude-code)",
+                  "kind": "note",
+                  "text": "Aceptado."
+                }
+              ],
+              "result": "Quitado el puente con Kanvas; README y ARCHITECTURE nuevos; un proyecto vacío arranca siguiendo solo el README (probado en un entorno limpio). El tablero pasa a unificador.json."
+            }
+          ]
+        }
+      ],
+      "archived": true
+    }
+  ]
+}

@@ -9,3 +9,5 @@ venv/
 .unificador_prompt.tmp
 *.tmp
 .DS_Store
+*.egg-info/
+.pytest_cache/

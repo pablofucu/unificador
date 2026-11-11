@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.agents/skills/kanvas/kanvas.py\" status"
+            "command": "python \"$CLAUDE_PROJECT_DIR/.unificador/uni.py\" status"
           }
         ]
       }
