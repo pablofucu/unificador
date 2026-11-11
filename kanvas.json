@@ -410,7 +410,7 @@
     {
       "id": "SR-01",
       "title": "Servidor por proyecto y seguro",
-      "state": "todo",
+      "state": "done",
       "group": "SR",
       "at": "2026-11-11T11:11:16Z",
       "by": "claude-code",
@@ -420,6 +420,21 @@
           "at": "2026-11-11T11:25:03Z",
           "by": "pablo (delegado en claude-code)",
           "text": "Plan aprobado."
+        },
+        {
+          "at": "2026-11-11T11:35:59Z",
+          "by": "claude-code",
+          "text": "Plan: unificador/app.py (servidor por proyecto, tabla de rutas, solo local, sin CORS) + cli.py + pyproject"
+        },
+        {
+          "at": "2026-11-11T11:41:28Z",
+          "by": "claude-code",
+          "text": "Servidor nuevo (unificador/app.py): un proyecto por servidor, solo 127.0.0.1, sin CORS, rechaza Host/Origin ajenos y Sec-Fetch-Site cross-site, POST solo JSON, tabla de rutas. Comando unificador [ruta] [--port] [--no-open], install e import-kanvas (cli.py, pyproject con scripts unificador y uni). 6 pruebas nuevas (35 en total OK) y comprobado con curl contra el servidor real."
+        },
+        {
+          "at": "2026-11-11T11:41:28Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Aceptado."
         }
       ]
     },

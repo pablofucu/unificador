@@ -25,10 +25,12 @@
       "name": "unificador",
       "runtimeExecutable": "python",
       "runtimeArgs": [
-        "main.py",
-        "serve",
+        "-m",
+        "unificador",
+        ".",
         "--port",
-        "8767"
+        "8767",
+        "--no-open"
       ],
       "port": 8767
     }

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "unificador"
+version = "0.2.0"
+description = "El plan de tu proyecto y el chat con tus agentes, en una web local muy sencilla."
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+unificador = "unificador.cli:main"
+uni = "unificador.plan:main"
+
+[tool.setuptools]
+packages = ["unificador"]
+
+[tool.setuptools.package-data]
+unificador = ["web/*", "web/**/*"]
