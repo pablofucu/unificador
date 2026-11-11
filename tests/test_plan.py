@@ -51,6 +51,25 @@ class PlanTest(unittest.TestCase):
         self.assertEqual([s["id"] for _, _, s in P.iter_steps(plan)], ["CDC-1", "CDC-2", "CDC-3"])
         self.assertTrue(all(s["state"] == P.PENDING for _, _, s in P.iter_steps(plan)))
 
+    def test_branch_in_one_command_without_json(self):
+        code, out, err = run(self.path, "branch", "Web de recetas", "--icon", "🍲", "--goal", "Ver recetas",
+                             "--phase", "Cimientos", "Página principal", "Ficha :: Hecha cuando se ve una receta",
+                             "--phase", "Pulido", "Buscador")
+        self.assertEqual(code, 0, err)
+        self.assertIn("start WDR-1", out)  # dice qué escribir después
+        b = P.load(self.path)["branches"][0]
+        self.assertEqual((b["icon"], b["goal"], [p["name"] for p in b["phases"]]), ("🍲", "Ver recetas", ["Cimientos", "Pulido"]))
+        self.assertEqual(b["phases"][0]["steps"][1]["desc"], "Hecha cuando se ve una receta")
+        self.assertIn("done WDR-1 -m", run(self.path, "start", "WDR-1")[1])
+        self.assertIn("start WDR-2", run(self.path, "done", "WDR-1", "-m", "ok")[1])
+        for argv in (["branch", "Sin fases"], ["branch", "Fase vacía", "--phase", "Cimientos"]):
+            code, _, err = run(self.path, *argv)
+            self.assertEqual(code, 1)
+            self.assertIn('--phase "Nombre de fase"', err)
+        code, _, err = run(self.path, "plan", stdin="")
+        self.assertEqual(code, 1)
+        self.assertIn("uni.py branch", err)
+
     def test_single_branch_object_is_accepted(self):
         code, _, err = run(self.path, "plan", stdin=json.dumps(SAMPLE["branches"][0]))
         self.assertEqual(code, 0, err)

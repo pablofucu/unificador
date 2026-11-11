@@ -35,27 +35,22 @@ El plan vive en `{plan_module.PLAN_FILE}` y se toca solo con `{UNI}` (nunca edit
 Vale igual si te hablan desde la web, la terminal o la app.
 
 - **Al empezar**, mira cómo va: `{UNI} status`. Si un paso dice «PIDE CAMBIOS», atiéndelo lo primero.
-- **Trabajo nuevo** (algo más que una pregunta o un retoque): apúntalo como una rama y ponte con él.
-  No hace falta que nadie lo apruebe; la persona te corregirá si algo no le encaja.
+- **Trabajo nuevo** (algo más que una pregunta o un retoque): apúntalo ANTES de empezar, como una rama,
+  con esta única orden (vale en PowerShell, cmd y bash; cada cosa entre comillas dobles):
 
   ```
-  {UNI} plan <<'EOF'
-  {{"branches": [{{
-    "name": "Carrito de compra", "icon": "🛒", "goal": "Poder comprar desde la web",
-    "phases": [
-      {{"name": "Cimientos", "steps": [{{"title": "Modelo del carrito", "desc": "Hecho cuando se guarda y se recupera"}}]}},
-      {{"name": "Pagos", "steps": [{{"title": "Pasarela de pago"}}, {{"title": "Recibo por correo"}}]}}
-    ]}}]}}
-  EOF
+  {UNI} branch "Carrito de compra" --icon 🛒 --goal "Poder comprar desde la web" --phase "Cimientos" "Modelo del carrito" "Guardar y recuperar" --phase "Pagos" "Pasarela de pago" "Recibo por correo"
   ```
 
-  - Una **rama** es un cambio o un área que avanza por su cuenta. Ponle un emoji en `icon`.
-  - Entre 2 y 4 **fases** por rama, en orden, con un nombre que se reconozca de un vistazo
-    («Cimientos», «Pagos», «Pulido»). «Fase 1» o «Etapa 2» se rechazan.
-  - **Pasos** pequeños y comprobables, con título corto en lenguaje llano.
-  - Para añadir un paso suelto a una rama que ya existe: `{UNI} add RAMA "Fase" "Título" -d "…"`.
+  - Una **rama** es una función o un conjunto de cosas que hacer. Detrás de cada `--phase` va el nombre
+    de la fase y después sus pasos.
+  - Entre 2 y 4 **fases** por rama, en orden, con un nombre que se reconozca («Cimientos», «Pagos», «Pulido»).
+    «Fase 1» o «Etapa 2» se rechazan. **Pasos** pequeños y comprobables, con título corto en lenguaje llano.
+  - No pidas permiso ni confirmación para apuntar el plan: hazlo y sigue. La persona te corregirá si algo no encaja.
+  - Para añadir un paso suelto a una rama que ya existe: `{UNI} add RAMA "Fase" "Título"`.
 - **En cada paso**: `{UNI} start ID` → trabaja → `{UNI} done ID -m "qué ha cambiado y cómo lo has comprobado"`.
-  Si descubres algo que la persona deba saber, `{UNI} note ID "…"`. Termina las fases en orden.
+  Cada orden te dice cuál es la siguiente. Termina las fases en orden; si descubres algo que la persona
+  deba saber, `{UNI} note ID "…"`.
 - Firma con `--as <tu nombre>` (por ejemplo `--as claude`) salvo que `UNI_AGENT` ya esté puesto.
 - Preguntas y cambios diminutos: contesta sin tocar el plan.
 {BLOCK_END}"""
@@ -84,8 +79,12 @@ def upsert_block(text: str) -> str:
     return text.rstrip("\n") + "\n\n" + AGENTS_BLOCK + "\n" if text.strip() else AGENTS_BLOCK + "\n"
 
 
+def _uni_source() -> bytes:
+    return Path(plan_module.__file__).read_bytes().replace(b"\r\n", b"\n")
+
+
 def _ensure_uni(root: Path) -> bool:
-    source = Path(plan_module.__file__).read_bytes().replace(b"\r\n", b"\n")
+    source = _uni_source()
     target = root / UNI_REL
     if target.is_file() and target.read_bytes() == source:
         return False
@@ -154,6 +153,20 @@ def _ensure_hook(root: Path) -> bool:
 STEPS = ((UNI_REL, _ensure_uni), (f"{LOCAL_DIR}/.gitignore", _ensure_local_ignore),
          ("AGENTS.md", _ensure_agents), ("CLAUDE.md", _ensure_claude),
          (".claude/settings.json", _ensure_hook))
+
+
+def missing(project_path: str | Path) -> List[str]:
+    """Qué le falta al proyecto para que los agentes sigan el plan (sin tocar nada)."""
+    root = Path(project_path)
+    out = []
+    target = root / UNI_REL
+    if not target.is_file() or target.read_bytes() != _uni_source():
+        out.append(UNI_REL)
+    if upsert_block(_read(root / "AGENTS.md")) != _read(root / "AGENTS.md"):
+        out.append("AGENTS.md")
+    if CLAUDE_IMPORT not in _read(root / "CLAUDE.md"):
+        out.append("CLAUDE.md")
+    return out
 
 
 def install(project_path: str | Path) -> List[str]:

@@ -365,7 +365,7 @@ def render_status(plan: Dict[str, Any]) -> str:
     branches = [b for b in plan.get("branches", []) if not b.get("archived")]
     if not branches:
         return (f"{plan.get('title') or 'Proyecto'}: el plan está vacío.\n"
-                "Cuando haya trabajo que hacer, crea una rama con `plan` (mira las reglas en AGENTS.md).")
+                "Cuando haya trabajo que hacer, crea una rama con `branch` (ejemplo: python .unificador/uni.py --help).")
     done = sum(branch_progress(b)[0] for b in branches)
     total = sum(branch_progress(b)[1] for b in branches)
     lines = [f"{plan.get('title') or 'Proyecto'}: {done}/{total} pasos hechos en {len(branches)} "
@@ -415,21 +415,59 @@ def render_step(plan: Dict[str, Any], step_id: str) -> str:
 
 # ── Línea de órdenes ─────────────────────────────────────────────────────────
 
-EXAMPLE = """ejemplo de plan (por la entrada estándar o con --file):
+EXAMPLE = """ejemplo (vale igual en PowerShell, cmd y bash):
 
-  python .unificador/uni.py plan <<'EOF'
-  {"branches": [{
-     "name": "Carrito de compra", "icon": "🛒", "goal": "Que se pueda comprar desde la web",
-     "phases": [
-       {"name": "Cimientos", "steps": [{"title": "Modelo del carrito", "desc": "Hecho cuando…"}]},
-       {"name": "Pagos",     "steps": [{"title": "Pasarela de pago"}, {"title": "Recibo por correo"}]}
-     ]}]}
-  EOF
+  python .unificador/uni.py branch "Carrito de compra" --icon 🛒 --goal "Poder comprar desde la web" \
+      --phase "Cimientos" "Modelo del carrito" "Guardar y recuperar" \
+      --phase "Pagos" "Pasarela de pago" "Recibo por correo"
+  python .unificador/uni.py start CDC-1
+  python .unificador/uni.py done CDC-1 -m "qué ha cambiado y cómo lo he comprobado"
+
+Cada --phase lleva el nombre de la fase y después sus pasos, cada cosa entre comillas.
+Para un plan con descripciones: `plan --file plan.json` (mismo formato que unificador.json).
 """
+BRANCH_HINT = ('Crea la rama con una sola orden, cada cosa entre comillas:\n'
+               '  python .unificador/uni.py branch "Nombre de la rama" --goal "Para qué sirve" '
+               '--phase "Nombre de fase" "Primer paso" "Segundo paso" --phase "Otra fase" "Otro paso"')
+
+
+def branch_from_args(name: str, icon: str, goal: str, phases: List[List[str]]) -> dict:
+    """La rama que describe la orden `branch`: cada --phase es [nombre, paso, paso…]."""
+    if not phases:
+        raise PlanError("A la rama le faltan las fases.\n" + BRANCH_HINT)
+    out = []
+    for items in phases:
+        if len(items) < 2:
+            raise PlanError(f"La fase «{items[0]}» no tiene pasos: detrás del nombre van sus pasos.\n" + BRANCH_HINT)
+        steps = []
+        for item in items[1:]:
+            title, _, desc = item.partition(" :: ")
+            steps.append({"title": title, "desc": desc})
+        out.append({"name": items[0], "steps": steps})
+    return {"branches": [{"name": name, "icon": icon, "goal": goal, "phases": out}]}
+
+
+def _what_next(plan: Dict[str, Any], step_id: str) -> str:
+    """Qué orden toca después de cerrar un paso, para que el agente no tenga que deducirlo."""
+    branch, _, _ = find_step(plan, step_id)
+    nxt = next_step(branch)
+    if nxt is None:
+        return f"Rama «{branch['name']}» terminada. Cuéntale a la persona qué has hecho."
+    if nxt["state"] == DOING:
+        return f"Sigue con {nxt['id']} {nxt['title']} (ya está en curso)."
+    return f"Siguiente: python .unificador/uni.py start {nxt['id']}   ({nxt['title']})"
+
+
+class _Parser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:  # los errores, en llano y con lo que hay que escribir
+        self.print_usage(sys.stderr)
+        print(f"No entiendo la orden: {message}\nOrdenes: status, branch, add, start, done, note, show. "
+              "Ayuda con ejemplo: python .unificador/uni.py --help", file=sys.stderr)
+        raise SystemExit(2)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="uni", description="El plan del proyecto en ramas → fases → pasos.",
+    p = _Parser(prog="uni", description="El plan del proyecto en ramas → fases → pasos.",
                                 epilog=EXAMPLE, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("-f", "--plan-file", metavar="RUTA", help=f"fichero del plan (por defecto, el {PLAN_FILE} más cercano)")
     p.add_argument("--as", dest="by", metavar="NOMBRE", help="quién firma (por defecto $UNI_AGENT o «ia»)")
@@ -437,7 +475,13 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("status", help="cómo va el plan (orden por defecto)")
     s = sub.add_parser("show", help="un paso con su descripción y sus notas")
     s.add_argument("id")
-    s = sub.add_parser("plan", help="crea ramas nuevas desde JSON (entrada estándar o --file)")
+    s = sub.add_parser("branch", help="crea una rama con sus fases y pasos, todo en una orden")
+    s.add_argument("name", help="nombre de la rama")
+    s.add_argument("--icon", default="", help="un emoji")
+    s.add_argument("--goal", default="", help="para qué sirve")
+    s.add_argument("--phase", dest="phases", action="append", nargs="+", default=[], metavar="TEXTO",
+                   help='nombre de la fase y después sus pasos: --phase "Cimientos" "Paso uno" "Paso dos"')
+    s = sub.add_parser("plan", help="crea ramas nuevas desde JSON (--file o entrada estándar)")
     s.add_argument("--file", help="fichero JSON con el plan")
     s = sub.add_parser("add", help="añade un paso a una fase de una rama (crea la fase si no existe)")
     s.add_argument("branch", help="clave o nombre de la rama")
@@ -491,17 +535,26 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(render_status(load(path)))
         elif cmd == "show":
             print(render_step(load(path), args.id))
-        elif cmd == "plan":
-            raw = Path(args.file).read_text(encoding="utf-8") if args.file else sys.stdin.read()
-            try:
-                data = json.loads(raw)
-            except ValueError as e:
-                raise PlanError(f"El plan no es JSON válido: {e}")
+        elif cmd in ("plan", "branch"):
+            if cmd == "branch":
+                data = branch_from_args(args.name, args.icon, args.goal, args.phases)
+            else:
+                if not args.file and sys.stdin is not None and sys.stdin.isatty():
+                    raise PlanError("No me ha llegado ningún plan.\n" + BRANCH_HINT)
+                raw = Path(args.file).read_text(encoding="utf-8-sig") if args.file else sys.stdin.read()
+                if not raw.strip():
+                    raise PlanError("No me ha llegado ningún plan.\n" + BRANCH_HINT)
+                try:
+                    data = json.loads(raw.lstrip("\ufeff"))
+                except ValueError as e:
+                    raise PlanError(f"El plan no es JSON válido: {e}\n" + BRANCH_HINT)
+            first = ""
             for b in mutate(path, lambda plan: add_branches(plan, data, by)):
                 print(f"+ rama {b.get('icon') or '●'} {b['name']} [{b['key']}]")
                 for ph in b["phases"]:
                     print(f"    {ph['name']}: " + ", ".join(s["id"] for s in ph["steps"]))
-            print("Plan guardado. Empieza por el primer paso con `start`.")
+                first = first or next((s["id"] for ph in b["phases"] for s in ph["steps"]), "")
+            print(f"Plan guardado. Ahora empieza el primer paso: python .unificador/uni.py start {first}")
         elif cmd == "add":
             s = mutate(path, lambda plan: add_step(plan, args.branch, args.phase, args.title, args.desc, by))
             print(f"+ {s['id']}  {s['title']}")
@@ -509,6 +562,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             state = {"start": DOING, "done": DONE, "reopen": PENDING}[cmd]
             s = mutate(path, lambda plan: set_state(plan, args.id, state, by, args.message))
             print(f"{MARKS[state]} {s['id']}  {s['title']}  [{STATE_NAMES[state]}]")
+            if cmd == "start":
+                print(f'Cuando lo termines: python .unificador/uni.py done {s["id"]} -m "qué ha cambiado y cómo lo has comprobado"')
+            elif cmd == "done":
+                print(_what_next(load(path), s["id"]))
         elif cmd == "note":
             s = mutate(path, lambda plan: add_note(plan, args.id, args.text, by))
             print(f"Nota guardada en {s['id']}.")

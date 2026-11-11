@@ -5,6 +5,7 @@ import sys
 import tempfile
 import threading
 import time
+import os
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -101,6 +102,55 @@ class CommandTest(unittest.TestCase):
         self.assertEqual(clean["agents"]["claude"], {"model": "", "effort": "", "mode": "auto"})
         self.assertEqual(G.clean_settings("x")["agents"]["antigravity"]["mode"], "auto")
         self.assertEqual(G.clean_settings({"agents": {"claude": {"model": "--resume"}}})["agents"]["claude"]["model"], "")
+
+
+class FindTest(unittest.TestCase):
+    """Encontrar los agentes aunque la terminal no los tenga en el PATH."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.home = Path(self.tmp.name)
+        for target, value in (("PATHS_FILE", self.home / "cfg" / "agentes.json"), ("_paths", None)):
+            patcher = mock.patch.object(G, target, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        for target, value in (("shutil.which", lambda name: None), ("pathlib.Path.home", lambda: self.home)):
+            patcher = mock.patch(target, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        patcher = mock.patch.dict(os.environ, {"LOCALAPPDATA": str(self.home / "L"), "APPDATA": str(self.home / "R")})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def exe(self, folder, command):
+        path = self.home / folder / (command + (".exe" if sys.platform == "win32" else ""))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("", encoding="utf-8")
+        return path
+
+    def test_usual_folder_without_path(self):
+        self.assertEqual(G._exe("claude"), "")
+        found = self.exe(".local/bin", "claude")
+        self.assertEqual(G._exe("claude"), str(found))
+        agents = {a["id"]: a for a in G.available()}
+        self.assertEqual((agents["claude"]["installed"], agents["claude"]["path"]), (True, str(found)))
+        self.assertFalse(agents["antigravity"]["installed"])
+        # El agente elegido nunca es uno que no se puede usar.
+        self.assertEqual(G.clean_settings({"agent": "antigravity"})["agent"], "claude")
+
+    def test_path_set_by_hand(self):
+        with self.assertRaises(G.AgentError):
+            G.set_path("antigravity", str(self.home / "no-existe"))
+        other = self.exe("otro", "claude")
+        with self.assertRaises(G.AgentError):
+            G.set_path("antigravity", str(other))  # no es agy
+        agy = self.exe("mis cosas", "agy")
+        self.assertEqual(G.set_path("antigravity", f'"{agy.parent}"'), str(agy))  # vale la carpeta, con comillas
+        with mock.patch.object(G, "_paths", None):  # se recuerda al volver a arrancar
+            self.assertEqual(G._exe("antigravity"), str(agy))
+        self.assertEqual(G.set_path("antigravity", ""), "")
+        self.assertEqual(G.clean_settings({})["agent"], "claude")
 
 
 class StreamTest(FakeAgents, unittest.TestCase):

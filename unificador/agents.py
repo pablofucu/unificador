@@ -69,8 +69,74 @@ class AgentError(Exception):
     pass
 
 
+PATHS_FILE = Path.home() / ".unificador" / "agentes.json"  # rutas puestas a mano; son de este ordenador
+_paths: Optional[Dict[str, str]] = None
+
+
+def _usual_places(agent: str) -> List[Path]:
+    """Dónde suelen instalarse, por si la terminal que abrió Unificador no los tiene en el PATH."""
+    home, env = Path.home(), os.environ
+    local, roaming = Path(env.get("LOCALAPPDATA") or home / "AppData/Local"), Path(env.get("APPDATA") or home / "AppData/Roaming")
+    shared = [home / ".local/bin", Path("/usr/local/bin"), Path("/opt/homebrew/bin"), home / ".npm-global/bin",
+              home / ".bun/bin", roaming / "npm"]
+    own = {"claude": [home / ".claude/local", home / ".claude/bin", local / "Programs/claude"],
+           "antigravity": [local / "agy/bin", home / ".gemini/antigravity-cli/bin", local / "Programs/agy/bin"]}[agent]
+    command = AGENTS[agent]["command"]
+    names = [command + ext for ext in ((".exe", ".cmd", "") if sys.platform == "win32" else ("",))]
+    return [folder / name for folder in own + shared for name in names]
+
+
+def _saved_paths() -> Dict[str, str]:
+    global _paths
+    if _paths is None:
+        try:
+            data = json.loads(PATHS_FILE.read_text(encoding="utf-8"))
+            _paths = {k: v for k, v in data.items() if k in AGENTS and isinstance(v, str)} if isinstance(data, dict) else {}
+        except (OSError, ValueError):
+            _paths = {}
+    return _paths
+
+
+def set_path(agent: str, path: str) -> str:
+    """Guarda dónde está el programa de un agente (vacío = volver a buscarlo solo). Devuelve la ruta usada."""
+    global _agy_models
+    if agent not in AGENTS:
+        raise AgentError(f"No conozco el agente «{agent}».")
+    command, name = AGENTS[agent]["command"], AGENTS[agent]["name"]
+    path = path.strip().strip('"')
+    if path:
+        p = Path(path).expanduser()
+        if p.is_dir():
+            p = next((p / (command + ext) for ext in (".exe", ".cmd", "") if (p / (command + ext)).is_file()), p)
+        if not p.is_file():
+            raise AgentError(f"Ahí no hay ningún programa: {p}")
+        if p.stem.lower() != command:
+            raise AgentError(f"Ese fichero no es {name}: tiene que llamarse «{command}».")
+        path = str(p)
+    paths = dict(_saved_paths())
+    paths.pop(agent, None)
+    if path:
+        paths[agent] = path
+    try:
+        PATHS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        PATHS_FILE.write_text(json.dumps(paths, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    except OSError as e:
+        raise AgentError(f"No he podido guardar la ruta: {e}")
+    _saved_paths().clear()
+    _saved_paths().update(paths)
+    if agent == "antigravity":
+        _agy_models = None
+    return _exe(agent)
+
+
 def _exe(agent: str) -> str:
-    return shutil.which(AGENTS[agent]["command"]) or ""
+    saved = _saved_paths().get(agent, "")
+    if saved and Path(saved).is_file():
+        return saved
+    found = shutil.which(AGENTS[agent]["command"])
+    if found:
+        return found
+    return next((str(p) for p in _usual_places(agent) if p.is_file()), "")
 
 
 # ----------------------------------------------------------------------------- qué hay
@@ -115,7 +181,8 @@ def available() -> List[Dict[str, Any]]:
         models = list(a["models"])
         if key == "antigravity":
             models += _agy_models or []
-        out.append({"id": key, "name": a["name"], "icon": a["icon"], "installed": bool(_exe(key)),
+        exe = _exe(key)
+        out.append({"id": key, "name": a["name"], "icon": a["icon"], "installed": bool(exe), "path": exe,
                     "models": models, "efforts": a["efforts"], "modes": MODES})
     return out
 
@@ -123,7 +190,10 @@ def available() -> List[Dict[str, Any]]:
 def clean_settings(data: Any) -> Dict[str, Any]:
     """Ajustes de la persona, ya comprobados: agente elegido y modelo/esfuerzo/modo de cada uno."""
     data = data if isinstance(data, dict) else {}
-    agent = data.get("agent") if data.get("agent") in AGENTS else "claude"
+    installed = [k for k in AGENTS if _exe(k)]
+    agent = data.get("agent") if data.get("agent") in AGENTS else ""
+    if not agent or (installed and agent not in installed):
+        agent = (installed or ["claude"])[0]  # nunca se deja elegido uno que no se puede usar
     per = data.get("agents") if isinstance(data.get("agents"), dict) else {}
     agents = {}
     for key, a in AGENTS.items():

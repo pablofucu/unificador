@@ -5,6 +5,7 @@ import json
 import tempfile
 import threading
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from unificador import app as A
@@ -91,6 +92,12 @@ class AppTest(ServerCase):
         self.assertEqual(self.call("POST", path, body, {"Origin": ok, "Sec-Fetch-Site": "same-origin"})[0], 200)
         self.assertEqual(self.call("GET", "/api/plan", host=f"localhost:{self.port}")[0], 200)
 
+    def test_agent_path_from_the_web(self):
+        with mock.patch.object(A.G, "set_path", side_effect=A.G.AgentError("Ahí no hay ningún programa: x")) as fake:
+            status, data, _ = self.call("POST", "/api/settings", {"paths": {"antigravity": "x"}})
+        self.assertEqual((status, fake.call_args.args), (400, ("antigravity", "x")))
+        self.assertIn("no hay ningún programa", data["error"])
+
     def test_settings_are_cleaned_and_kept_local(self):
         status, data, _ = self.call("POST", "/api/settings", {
             "agent": "antigravity", "otra": "cosa",
@@ -133,7 +140,13 @@ class AppTest(ServerCase):
         finally:
             other.server_close()
         with tempfile.TemporaryDirectory() as tmp:
-            self.assertEqual(cli.main(["install", tmp]), 0)
+            with mock.patch.object(cli, "_agent_lines", lambda: ["  ✔ Claude Code: x"]):
+                self.assertEqual(cli.main(["doctor", tmp]), 1)  # faltan las reglas, y no las pone él
+                self.assertEqual(list(Path(tmp).iterdir()), [])
+                self.assertEqual(cli.main(["install", tmp]), 0)
+                self.assertEqual(cli.main(["doctor", tmp]), 0)
+            with mock.patch.object(cli, "_agent_lines", lambda: ["  ✘ Claude Code: no lo encuentro."]):
+                self.assertEqual(cli.main(["doctor", tmp]), 1)
             self.assertTrue((Path(tmp) / ".unificador/uni.py").is_file())
             self.assertEqual(cli.main(["import-kanvas", tmp]), 1)
             (Path(tmp) / "kanvas.json").write_text(json.dumps({"tasks": [

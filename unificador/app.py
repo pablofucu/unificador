@@ -159,6 +159,13 @@ def get_session(project, args, query, body):
 
 @route("POST", "/api/settings")
 def post_settings(project, args, query, body):
+    paths = body.pop("paths", None)
+    if isinstance(paths, dict):  # dónde está cada agente: es del ordenador, no del proyecto
+        for agent, path in paths.items():
+            try:
+                G.set_path(str(agent), path if isinstance(path, str) else "")
+            except G.AgentError as e:
+                raise ApiError(str(e))
     return project.save_settings(G.clean_settings({**project.settings(), **body}))
 
 

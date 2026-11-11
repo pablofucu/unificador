@@ -1,6 +1,7 @@
 """Lo que Unificador instala en cada proyecto."""
 
 import json
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -30,11 +31,13 @@ class RulesTest(unittest.TestCase):
     def test_copied_cli_works_alone_and_example_in_rules_is_valid(self):
         R.install(self.root)
         block = (self.root / "AGENTS.md").read_text(encoding="utf-8")
-        example = block.split("<<'EOF'\n")[1].split("EOF")[0]
+        line = next(l for l in block.splitlines() if " branch " in l and "--phase" in l)
+        example = shlex.split(line.strip())[2:]  # la orden tal cual sale en las reglas, sin «python uni.py»
+        self.assertNotIn("<<", block)  # nada que solo valga en bash
         run = lambda *a, **k: subprocess.run(
             [sys.executable, "-X", "utf8", R.UNI_REL, *a], cwd=self.root, capture_output=True,
             text=True, encoding="utf-8", **k)
-        made = run("--as", "claude", "plan", input=example)
+        made = run("--as", "claude", *example)
         self.assertEqual(made.returncode, 0, made.stderr)
         self.assertEqual(run("start", "CDC-1").returncode, 0)
         status = run("status")
