@@ -8,9 +8,22 @@
 </head>
 <body data-tab="plan">
   <div class="layout">
+    <aside id="chat" aria-label="Chat">
+      <nav id="chat-rail" class="rail" aria-label="Agentes"></nav>
+      <div class="chat-main">
+        <div id="chat-bar" class="chat-bar"></div>
+        <div id="chat-list" class="chat-list" hidden></div>
+        <div id="chat-log" class="chat-log" role="log" aria-live="polite"></div>
+        <div id="chat-toast" class="chat-toast" role="status" hidden></div>
+        <form id="chat-form" class="composer">
+          <textarea id="chat-input" rows="1" placeholder="Escribe aquí…" title="Enter envía · Shift+Enter salta de línea" aria-label="Mensaje"></textarea>
+          <button id="chat-send" type="submit" data-mode="send">Enviar ➤</button>
+        </form>
+      </div>
+    </aside>
     <main id="plan" aria-label="Plan del proyecto">
       <header class="top">
-        <div>
+        <div class="top-title">
           <h1 id="project-name">Unificador</h1>
           <p id="project-sub" class="muted"></p>
         </div>
@@ -21,16 +34,6 @@
       </header>
       <div id="branches"></div>
     </main>
-    <aside id="chat" aria-label="Chat">
-      <div id="chat-bar" class="chat-bar"></div>
-      <div id="chat-list" class="chat-list" hidden></div>
-      <div id="chat-log" class="chat-log" role="log" aria-live="polite"></div>
-      <div id="chat-toast" class="chat-toast" role="status" hidden></div>
-      <form id="chat-form" class="composer">
-        <textarea id="chat-input" rows="1" placeholder="Escribe aquí… (Enter envía, Shift+Enter salta de línea)" aria-label="Mensaje"></textarea>
-        <button id="chat-send" type="submit" data-mode="send">Enviar ➤</button>
-      </form>
-    </aside>
   </div>
   <nav class="tabs" aria-label="Secciones">
     <button type="button" data-tab="plan" aria-pressed="true">🗺️ Plan</button>

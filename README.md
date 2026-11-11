@@ -44,13 +44,20 @@ conversaciones aparecerán en la web.
 ```text
 unificador [RUTA] [--port N] [--no-open]    abre la web del proyecto (por defecto, la carpeta actual)
 unificador install [RUTA]                   solo prepara el proyecto, sin abrir la web
+unificador doctor [RUTA]                    comprueba que todo está listo y dice qué falta
 unificador import-kanvas [RUTA] [--force]   convierte un tablero Kanvas (kanvas.json) en plan
 ```
 
 La IA (y tú, si quieres) maneja el plan con `python .unificador/uni.py`:
 
 ```text
-status · show ID · plan · add · start ID · note ID · done ID -m "qué cambió" · reopen ID · archive RAMA · drop RAMA
+status · show ID · branch · plan · add · start ID · note ID · done ID -m "qué cambió" · reopen ID · archive RAMA · drop RAMA
+```
+
+Una rama entera se apunta con una sola orden, igual en PowerShell, cmd y bash:
+
+```text
+python .unificador/uni.py branch "Carrito" --icon 🛒 --goal "Comprar desde la web" --phase "Cimientos" "Modelo" "Guardar" --phase "Pagos" "Pasarela" "Recibo"
 ```
 
 ## Cómo se trabaja
@@ -69,7 +76,10 @@ Los modos del chat: **Autónomo** (hace el trabajo sin preguntar), **Edita sin p
 | Antigravity | la orden `agy` | funciona |
 | Codex | — | propuesta de futuro |
 
-Un agente que no esté instalado aparece desactivado; el resto sigue funcionando.
+Unificador los busca solo: en el PATH y en sus carpetas de instalación habituales. Si no encuentra alguno,
+pulsa su icono en la web y pega la ruta del programa (se guarda en `~/.unificador/agentes.json`).
+En Windows, Antigravity necesita el modo **Autónomo** para ejecutar órdenes y apuntar el plan; si se le
+deniega algo, el chat lo avisa y ofrece repetirlo en ese modo.
 
 ## Desarrollo
 

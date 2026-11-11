@@ -30,6 +30,8 @@ branches[]   rama: key, name, goal, icon, color, archived?
 - El estado de fases y ramas se calcula a partir de sus pasos; no se guarda.
 - `change` es una corrección pedida por la persona: reabre el paso hasta que la IA lo termina otra vez.
 - `notes` es la historia del paso: quién (`ia` o `persona`), cuándo y qué.
+- La IA crea una rama con `uni.py branch "Nombre" --phase "Fase" "Paso"…`: una sola línea que vale en cualquier
+  terminal (los modelos flojos fallaban con JSON por la entrada estándar). Cada orden imprime cuál es la siguiente.
 
 ## Módulos (`unificador/`)
 
@@ -71,6 +73,10 @@ restos de la versión anterior.
 - **Antigravity**: `agy --output-format stream-json --mode <modo> [--model] [--conversation <id>] -p <mensaje>`.
 - Una conversación solo puede tener una respuesta en curso; parar mata el proceso del agente.
 - El modelo que se enseña junto a cada respuesta es el que dice el propio agente, no el elegido.
+- Dónde está cada agente: ruta guardada (`~/.unificador/agentes.json`, se pone desde la web) → PATH → carpetas
+  de instalación habituales. `unificador doctor` repasa agentes, reglas, plan y `python` sin tocar nada.
+- En Windows el modo Autónomo de Antigravity es `--dangerously-skip-permissions`; una acción denegada se avisa en
+  el chat con un botón para repetirla en ese modo.
 
 ## Seguridad
 

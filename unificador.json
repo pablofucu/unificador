@@ -1085,22 +1085,67 @@
               "id": "IDC-10",
               "title": "Recuperar el diseño «definitivo»",
               "desc": "Chat a la izquierda con la barra de agentes, lienzo a la derecha con ramas en filas y fases en columnas, tema claro.",
-              "state": "pending",
-              "notes": []
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T23:07:40+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-11T23:10:57+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Chat a la izquierda con barra de agentes y lienzo a la derecha; cada rama es una tarjeta con sus fases en rejilla y los pasos en línea. Comprobado en el navegador a 1440 y a 375 px, sin desbordes ni errores de consola."
+                }
+              ],
+              "updated": "2026-11-11T23:10:57+01:00",
+              "result": "Chat a la izquierda con barra de agentes y lienzo a la derecha; cada rama es una tarjeta con sus fases en rejilla y los pasos en línea. Comprobado en el navegador a 1440 y a 375 px, sin desbordes ni errores de consola."
             },
             {
               "id": "IDC-11",
               "title": "El lienzo se mueve solo",
               "desc": "Los pasos cambian en vivo mientras el agente trabaja, se escriba desde la web o desde fuera.",
-              "state": "pending",
-              "notes": []
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T23:10:57+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-11T23:10:57+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Al cambiar el plan el lienzo se actualiza sin recargar, con las barras y anillos animados. Comprobado ejecutando uni.py start con la web abierta y pidiendo un plan a Antigravity en un proyecto vacío: la rama apareció sola."
+                }
+              ],
+              "updated": "2026-11-11T23:10:57+01:00",
+              "result": "Al cambiar el plan el lienzo se actualiza sin recargar, con las barras y anillos animados. Comprobado ejecutando uni.py start con la web abierta y pidiendo un plan a Antigravity en un proyecto vacío: la rama apareció sola."
             },
             {
               "id": "IDC-12",
               "title": "Repaso visual con capturas",
               "desc": "Escritorio y móvil, comparado con la maqueta.",
-              "state": "pending",
-              "notes": []
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T23:10:58+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-11T23:10:58+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Repasado con capturas en escritorio y móvil: las fases ya no se pisan (saltan de fila), cabeceras legibles en móvil, y el chat pinta títulos, separadores y código. Prueba completa desde la web con el modelo por defecto de Antigravity: creó el plan sin ayuda. 56 pruebas pasan."
+                }
+              ],
+              "updated": "2026-11-11T23:10:58+01:00",
+              "result": "Repasado con capturas en escritorio y móvil: las fases ya no se pisan (saltan de fila), cabeceras legibles en móvil, y el chat pinta títulos, separadores y código. Prueba completa desde la web con el modelo por defecto de Antigravity: creó el plan sin ayuda. 56 pruebas pasan."
             }
           ]
         }

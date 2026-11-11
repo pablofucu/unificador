@@ -40,7 +40,7 @@ function inline(parent, text) {
   for (const part of text.split(/(`[^`\n]+`|\*\*[^*\n]+\*\*)/)) {
     if (!part) continue;
     if (part.startsWith("`") && part.endsWith("`") && part.length > 2) parent.append(el("code", null, part.slice(1, -1)));
-    else if (part.startsWith("**") && part.endsWith("**") && part.length > 4) parent.append(el("strong", null, part.slice(2, -2)));
+    else if (part.startsWith("**") && part.endsWith("**") && part.length > 4) { const b = el("strong"); inline(b, part.slice(2, -2)); parent.append(b); }
     else parent.append(part);
   }
 }
@@ -57,6 +57,10 @@ function markdown(text) {
         if (!list) { list = el("ul"); box.append(list); para = null; }
         const item = el("li"); inline(item, li[1]); list.append(item);
       } else if (!line.trim()) flush();
+      else if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { box.append(el("hr")); flush(); }
+      else if (/^\s*#{1,6}\s+\S/.test(line)) {
+        const h = el("h4"); inline(h, line.replace(/^\s*#{1,6}\s+/, "").replace(/\s+#+\s*$/, "")); box.append(h); flush();
+      }
       else {
         if (!para) { para = el("p"); box.append(para); list = null; } else para.append(el("br"));
         inline(para, line);
@@ -85,17 +89,63 @@ function setAgent(id) {
   renderBar(); renderLog();
 }
 
+let setupFor = "";             // agente cuyo formulario «dónde está instalado» está abierto
+let setupDraft = "";
+let setupMsg = "";
+
+async function savePath(id, path) {
+  setupMsg = "";
+  try {
+    const r = await post("/api/settings", { ...settings, paths: { [id]: path } });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) throw new Error(d.error || `Error ${r.status}`);
+    const info = await (await api("/api/project")).json();
+    project = info;
+    const ag = (info.agents || []).find((x) => x.id === id);
+    if (ag && ag.installed) { setupFor = ""; setupDraft = ""; setAgent(id); return; }
+    setupMsg = "Sigo sin encontrarlo en esa ruta. Revisa que sea el programa.";
+  } catch (e) { setupMsg = `No se pudo guardar: ${e.message}`; }
+  renderBar();
+}
+
+function setupForm(ag) {
+  const f = el("form", "setup");
+  f.append(el("p", null, `No encuentro ${ag.name} en este ordenador. Si lo tienes instalado, pega aquí la ruta del programa.`));
+  const row = el("div", "setup-row");
+  const inp = el("input");
+  inp.type = "text";
+  inp.placeholder = "Ruta del programa";
+  inp.setAttribute("aria-label", `Ruta del programa de ${ag.name}`);
+  inp.value = setupDraft || ag.path || "";
+  inp.addEventListener("input", () => { setupDraft = inp.value; });
+  const save = el("button", "pill primary", "Guardar");
+  save.type = "submit";
+  const cancel = el("button", "pill", "Cancelar");
+  cancel.type = "button";
+  cancel.addEventListener("click", () => { setupFor = ""; setupMsg = ""; renderBar(); });
+  row.append(inp, save, cancel);
+  f.append(row);
+  if (setupMsg) f.append(el("p", "setup-msg", setupMsg));
+  f.addEventListener("submit", (e) => { e.preventDefault(); if (inp.value.trim()) savePath(ag.id, inp.value.trim()); });
+  return f;
+}
+
 function renderBar() {
   const bar = $("chat-bar"), a = agentInfo(settings.agent);
-  const agents = el("div", "agents");
-  for (const ag of project.agents || []) {
-    const b = el("button", "pill agent", `${ag.icon || "🤖"} ${ag.name}${ag.installed ? "" : " · no instalado"}`);
+  const rail = $("chat-rail");
+  rail.replaceChildren(...(project.agents || []).map((ag) => {
+    const b = el("button", "agent");
     b.type = "button";
-    b.disabled = !ag.installed;
-    b.setAttribute("aria-pressed", String(ag.id === settings.agent));
-    b.addEventListener("click", () => setAgent(ag.id));
-    agents.append(b);
-  }
+    b.title = ag.installed ? ag.name : `${ag.name} · no instalado`;
+    b.classList.toggle("off", !ag.installed);
+    b.setAttribute("aria-pressed", String(ag.installed && ag.id === settings.agent));
+    b.append(el("span", "agent-ic", ag.icon || "🤖"), el("span", "agent-name", ag.name));
+    b.addEventListener("click", () => {
+      if (ag.installed) { setupFor = ""; setAgent(ag.id); return; }
+      setupFor = setupFor === ag.id ? "" : ag.id; setupMsg = ""; renderBar();
+    });
+    return b;
+  }));
   const opts = el("div", "opts");
   const set = (k) => (v) => { prefs()[k] = v; saveSettings(); };
   const p = prefs();
@@ -117,7 +167,12 @@ function renderBar() {
     nat.addEventListener("click", openNative);
     tools.append(nat);
   }
-  bar.replaceChildren(agents, opts, tools);
+  const head = el("div", "agent-title");
+  head.append(el("strong", null, `${a.icon || "🤖"} ${a.name}`));
+  const kids = [head, opts, tools];
+  const miss = (project.agents || []).find((x) => x.id === setupFor && !x.installed);
+  if (miss) kids.push(setupForm(miss));
+  bar.replaceChildren(...kids);
 }
 
 function newChat() {
@@ -316,7 +371,8 @@ export async function initChat(info) {
   project = info;
   settings = { agent: "", agents: {}, ...(info.settings || {}) };
   settings.agents ||= {};
-  if (!settings.agent) settings.agent = ((info.agents || []).find((a) => a.installed) || (info.agents || [])[0] || {}).id || "";
+  const saved = (info.agents || []).find((a) => a.id === settings.agent);
+  if (!saved || !saved.installed) settings.agent = ((info.agents || []).find((a) => a.installed) || (info.agents || [])[0] || {}).id || "";
   active = { agent: settings.agent, session: null };
 
   const form = $("chat-form"), input = $("chat-input");
