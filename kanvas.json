@@ -498,7 +498,7 @@
     {
       "id": "IT-01",
       "title": "Vista del plan: ramas, fases con nombre y pasos",
-      "state": "todo",
+      "state": "doing",
       "group": "IT",
       "deps": ["PS-01", "SR-01"],
       "at": "2026-11-11T11:11:16Z",
@@ -549,7 +549,7 @@
     {
       "id": "LM-01",
       "title": "Quitar lo que sobra",
-      "state": "todo",
+      "state": "done",
       "group": "LM",
       "at": "2026-11-11T11:11:16Z",
       "by": "claude-code",
@@ -559,6 +559,16 @@
           "at": "2026-11-11T11:25:03Z",
           "by": "pablo (delegado en claude-code)",
           "text": "Plan aprobado."
+        },
+        {
+          "at": "2026-11-11T15:29:42Z",
+          "by": "claude-code",
+          "text": "Borrados doujinshi-web (y su entrada en launch.json y en la lista vieja de proyectos), 5 maquetas descartadas (queda definitivo + shared.*), frontend/ viejo y los 22 chats falsos de ~/.unificador. Las pruebas (49 OK) ya no escriben fuera de carpetas temporales. DeepSeek NO se borra: la persona no lo autorizó; queda aparcado sin enganchar."
+        },
+        {
+          "at": "2026-11-11T15:29:43Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Aceptado."
         }
       ]
     },
