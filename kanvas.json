@@ -403,7 +403,7 @@
     {
       "id": "CN-04",
       "title": "Antigravity: ver y continuar sus conversaciones",
-      "state": "todo",
+      "state": "done",
       "group": "CN",
       "deps": ["CN-02"],
       "at": "2026-11-11T11:11:16Z",
@@ -414,6 +414,16 @@
           "at": "2026-11-11T11:25:03Z",
           "by": "pablo (delegado en claude-code)",
           "text": "Plan aprobado."
+        },
+        {
+          "at": "2026-11-11T15:28:12Z",
+          "by": "claude-code",
+          "text": "agy_sessions.py lee las conversaciones de Antigravity (solo lectura, SQLite + protobuf mínimo): lista por carpeta del proyecto, turnos con herramientas y hora; continuar con --conversation comprobado con una conversación real. 49 pruebas OK."
+        },
+        {
+          "at": "2026-11-11T15:28:12Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Aceptado."
         }
       ]
     },
