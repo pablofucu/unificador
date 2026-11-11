@@ -126,8 +126,15 @@ h1 { margin: 0; font-size: 1.9rem; }
 .notes li { display: flex; gap: 8px; }
 .notes time { color: var(--muted); font-size: .8rem; white-space: nowrap; min-width: 8.5em; }
 .notes b { font-weight: 600; }
-.actions { display: flex; gap: 8px; margin-top: 10px; }
-.actions:empty { display: none; }
+.actions { display: grid; gap: 8px; margin-top: 10px; }
+.act-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.act-msg { font-size: .8rem; color: var(--muted); }
+.act-msg:empty { display: none; }
+.change-form[hidden] { display: none; }
+.change-form { display: grid; gap: 6px; }
+.change-form textarea { font: inherit; width: 100%; box-sizing: border-box; resize: vertical; padding: 8px 10px;
+  border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+.change-btns { display: flex; gap: 8px; }
 
 .archived > summary { cursor: pointer; font-weight: 700; padding: 10px 4px; color: var(--muted); }
 .archived .branch { opacity: .85; }

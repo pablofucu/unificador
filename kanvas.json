@@ -552,7 +552,7 @@
     {
       "id": "IT-03",
       "title": "Corregir desde la web",
-      "state": "todo",
+      "state": "done",
       "group": "IT",
       "deps": ["IT-02"],
       "at": "2026-11-11T11:11:16Z",
@@ -563,6 +563,16 @@
           "at": "2026-11-11T11:25:03Z",
           "by": "pablo (delegado en claude-code)",
           "text": "Plan aprobado."
+        },
+        {
+          "at": "2026-11-11T15:37:26Z",
+          "by": "claude-code",
+          "text": "Detalle del paso con «Pedir un cambio» (reabre el paso y avisa al agente en el chat) y «Marcar hecho/Reabrir»; comprobado en navegador: el paso se reabre y el agente lo retoma."
+        },
+        {
+          "at": "2026-11-11T15:37:27Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Aceptado."
         }
       ]
     },

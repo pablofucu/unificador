@@ -1,7 +1,7 @@
 // Chat: agentes, conversaciones, envío en streaming. Todo el DOM se construye con textContent.
 const $ = (id) => document.getElementById(id);
 const api = (url, opt) => fetch(url, opt);
-const post = (url, body) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+export const post = (url, body) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 let project = null;           // {name, agents, settings}
 let settings = { agent: "", agents: {} };

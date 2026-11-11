@@ -167,6 +167,8 @@ def read_turns(path: Path) -> List[Dict[str, Any]]:
                 turns.append({"role": "user", "text": text, "tools": [], "at": at})
             continue
         content = (e.get("message") or {}).get("content")
+        if str((e.get("message") or {}).get("model") or "").startswith("<"):
+            continue  # relleno que escribe la CLI al parar («No response requested.»)
         text = _text_of(content).strip()
         tools = [describe_tool(str(b.get("name") or ""), b.get("input"))
                  for b in content or [] if isinstance(b, dict) and b.get("type") == "tool_use"]

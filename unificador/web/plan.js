@@ -1,4 +1,5 @@
 // Pinta el plan con createElement/textContent (nunca innerHTML con datos del plan).
+import { post, sendToActive } from "./chat.js";
 const STATE = { pending: ["·", "Pendiente"], doing: ["▶", "En curso"], done: ["✔", "Hecho"] };
 const KIND = { start: "Empezó", done: "Terminó", reopen: "Reabrió", change: "Pidió un cambio", note: "Nota" };
 const open = new Set(); // ids de pasos desplegados (sobrevive a los repintados)
@@ -53,8 +54,81 @@ function detail(s) {
     }
     d.append(section("Historia", ul));
   }
-  d.append(el("div", "actions")); // hueco para «Corregir» y «Marcar» (siguiente paso)
+  d.append(actions(s));
   return d;
+}
+
+// Borradores de corrección por paso: sobreviven a los repintados del plan (SSE).
+const drafts = new Map(); // id -> texto (existe = formulario abierto)
+const notes = new Map();  // id -> último aviso/error
+
+async function call(url, body) {
+  const r = await post(url, body);
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error(e.error || `Error ${r.status}`);
+  }
+}
+
+function actions(s) {
+  const box = el("div", "actions");
+  const msg = el("span", "act-msg", notes.get(s.id) || "");
+  msg.setAttribute("role", "status");
+  const say = (t) => { notes.set(s.id, t); msg.textContent = t; };
+  const pill = (text, label, fn) => {
+    const b = el("button", "pill", text);
+    b.type = "button";
+    if (label) b.setAttribute("aria-label", label);
+    b.addEventListener("click", fn);
+    return b;
+  };
+  const run = async (b, fn) => {
+    b.disabled = true; say("");
+    try { await fn(); } catch (e) { say(`No se pudo: ${e.message}`); b.disabled = false; }
+  };
+
+  const ask = pill("✏️ Pedir un cambio", `Pedir un cambio en el paso ${s.title}`, () => {
+    drafts.set(s.id, drafts.get(s.id) || ""); say("");
+    form.hidden = false; ask.hidden = true; ta.focus();
+  });
+  const mark = s.state === "done"
+    ? pill("↩ Reabrir", `Reabrir el paso ${s.title}`, () => run(mark, () => call(`/api/plan/steps/${s.id}/state`, { state: "pending" })))
+    : pill("✓ Marcar hecho", `Marcar hecho el paso ${s.title}`, () => run(mark, () => call(`/api/plan/steps/${s.id}/state`, { state: "done" })));
+
+  const form = el("div", "change-form");
+  const ta = el("textarea");
+  ta.rows = 2;
+  ta.placeholder = "¿Qué quieres que cambie en este paso?";
+  ta.setAttribute("aria-label", `Cambio que pides en el paso ${s.title}`);
+  ta.value = drafts.get(s.id) || "";
+  ta.addEventListener("input", () => drafts.set(s.id, ta.value));
+  const close = () => { drafts.delete(s.id); ta.value = ""; form.hidden = true; ask.hidden = false; ask.focus(); };
+  const send = pill("Enviar", null, async () => {
+    const text = ta.value.trim();
+    if (!text) { say("Escribe primero qué quieres cambiar."); ta.focus(); return; }
+    send.disabled = true; say("");
+    try {
+      await call(`/api/plan/steps/${s.id}/change`, { text });
+    } catch (e) { say(`No se pudo: ${e.message}`); send.disabled = false; return; }
+    send.disabled = false;
+    close();
+    const sent = await sendToActive(`Corrige el paso ${s.id} «${s.title}»: ${text}. Míralo en el plan (unificador.json) y retómalo.`);
+    say(sent ? "" : "La IA está ocupada; la corrección queda apuntada en el paso.");
+  });
+  const cancel = pill("Cancelar", null, close);
+  form.append(ta, el("div", "change-btns"));
+  form.lastChild.append(send, cancel);
+  ta.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.preventDefault(); close(); }
+    else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send.click(); }
+  });
+  form.hidden = !drafts.has(s.id);
+  ask.hidden = !form.hidden;
+
+  const row = el("div", "act-row");
+  row.append(ask, mark, msg);
+  box.append(row, form);
+  return box;
 }
 
 function step(s) {
