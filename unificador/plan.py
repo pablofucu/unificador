@@ -470,7 +470,19 @@ def main(argv: Optional[List[str]] = None) -> int:
             stream.reconfigure(encoding="utf-8", errors="replace")
         except (AttributeError, ValueError):
             pass
+    argv = list(sys.argv[1:] if argv is None else argv)
+    signer = None
+    for i, a in enumerate(argv):  # --as vale en cualquier sitio, antes o después de la orden
+        if a == "--as" and i + 1 < len(argv):
+            signer = argv[i + 1]
+            del argv[i:i + 2]
+            break
+        if a.startswith("--as="):
+            signer = a[5:]
+            del argv[i]
+            break
     args = build_parser().parse_args(argv)
+    args.by = signer or args.by
     path = Path(args.plan_file) if args.plan_file else find_plan()
     by = args.by or os.environ.get("UNI_AGENT") or "ia"
     try:

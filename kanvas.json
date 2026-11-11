@@ -254,7 +254,7 @@
     {
       "id": "PS-02",
       "title": "Reglas para la IA sin aprobaciones obligatorias",
-      "state": "todo",
+      "state": "done",
       "group": "PS",
       "deps": ["PS-01"],
       "at": "2026-11-11T11:11:16Z",
@@ -265,6 +265,21 @@
           "at": "2026-11-11T11:25:03Z",
           "by": "pablo (delegado en claude-code)",
           "text": "Plan aprobado."
+        },
+        {
+          "at": "2026-11-11T11:32:32Z",
+          "by": "claude-code",
+          "text": "Plan: unificador/rules.py copia plan.py a .unificador/uni.py y escribe bloque AGENTS.md, CLAUDE.md y hook SessionStart nuevos"
+        },
+        {
+          "at": "2026-11-11T11:34:58Z",
+          "by": "claude-code",
+          "text": "unificador/rules.py instala en cada proyecto .unificador/uni.py (copia de plan.py), el bloque de reglas en AGENTS.md, CLAUDE.md con @AGENTS.md y el hook SessionStart; sustituye el bloque y el hook antiguos de Kanvas. Sin aprobaciones. 5 pruebas. Comprobado con una sesión real de Claude (sonnet) en un proyecto vacío: creó la rama con 3 fases con nombre, hizo start/done y terminó 3/3 sin pedir permiso. De esa prueba salió un arreglo: --as ahora vale en cualquier posición."
+        },
+        {
+          "at": "2026-11-11T11:34:59Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Aceptado."
         }
       ]
     },

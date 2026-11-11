@@ -85,10 +85,12 @@ class PlanTest(unittest.TestCase):
         self.assertEqual(run(self.path, "--as", "claude", "start", "cdc-1")[0], 0)
         self.assertEqual(P.find_step(P.load(self.path), "CDC-1")[2]["state"], P.DOING)
         self.assertEqual(run(self.path, "note", "CDC-1", "a medias")[0], 0)
+        self.assertEqual(run(self.path, "note", "CDC-1", "firmado al final", "--as", "gemini")[0], 0)
+        self.assertEqual(P.find_step(P.load(self.path), "CDC-1")[2]["notes"][-1]["by"], "gemini")
         self.assertEqual(run(self.path, "done", "CDC-1", "-m", "Guarda en disco; 3 pruebas")[0], 0)
         step = P.find_step(P.load(self.path), "CDC-1")[2]
         self.assertEqual((step["state"], step["result"]), (P.DONE, "Guarda en disco; 3 pruebas"))
-        self.assertEqual([n["kind"] for n in step["notes"]], ["start", "note", "done"])
+        self.assertEqual([n["kind"] for n in step["notes"]], ["start", "note", "note", "done"])
         self.assertEqual(step["notes"][0]["by"], "claude")
         self.assertEqual(run(self.path, "reopen", "CDC-1")[0], 0)
         self.assertEqual(P.find_step(P.load(self.path), "CDC-1")[2]["state"], P.PENDING)
