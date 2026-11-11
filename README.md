@@ -11,11 +11,13 @@ El plan de tu proyecto y el chat con tus agentes de IA, en una web local muy sen
 
 ## Ponerlo en marcha en un proyecto (dos pasos)
 
-1. Instala Unificador una vez en tu ordenador, desde la carpeta de este repositorio:
+1. Instala Unificador una vez en tu ordenador:
 
    ```bash
-   pip install -e .
+   pip install git+https://github.com/pablofucu/unificador
    ```
+
+   (o, si ya has clonado el repositorio, `pip install -e .` desde su carpeta).
 
 2. Ábrelo en la carpeta de tu proyecto:
 
