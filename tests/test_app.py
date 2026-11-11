@@ -103,6 +103,21 @@ class AppTest(ServerCase):
         self.assertEqual(self.call("GET", "/api/project")[1]["settings"], data)
         self.assertTrue((self.root / ".unificador/local.json").is_file())
 
+    def test_live_events(self):
+        from unittest import mock
+        from unificador import agents as G
+        with mock.patch.object(G, "WATCH_EVERY", 0.05):
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+            conn.request("GET", "/api/events", headers={"Host": f"127.0.0.1:{self.port}"})
+            r = conn.getresponse()
+            self.assertIn("text/event-stream", r.getheader("Content-Type"))
+            self.assertEqual(r.fp.readline(), b"retry: 2000\n")
+            self.call("POST", "/api/plan/steps/CA-1/state", {"state": "doing"})
+            lines = [r.fp.readline() for _ in range(3)]
+            self.assertIn(b"event: plan\n", lines)
+            conn.close()
+        self.assertEqual(self.call("GET", "/api/events", host="evil.example")[0], 403)
+
     def test_bad_requests(self):
         conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
         conn.request("POST", "/api/settings", body=b"{roto", headers={"Content-Type": "application/json"})

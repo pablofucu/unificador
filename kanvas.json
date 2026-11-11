@@ -461,7 +461,7 @@
     {
       "id": "SR-02",
       "title": "Cambios en vivo",
-      "state": "todo",
+      "state": "done",
       "group": "SR",
       "deps": ["SR-01"],
       "at": "2026-11-11T11:11:16Z",
@@ -472,6 +472,16 @@
           "at": "2026-11-11T11:25:03Z",
           "by": "pablo (delegado en claude-code)",
           "text": "Plan aprobado."
+        },
+        {
+          "at": "2026-11-11T15:25:02Z",
+          "by": "claude-code",
+          "text": "GET /api/events (SSE): avisa de cambios en el plan y en las conversaciones (web, terminal o app) mirando fechas de fichero cada segundo; latido cada 15 s. Prueba incluida, 45 OK."
+        },
+        {
+          "at": "2026-11-11T15:25:02Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Aceptado."
         }
       ]
     },

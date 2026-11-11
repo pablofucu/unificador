@@ -14,6 +14,7 @@ import mimetypes
 import queue
 import re
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
@@ -204,6 +205,40 @@ def post_chat_stop(project, args, query, body):
 @route("POST", "/api/open-native")
 def post_open_native(project, args, query, body):
     return {"message": G.open_native(project.path, _text(body, "agent", 40), _text(body, "session", 80))}
+
+
+def _mtime(path: Path) -> float:
+    try:
+        return path.stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+def watch(project: "Project", every: float = 1.0, ping: float = 15.0) -> Iterator[str]:
+    """Avisos en vivo (SSE): ``plan`` cuando cambia el plan y ``sessions`` cuando alguien escribe
+    en una conversación, sea desde la web, la terminal o la app."""
+    def look() -> Dict[str, Any]:
+        return {"plan": _mtime(project.plan_path),
+                "sessions": (G.latest_mtime(project.path), sorted(G.busy_sessions()))}
+
+    seen, quiet = look(), 0.0
+    yield "retry: 2000\n\n"
+    while True:
+        time.sleep(every)
+        now, quiet = look(), quiet + every
+        for name in now:
+            if now[name] != seen[name]:
+                quiet = 0.0
+                yield f"event: {name}\ndata: {{}}\n\n"
+        seen = now
+        if quiet >= ping:
+            quiet = 0.0
+            yield ": sigo aquí\n\n"  # también sirve para notar que la página se ha cerrado
+
+
+@route("GET", "/api/events")
+def get_events(project, args, query, body):
+    return Stream(watch(project, G.WATCH_EVERY), "text/event-stream")
 
 
 # ----------------------------------------------------------------------------- servidor

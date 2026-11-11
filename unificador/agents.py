@@ -29,6 +29,7 @@ from unificador import sessions as S
 Event = Dict[str, Any]
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform == "win32" else 0
 MODEL_ID = re.compile(r"^\w[\w.\-\[\]]{0,79}$")
+WATCH_EVERY = 1.0  # cada cuánto se mira si algo ha cambiado (segundos)
 MAX_ARG_PROMPT = 24000  # agy recibe el mensaje como argumento
 
 MODES = [{"id": "auto", "name": "Autónomo"}, {"id": "acceptEdits", "name": "Edita sin preguntar"},
@@ -149,6 +150,12 @@ def list_sessions(project_path: str | Path, agent: str = "") -> List[Dict[str, A
         from unificador import agy_sessions
         out += agy_sessions.list_sessions(project_path)
     return sorted(out, key=lambda s: s.get("updated", ""), reverse=True)
+
+
+def latest_mtime(project_path: str | Path) -> float:
+    """Cuándo se escribió por última vez en alguna conversación del proyecto."""
+    from unificador import agy_sessions
+    return max(S.latest_mtime(project_path), agy_sessions.latest_mtime(project_path))
 
 
 def read_session(project_path: str | Path, agent: str, session_id: str) -> Dict[str, Any]:

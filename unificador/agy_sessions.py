@@ -14,3 +14,7 @@ def list_sessions(project_path: str | Path) -> List[Dict[str, Any]]:
 
 def read_session(project_path: str | Path, session_id: str) -> Dict[str, Any]:
     raise S.SessionError(f"no existe la conversación {session_id}")
+
+
+def latest_mtime(project_path) -> float:
+    return 0.0
