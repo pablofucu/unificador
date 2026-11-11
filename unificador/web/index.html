@@ -1,3 +1,34 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><title>Unificador</title></head>
-<body><p>Unificador está en marcha.</p></body></html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Unificador</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body data-tab="plan">
+  <div class="layout">
+    <main id="plan" aria-label="Plan del proyecto">
+      <header class="top">
+        <div>
+          <h1 id="project-name">Unificador</h1>
+          <p id="project-sub" class="muted"></p>
+        </div>
+        <div class="total" id="total" hidden>
+          <strong id="total-text"></strong>
+          <div class="bar"><i id="total-bar"></i></div>
+        </div>
+      </header>
+      <div id="branches"></div>
+    </main>
+    <aside id="chat" aria-label="Chat">
+      <div class="chat-empty">💬<br>Aquí irá el chat</div>
+    </aside>
+  </div>
+  <nav class="tabs" aria-label="Secciones">
+    <button type="button" data-tab="plan" aria-pressed="true">🗺️ Plan</button>
+    <button type="button" data-tab="chat" aria-pressed="false">💬 Chat</button>
+  </nav>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

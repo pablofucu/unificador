@@ -498,7 +498,7 @@
     {
       "id": "IT-01",
       "title": "Vista del plan: ramas, fases con nombre y pasos",
-      "state": "doing",
+      "state": "done",
       "group": "IT",
       "deps": ["PS-01", "SR-01"],
       "at": "2026-11-11T11:11:16Z",
@@ -509,6 +509,16 @@
           "at": "2026-11-11T11:25:03Z",
           "by": "pablo (delegado en claude-code)",
           "text": "Plan aprobado."
+        },
+        {
+          "at": "2026-11-11T15:30:54Z",
+          "by": "claude-code",
+          "text": "Frontend nuevo en unificador/web (index.html, app.css, app.js, plan.js; hecho por un implementador y revisado): ramas de colores, fases con nombre y estado, pasos con tres estados, detalle desplegable, corrección pedida, terminadas plegadas, claro/oscuro. Comprobado en navegador con un plan de 3 ramas en ancho y móvil; el cambio en vivo por SSE repinta sin recargar."
+        },
+        {
+          "at": "2026-11-11T15:30:54Z",
+          "by": "pablo (delegado en claude-code)",
+          "text": "Aceptado."
         }
       ]
     },
