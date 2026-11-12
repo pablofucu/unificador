@@ -1963,7 +1963,7 @@
       "color": 0,
       "created": "2026-11-12T04:08:25+01:00",
       "by": "claude",
-      "next_id": 9,
+      "next_id": 13,
       "phases": [
         {
           "name": "Propuestas de distribución",
@@ -1995,7 +1995,7 @@
               "id": "IN2-2",
               "title": "Elegir distribución y animaciones",
               "desc": "",
-              "state": "pending",
+              "state": "done",
               "notes": [
                 {
                   "at": "2026-11-12T04:16:03+01:00",
@@ -2008,11 +2008,31 @@
                   "by": "claude",
                   "kind": "note",
                   "text": "Elegida B. Andenes. Mockup v2 sin emojis (iconos SVG), un proyecto por defecto con selector arriba, y decisiones dentro del recorrido: preguntas y propuestas en el propio andén, parada al cerrar fase y bandeja de decisiones: design/mockups/interfaz-andenes/andenes.html"
+                },
+                {
+                  "at": "2026-11-12T14:02:11+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T14:02:11+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Elegida B. Andenes (maqueta v2 en design/mockups/interfaz-andenes/andenes.html). Decidido el 12-nov: cinco categorías fijas, lienzo con zoom y desplazar (colocación automática), decisiones en ficha + Markdown ligero."
                 }
               ],
-              "updated": "2026-11-12T12:26:52+01:00"
+              "updated": "2026-11-12T14:02:11+01:00",
+              "result": "Elegida B. Andenes (maqueta v2 en design/mockups/interfaz-andenes/andenes.html). Decidido el 12-nov: cinco categorías fijas, lienzo con zoom y desplazar (colocación automática), decisiones en ficha + Markdown ligero."
             }
-          ]
+          ],
+          "review": {
+            "state": "approved",
+            "text": "La persona eligió B. Andenes y pidió planificar e implementar (12-nov).",
+            "by": "persona",
+            "at": "2026-11-12T14:02:49+01:00",
+            "seen": true
+          }
         },
         {
           "name": "Categorías y reglas del plan",
@@ -2022,8 +2042,16 @@
               "id": "IN2-3",
               "title": "Categoría obligatoria en cada paso",
               "desc": "",
-              "state": "pending",
-              "notes": []
+              "state": "doing",
+              "notes": [
+                {
+                  "at": "2026-11-12T14:02:49+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                }
+              ],
+              "updated": "2026-11-12T14:02:49+01:00"
             },
             {
               "id": "IN2-4",
@@ -2038,6 +2066,30 @@
               "desc": "",
               "state": "pending",
               "notes": []
+            },
+            {
+              "id": "IN2-9",
+              "title": "Ficha estándar de las decisiones",
+              "desc": "Contexto en Markdown ligero, cada opción con título y una línea de qué implica, y la recomendada. uni.py rechaza las que no la cumplan.",
+              "state": "pending",
+              "notes": [],
+              "by": "claude"
+            },
+            {
+              "id": "IN2-10",
+              "title": "HTML de propuestas listo para incrustar",
+              "desc": "Un fragmento se envuelve solo; se añade viewport; se rechazan recursos de fuera con la línea exacta.",
+              "state": "pending",
+              "notes": [],
+              "by": "claude"
+            },
+            {
+              "id": "IN2-11",
+              "title": "Revisión de cumplimiento (uni.py check y avisos)",
+              "desc": "Lista lo que los agentes no cumplen: pasos sin categoría, done sin cómo se comprobó, decisiones sin ficha, propuestas rotas.",
+              "state": "pending",
+              "notes": [],
+              "by": "claude"
             }
           ]
         },
@@ -2065,6 +2117,14 @@
               "desc": "",
               "state": "pending",
               "notes": []
+            },
+            {
+              "id": "IN2-12",
+              "title": "Decisiones dentro del andén",
+              "desc": "Ficha de pregunta y propuestas en miniatura en el propio andén, parada al cerrar fase, bandeja de decisiones.",
+              "state": "pending",
+              "notes": [],
+              "by": "claude"
             }
           ]
         }
