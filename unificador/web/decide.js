@@ -1,6 +1,8 @@
 // Lo que la persona decide: revisar fases, responder preguntas y elegir entre propuestas.
 // Lo que se decide aquí se guarda «sin ver»: el agente lo recibe solo la próxima vez que mire.
 import { app, el, button, q, send, run, drafts, status, textarea, toast, when } from "./util.js";
+import { icon } from "./icons.js";
+import { auditFor, auditChip } from "./audit.js";
 
 const LOGICAL = 1280;                 // ancho al que se pintan las miniaturas antes de reducirlas
 const editing = new Set();            // preguntas ya respondidas que se están cambiando
@@ -12,13 +14,56 @@ const stepOf = (plan, id) => {
   return [null, null];
 };
 
+// ── Markdown ligero ──────────────────────────────────────────────────
+// Solo párrafos, **negrita**, *cursiva*, `código` y listas con "- ". Todo con createElement/textContent:
+// el texto lo escribe el agente y nunca se interpreta como HTML. Lo que no encaja sale literal.
+
+const INLINE = /`([^`\n]+)`|\*\*([^*\n]+)\*\*|\*([^*\n]+)\*/g;
+
+function inline(parent, text) {
+  let last = 0;
+  for (const m of text.matchAll(INLINE)) {
+    if (m.index > last) parent.append(text.slice(last, m.index));
+    if (m[1] != null) parent.append(el("code", null, m[1]));
+    else if (m[2] != null) parent.append(el("strong", null, m[2]));
+    else parent.append(el("em", null, m[3]));
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parent.append(text.slice(last));
+}
+
+// mdLite(text: string) -> DocumentFragment
+export function mdLite(text) {
+  const frag = document.createDocumentFragment();
+  for (const block of String(text || "").replace(/\r\n?/g, "\n").split(/\n[ \t]*\n/)) {
+    let para = null, list = null;
+    for (const line of block.split("\n")) {
+      if (!line.trim()) continue;
+      const li = /^\s*- (.*)$/.exec(line);
+      if (li) {
+        para = null;
+        if (!list) { list = el("ul"); frag.append(list); }
+        const item = el("li");
+        inline(item, li[1]);
+        list.append(item);
+      } else {
+        list = null;
+        if (!para) { para = el("p"); frag.append(para); }
+        else para.append(el("br"));
+        inline(para, line.trim());
+      }
+    }
+  }
+  return frag;
+}
+
 // ── Revisión de una fase ─────────────────────────────────────────────
 
 export function reviewBox(b, p) {
   const key = `rev:${b.key}:${p.name}`;
   const box = el("div", "review");
   const [msg, say] = status(key);
-  const approve = button("✓ Aprobar", "pill primary big", () => run(approve, say, async () => {
+  const approve = button("Aprobar", "pill primary big", () => run(approve, say, async () => {
     await send("/api/plan/phases/review", { branch: b.key, phase: p.name, verdict: "approved", text: "" });
     toast(`Fase «${p.name}» aprobada. ${SAVED}`);
   }), `Aprobar la fase ${p.name}`);
@@ -26,6 +71,7 @@ export function reviewBox(b, p) {
     drafts.set(key, drafts.get(key) || "");
     form.hidden = false; row.hidden = true; ta.focus();
   }, `Pedir cambios en la fase ${p.name}`);
+  approve.prepend(icon("check"));
   const row = el("div", "act-row");
   row.append(approve, ask);
 
@@ -56,6 +102,13 @@ export function reviewBox(b, p) {
 
 // ── Miniaturas y visor de propuestas ────────────────────────────────
 
+const recommended = (ask, n) => ask.recommend === n;
+function recBadge() {
+  const b = el("span", "rec-badge");
+  b.append(icon("star"), "Recomendada");
+  return b;
+}
+
 const frameSrc = (ask, n) => q(`/propuestas/${encodeURIComponent(ask.id)}/${n}.html`);
 
 function frame(ask, n, label) {
@@ -74,19 +127,23 @@ const sizer = new ResizeObserver((entries) => {
 function thumb(ask, i, plan) {
   const o = ask.options[i], n = i + 1;
   const chosen = ask.answer && ask.answer.option === n;
-  const fig = el("figure", `mock${chosen ? " chosen" : ""}`);
+  const fig = el("figure", `mock${chosen ? " chosen" : ""}${recommended(ask, n) ? " rec" : ""}`);
   const box = el("div", "thumb");
   const f = frame(ask, n, o.label);
   f.tabIndex = -1;
   f.setAttribute("aria-hidden", "true");
   const zoom = button("", "thumb-zoom", () => openViewer(ask, i, plan), `Ver «${o.label}» a pantalla completa`);
-  zoom.append(el("span", "zoom-hint", "⤢ Ampliar"));
+  const hint = el("span", "zoom-hint");
+  hint.append(icon("eye"), "Ver");
+  zoom.append(hint);
   box.append(f, zoom);
   sizer.observe(box);
   const cap = el("figcaption");
   cap.append(el("span", "mock-n", String(n)), el("span", "mock-label", o.label));
-  if (chosen) cap.append(el("span", "chip ok", "Elegida"));
+  if (chosen) { const c = el("span", "chip ok"); c.append(icon("check"), "Elegida"); cap.append(c); }
   fig.append(box, cap);
+  if (recommended(ask, n)) fig.append(recBadge());
+  if (o.desc) fig.append(el("p", "opt-desc", o.desc));
   return fig;
 }
 
@@ -112,8 +169,14 @@ function showViewer() {
   document.getElementById("v-count").textContent = `${ask.title} · ${i + 1} de ${ask.options.length}`;
   const chosen = ask.answer && ask.answer.option === i + 1;
   const pick = document.getElementById("v-pick");
-  pick.textContent = chosen ? "✓ Elegida" : "Elegir esta";
+  if (chosen) pick.replaceChildren(icon("check"), "Elegida");
+  else pick.replaceChildren("Elegir esta");
   pick.disabled = !!chosen;
+  const extra = document.getElementById("v-extra");
+  extra.replaceChildren();
+  if (recommended(ask, i + 1)) extra.append(recBadge());
+  if (o.desc) extra.append(el("span", "v-desc", o.desc));
+  extra.hidden = !extra.childElementCount;
   for (const b of document.querySelectorAll("#viewer [data-w]")) b.setAttribute("aria-pressed", String(Number(b.dataset.w) === viewer.width));
   const box = el("div", "v-frame");
   box.append(frame(ask, i + 1, o.label));
@@ -137,6 +200,18 @@ function step(delta) {
 
 export function setupViewer() {
   const d = document.getElementById("viewer");
+  const put = (node, name, text) => node.replaceChildren(...[icon(name), text].filter(Boolean));
+  put(document.getElementById("v-prev"), "left");
+  put(document.getElementById("v-next"), "right");
+  put(document.getElementById("v-close"), "x");
+  for (const [w, name, text] of [["390", "phone", "Móvil"], ["820", "tablet", "Tableta"], ["1280", "desktop", "Escritorio"]])
+    put(d.querySelector(`[data-w="${w}"]`), name, text);
+  if (!document.getElementById("v-extra")) {
+    const x = el("div", "v-extra");
+    x.id = "v-extra";
+    x.hidden = true;
+    d.querySelector(".v-info").append(x);
+  }
   document.getElementById("v-prev").addEventListener("click", () => step(-1));
   document.getElementById("v-next").addEventListener("click", () => step(1));
   document.getElementById("v-close").addEventListener("click", () => d.close());
@@ -169,41 +244,79 @@ async function answer(ask, option) {
   toast(`Elegido ${label}. ${SAVED}`);
 }
 
-function context(ask, plan) {
-  const parts = [];
-  const [b, s] = ask.step ? stepOf(plan, ask.step) : [branchOf(plan, ask.branch), null];
-  if (b) parts.push(`${b.icon || "📌"} ${b.name}`);
-  if (s) parts.push(`${s.id} · ${s.title}`);
-  return parts.join(" · ");
-}
-
 function chosenText(ask) {
   const a = ask.answer;
   if (!a) return "";
   return a.option ? ask.options[a.option - 1]?.label || `Opción ${a.option}` : "";
 }
 
-// Tarjeta de una pregunta o propuesta. `compact`: versión corta para el detalle de un paso.
+function context(ask, plan) {
+  const [b, s] = ask.step ? stepOf(plan, ask.step) : [branchOf(plan, ask.branch), null];
+  const parts = [];
+  if (b) parts.push(b.name);
+  if (s) parts.push(`${s.id} · ${s.title}`);
+  return parts.join(" · ");
+}
+
+// Cuerpo de una opción de pregunta: título (con insignia si es la recomendada) y debajo su línea de explicación.
+function optionBody(ask, o, n) {
+  const body = el("span", "opt-body");
+  const t = el("span", "opt-title");
+  t.append(el("span", "opt-label", o.label));
+  if (recommended(ask, n)) t.append(recBadge());
+  body.append(t);
+  if (o.desc) body.append(el("span", "opt-desc", o.desc));
+  return body;
+}
+
+// Tarjeta de una pregunta o propuesta. `compact`: versión más apretada para el andén o el detalle de un paso.
 export function askCard(ask, plan, compact = false) {
-  const card = el("article", `ask ${ask.kind}${ask.answer ? " answered" : ""}`);
+  const prop = ask.kind === "proposal";
+  const card = el("article", `ask ficha ${ask.kind}${ask.answer ? " answered" : ""}${compact ? " compact" : ""}`);
   if (!compact) card.id = `ask-${ask.id}`;
   const head = el("div", "ask-head");
-  head.append(el("span", `chip ${ask.kind === "proposal" ? "prop" : "quest"}`, ask.kind === "proposal" ? "Propuesta" : "Pregunta"),
-    el("span", "ask-id", ask.id));
+  const kind = el("span", `chip ${prop ? "prop" : "quest"}`);
+  kind.append(icon(prop ? "eye" : "ask"), prop ? "Propuesta" : "Pregunta");
+  head.append(kind, el("span", "ask-id", ask.id));
   const ctx = context(ask, plan);
   if (ctx) head.append(el("span", "ask-ctx", ctx));
+  const chip = auditChip(auditFor(plan, ask.id));
+  if (chip) head.append(chip);
   card.append(head, el(compact ? "h4" : "h3", "ask-title", ask.title));
-  if (ask.text) card.append(el("p", "ask-text", ask.text));
+  if (ask.text) {
+    const t = el("div", "ask-text md");
+    t.append(mdLite(ask.text));
+    card.append(t);
+  }
+  const opts = ask.options || [];
 
   if (ask.answer && !editing.has(ask.id)) {
+    const chosenN = ask.answer.option || 0;
+    if (opts.length && !prop) {
+      const list = el("div", "choices done");
+      opts.forEach((o, i) => {
+        const on = chosenN === i + 1;
+        const r = el("div", `choice${on ? " on" : ""}`);
+        const n = el("span", `choice-n${on ? " ok" : ""}`);
+        if (on) n.append(icon("check")); else n.append(String(i + 1));
+        r.append(n, optionBody(ask, o, i + 1));
+        if (on) r.setAttribute("aria-label", `Elegida: ${o.label}`);
+        list.append(r);
+      });
+      card.append(list);
+    }
     const done = el("div", "answer");
     const pick = chosenText(ask);
-    if (pick) done.append(el("p", "answer-pick", `✓ Elegiste «${pick}»`));
+    if (pick && prop) {
+      const p = el("p", "answer-pick");
+      p.append(icon("check"), `Elegiste «${pick}»`);
+      done.append(p);
+    }
     if (ask.answer.text) done.append(el("p", "answer-text", pick ? `Comentario: ${ask.answer.text}` : `Respondiste: ${ask.answer.text}`));
     done.append(el("p", "muted small", `${ask.answer.seen ? "Tu agente ya lo ha visto" : "Tu agente aún no lo ha visto"} · ${when(ask.answer.at)}`));
     const row = el("div", "act-row");
-    if (ask.kind === "proposal" && ask.options.length)
-      row.append(button("Ver las propuestas", "pill", () => openViewer(ask, Math.max(0, (ask.answer.option || 1) - 1), plan)));
+    if (prop && opts.length)
+      row.append(button("Ver las propuestas", "pill", () => openViewer(ask, Math.max(0, chosenN - 1), plan)));
     row.append(button("Cambiar mi respuesta", "pill", () => {
       editing.add(ask.id);
       app.rerender();
@@ -217,8 +330,7 @@ export function askCard(ask, plan, compact = false) {
 
   const key = `ask:${ask.id}`;
   const [msg, say] = status(key);
-  const opts = ask.options || [];
-  if (ask.kind === "proposal" && opts.length) {
+  if (prop && opts.length) {
     const gal = el("div", "gallery");
     opts.forEach((o, i) => {
       const fig = thumb(ask, i, plan);
@@ -233,14 +345,15 @@ export function askCard(ask, plan, compact = false) {
     list.setAttribute("role", "group");
     list.setAttribute("aria-label", "Opciones");
     opts.forEach((o, i) => {
-      const b = button(o.label, "choice", null);
-      b.prepend(el("span", "choice-n", String(i + 1)));
+      const b = button("", `choice${recommended(ask, i + 1) ? " rec" : ""}`, null);
+      b.append(el("span", "choice-n", String(i + 1)), optionBody(ask, o, i + 1));
       if (ask.answer && ask.answer.option === i + 1) b.setAttribute("aria-pressed", "true");
       b.addEventListener("click", () => run(b, say, () => answer(ask, i + 1)));
       list.append(b);
     });
     card.append(list);
   }
+  if (opts.length && ask.recommend === 0) card.append(el("p", "no-pref", "Sin preferencia del agente"));
   const ta = textarea(key, opts.length ? "Comentario (opcional): se envía con lo que elijas" : "Escribe tu respuesta",
     opts.length ? `Comentario para ${ask.id}` : `Respuesta a ${ask.id}`, opts.length ? 2 : 3);
   const row = el("div", "act-row");
@@ -265,10 +378,10 @@ export const openAsks = (plan) => (plan.asks || []).filter((a) => !a.answer || e
 function reviewCard(b, p) {
   const c = el("article", "todo-review");
   const head = el("div", "ask-head");
-  head.append(el("span", "chip wait", "Revisar fase"), el("span", "ask-ctx", `${b.icon || "📌"} ${b.name}`));
+  head.append(el("span", "chip wait", "Revisar fase"), el("span", "ask-ctx", b.name));
   const [done, total] = [p.steps.filter((s) => s.state === "done").length, p.steps.length];
   const ul = el("ul", "mini-steps");
-  for (const s of p.steps) ul.append(el("li", s.state === "done" ? "done" : "", `${s.state === "done" ? "✓" : "·"} ${s.title}`));
+  for (const s of p.steps) ul.append(el("li", s.state === "done" ? "done" : "", s.title));
   c.append(head, el("h3", "ask-title", `«${p.name}» está lista: ${done} de ${total} pasos`),
     el("p", "ask-text", "Tu agente ha parado aquí. Dale el visto bueno o dile qué cambiar."), ul, reviewBox(b, p));
   return c;
@@ -277,7 +390,7 @@ function reviewCard(b, p) {
 // Firma de lo que hay en la bandeja: si no cambia, no se repinta (las miniaturas no se recargan).
 export function inboxKey(plan) {
   return JSON.stringify([waitingPhases(plan).map(([b, p]) => [b.key, p.name, p.steps.map((s) => s.state)]),
-    openAsks(plan).map((a) => [a.id, a.title, a.text, a.options, a.answer]), app.pid]);
+    openAsks(plan).map((a) => [a.id, a.title, a.text, a.options, a.recommend, a.answer, (plan.audit || []).filter((x) => x.ref === a.id)]), app.pid]);
 }
 
 export function renderInbox(root, plan, colorOf) {
