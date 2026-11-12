@@ -98,17 +98,24 @@ def _host_name(value: str) -> str:
     return value.rsplit(":", 1)[0] if ":" in value else value
 
 
-def refusal(method: str, headers: Any, port: int) -> Optional[str]:
+def refusal(method: str, headers: Any, port: int, host: str = "127.0.0.1") -> Optional[str]:
     """Por qué se rechaza la petición, o None si viene de la propia página."""
-    host = headers.get("Host", "")
-    if _host_name(host) not in LOCAL_HOSTS:
+    h_host = headers.get("Host", "")
+    is_lan = host not in ("127.0.0.1", "localhost", "::1")
+    if not is_lan and _host_name(h_host) not in LOCAL_HOSTS:
         return "Unificador solo atiende a esta máquina."
     if (headers.get("Sec-Fetch-Site") or "").lower() == "cross-site":
         return "Petición de otra web: rechazada."
     origin = headers.get("Origin")
     if origin is not None:
         o = urlsplit(origin)
-        if o.scheme != "http" or _host_name(o.netloc) not in LOCAL_HOSTS or (o.port or 80) != port:
+        if o.scheme != "http":
+            return "Petición de otra web: rechazada."
+        if (o.port or 80) != port:
+            return "Petición de otra web: rechazada."
+        if not is_lan and _host_name(o.netloc) not in LOCAL_HOSTS:
+            return "Petición de otra web: rechazada."
+        if is_lan and _host_name(o.netloc) != _host_name(h_host):
             return "Petición de otra web: rechazada."
     if method == "POST" and "application/json" not in (headers.get("Content-Type") or "").lower():
         return "Los cambios se envían como JSON."
@@ -351,7 +358,7 @@ class Handler(BaseHTTPRequestHandler):
     def _handle(self) -> None:
         self._read_body = False
         method = "GET" if self.command == "HEAD" else self.command
-        why = refusal(method, self.headers, self.server.server_address[1])
+        why = refusal(method, self.headers, self.server.server_address[1], getattr(self.server, "host", "127.0.0.1"))
         if why:
             return self._json({"error": why}, 403)
         url = urlsplit(self.path)
@@ -399,15 +406,16 @@ class Server(ThreadingHTTPServer):
             super().handle_error(request, client_address)  # que una pestaña se cierre no es un error
 
 
-def make_server(project_path: str | Path, port: int = DEFAULT_PORT, tries: int = 20) -> Server:
-    """Abre el servidor en 127.0.0.1, en ``port`` o en el siguiente que esté libre."""
+def make_server(project_path: str | Path, port: int = DEFAULT_PORT, host: str = "127.0.0.1", tries: int = 20) -> Server:
+    """Abre el servidor en ``host``, en ``port`` o en el siguiente que esté libre."""
     project = Project(project_path)
     handler = type("ProjectHandler", (Handler,), {"project": project})
     last: Optional[OSError] = None
     for candidate in ([0] if port == 0 else range(port, port + tries)):
         try:
-            server = Server(("127.0.0.1", candidate), handler)
+            server = Server((host, candidate), handler)
             server.project = project  # type: ignore[attr-defined]
+            server.host = host  # type: ignore[attr-defined]
             return server
         except OSError as e:
             last = e

@@ -32,19 +32,29 @@ def _project(path: str) -> Path:
     return root
 
 
-def serve(root: Path, port: int, open_browser: bool) -> int:
+def serve(root: Path, port: int, open_browser: bool, host: str = "127.0.0.1") -> int:
     from unificador import app
     changed = rules.install(root)
     try:
         projects.register(root)
     except OSError:
         pass
-    server = app.make_server(root, port)
-    url = f"http://127.0.0.1:{server.server_address[1]}/"
+    server = app.make_server(root, port, host=host)
+    actual_port = server.server_address[1]
+    url = f"http://127.0.0.1:{actual_port}/"
     print(f"Unificador · {root.name}")
     if changed:
         print("  Preparado: " + ", ".join(changed))
     print(f"  {url}   (Ctrl+C para cerrar)", flush=True)
+    if host not in ("127.0.0.1", "localhost", "::1"):
+        import socket
+        try:
+            hostname = socket.gethostname()
+            for ip in socket.gethostbyname_ex(hostname)[2]:
+                if not ip.startswith("127."):
+                    print(f"  http://{ip}:{actual_port}/   (desde otros equipos)")
+        except Exception:
+            pass
     if open_browser:
         try:
             webbrowser.open(url)
@@ -136,6 +146,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     if command == "serve":
         from unificador.app import DEFAULT_PORT
         parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"puerto (por defecto {DEFAULT_PORT})")
+        parser.add_argument("--host", default=None, help="dirección IP en la que escuchar (por defecto 127.0.0.1)")
+        parser.add_argument("--lan", action="store_true", help="permitir acceso desde otros equipos de la red local (escucha en 0.0.0.0)")
         parser.add_argument("--no-open", action="store_true", help="no abrir el navegador")
     elif command == "import-kanvas":
         parser.add_argument("--force", action="store_true", help="sustituir el plan que ya haya")
@@ -143,7 +155,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         root = _project(args.path)
         if command == "serve":
-            return serve(root, args.port, not args.no_open)
+            host = args.host or ("0.0.0.0" if args.lan else "127.0.0.1")
+            return serve(root, args.port, not args.no_open, host=host)
         if command == "install":
             changed = rules.install(root)
             print("Preparado: " + ", ".join(changed) if changed else "Ya estaba todo al día.")
