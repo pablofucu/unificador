@@ -1,6 +1,7 @@
 // Arranque: portada con todos los proyectos o tablero de uno (#p=<id>). Se repinta en vivo.
 import { app, el, getJSON, q, pctOf } from "./util.js";
-import { renderPlan, resetBoard } from "./plan.js";
+import { renderPlan, resetBoard, initBoard } from "./plan.js";
+import { icon } from "./icons.js";
 import { setupViewer } from "./decide.js";
 
 const $ = (id) => document.getElementById(id);
@@ -28,9 +29,11 @@ function projectCard(p) {
   fill.style.width = `${pct}%`;
   bar.append(fill);
   c.append(el("p", "proj-count", p.total ? `${p.done} de ${p.total} pasos · ${pct}%` : "Todavía sin plan"), bar);
-  c.append(p.waiting
-    ? el("p", "proj-wait", `🔔 ${p.waiting} ${p.waiting === 1 ? "cosa espera" : "cosas esperan"} tu respuesta`)
-    : el("p", "proj-calm", "Nada pendiente de ti"));
+  if (p.waiting) {
+    const w = el("p", "proj-wait");
+    w.append(icon("inbox"), `${p.waiting} ${p.waiting === 1 ? "cosa espera" : "cosas esperan"} tu respuesta`);
+    c.append(w);
+  } else c.append(el("p", "proj-calm", "Nada pendiente de ti"));
   return c;
 }
 
@@ -89,7 +92,7 @@ function showBoard(p) {
   app.pid = p.id;
   $("home").hidden = true;
   $("board").hidden = false;
-  $("crumbs").hidden = app.projects.length < 2;
+  fillSelect(p.id);
   $("project-name").textContent = p.name || "Mi proyecto";
   document.title = `${p.name || "Proyecto"} · Unificador`;
   closeEvents();
@@ -98,18 +101,42 @@ function showBoard(p) {
   loadPlan();
 }
 
+// Selector de proyecto de la cabecera; la última opción lleva a la portada con todos.
+function fillSelect(id) {
+  const sel = $("project-select");
+  const usable = app.projects.filter((p) => p.exists && !p.error);
+  const opts = usable.map((p) => {
+    const o = document.createElement("option");
+    o.value = p.id;
+    o.textContent = p.waiting ? `${p.name} (${p.waiting} te esperan)` : p.name;
+    return o;
+  });
+  const all = document.createElement("option");
+  all.value = "";
+  all.textContent = "Todos los proyectos";
+  sel.replaceChildren(...opts, all);
+  sel.value = usable.some((p) => p.id === id) ? id : "";
+  sel.disabled = !app.projects.length;
+}
+$("project-select").addEventListener("change", (e) => {
+  location.hash = e.target.value ? `#p=${e.target.value}` : "#todos";
+});
+
 async function route() {
   await loadProjects();
+  if (location.hash === "#todos") return showHome();
   const m = location.hash.match(/^#p=([0-9a-f]+)$/);
   const found = m && app.projects.find((p) => p.id === m[1]);
   if (found) return showBoard(found);
-  const usable = app.projects.filter((p) => p.exists);
-  if (usable.length === 1) return showBoard(usable[0]);
   if (!app.projects.length) return showBoard({ id: null, name: "Mi proyecto" });
+  // Sin proyecto en la ruta: el de aquí, o el primero que se pueda abrir; la portada sigue en #todos.
+  const usable = app.projects.filter((p) => p.exists && !p.error);
+  const first = usable.find((p) => p.current) || usable[0];
+  if (first) return showBoard(first);
   showHome();
 }
 
-$("back").addEventListener("click", (e) => { e.preventDefault(); history.pushState(null, "", location.pathname); route(); });
 window.addEventListener("hashchange", route);
 setupViewer();
+initBoard();
 route();

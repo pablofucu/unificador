@@ -23,22 +23,40 @@
         <div id="projects" class="projects"></div>
       </section>
 
-      <!-- Tablero de un proyecto -->
+      <!-- Tablero de un proyecto: cabecera, lienzo y bandeja de decisiones -->
       <section id="board" aria-labelledby="project-name" hidden>
-        <nav class="crumbs" id="crumbs" hidden><a id="back" href="#">← Todos los proyectos</a></nav>
-        <header class="top">
-          <div class="top-title">
-            <h1 id="project-name">Unificador</h1>
-            <p id="project-sub" class="muted"></p>
-          </div>
+        <h1 id="project-name" class="sr-only">Unificador</h1>
+        <header class="tb">
+          <label class="pick"><span class="pick-l">Proyecto</span>
+            <select id="project-select" aria-label="Proyecto"></select></label>
           <div class="total" id="total" hidden>
             <strong id="total-text"></strong>
             <div class="bar"><i id="total-bar"></i></div>
           </div>
+          <div id="legend" class="legend" role="group" aria-label="Filtrar por categoría"></div>
+          <button type="button" id="decb" class="decb" aria-controls="drawer" aria-expanded="false"></button>
         </header>
-        <section id="inbox" class="inbox" aria-label="Te toca" hidden></section>
-        <div id="decided"></div>
-        <div id="branches"></div>
+        <p id="project-sub" class="muted sub"></p>
+        <div class="canvas-wrap">
+          <div id="canvas" class="canvas" tabindex="0" role="region" aria-label="Plan del proyecto. Con el teclado: más, menos y cero para el zoom.">
+            <div id="sizer" class="sizer"><div id="branches" class="m-box"></div></div>
+          </div>
+          <div class="zoom" role="group" aria-label="Zoom del plan">
+            <button type="button" id="z-out" aria-label="Alejar"></button>
+            <span id="z-label" aria-live="polite">100%</span>
+            <button type="button" id="z-in" aria-label="Acercar"></button>
+            <button type="button" id="z-fit" aria-label="Ajustar el plan a la pantalla"></button>
+          </div>
+        </div>
+        <div id="scrim" class="scrim" hidden></div>
+        <aside id="drawer" class="drawer" role="dialog" aria-label="Decisiones" hidden>
+          <div class="dh"><h2>Decisiones</h2><button type="button" id="drawer-close" class="x" aria-label="Cerrar las decisiones"></button></div>
+          <div class="dbody">
+            <p id="drawer-empty" class="muted" hidden>Nada te espera ahora mismo.</p>
+            <section id="inbox" class="inbox" aria-label="Te toca" hidden></section>
+            <div id="decided"></div>
+          </div>
+        </aside>
       </section>
     </main>
   </div>
