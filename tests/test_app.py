@@ -71,6 +71,14 @@ class AppTest(ServerCase):
         self.assertEqual(self.call("GET", "/api/nada")[0], 404)
         self.assertEqual(self.call("POST", "/api/plan", {})[0], 405)
 
+    def test_plan_carries_audit_without_saving_it(self):
+        status, plan, _ = self.call("GET", "/api/plan")
+        self.assertEqual(status, 200)
+        self.assertIsInstance(plan["audit"], list)
+        self.assertTrue(plan["audit"])  # los pasos del plan de prueba no tienen categoría
+        self.assertTrue(all(set(i) == {"level", "ref", "text"} for i in plan["audit"]))
+        self.assertNotIn("audit", json.loads((self.root / P.PLAN_FILE).read_text(encoding="utf-8")))
+
     def test_person_changes_steps(self):
         status, plan, _ = self.call("POST", "/api/plan/steps/CA-1/state", {"state": "done", "text": "ok"})
         self.assertEqual(status, 200, plan)
@@ -135,7 +143,7 @@ class AppTest(ServerCase):
 
     def test_answer_asks(self):
         def add(plan):
-            P.add_ask(plan, "¿Color?", options=["Azul", "Verde"], step="CA-1")
+            P.add_ask(plan, "¿Color?", options=["Azul | claro", "Verde | oscuro"], step="CA-1", recommend=1)
             P.add_ask(plan, "¿Nombre?")
         P.mutate(self.root / P.PLAN_FILE, add)
         path = "/api/plan/asks/P-1/answer"
