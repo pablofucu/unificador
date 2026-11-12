@@ -47,6 +47,15 @@ class RulesTest(unittest.TestCase):
                          "python3 .unificador/uni.py status")
         self.assertFalse((self.root / ".agents").exists())  # Antigravity: sin ficheros de hooks
 
+    def test_install_keeps_crlf_files_in_crlf(self):
+        (self.root / "CLAUDE.md").write_bytes(b"# Proyecto\r\n\r\nReglas.\r\n")
+        (self.root / "AGENTS.md").write_bytes(b"# Agentes\n\nLF.\n")
+        R.install(self.root)
+        claude = (self.root / "CLAUDE.md").read_bytes()
+        self.assertIn(b"@AGENTS.md", claude)
+        self.assertEqual(claude.count(b"\n"), claude.count(b"\r\n"))
+        self.assertNotIn(b"\r\n", (self.root / "AGENTS.md").read_bytes())
+
     def test_codex_hooks_merge_keeps_foreign_content(self):
         (self.root / ".codex").mkdir()
         (self.root / ".codex/hooks.json").write_text(json.dumps({

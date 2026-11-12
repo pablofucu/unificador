@@ -92,8 +92,10 @@ OLD_HOOK_COMMAND = 'python "$CLAUDE_PROJECT_DIR/.agents/skills/kanvas/kanvas.py"
 
 
 def _write(path: Path, text: str) -> None:
+    # Conserva los finales de línea que ya tuviera el fichero (CRLF o LF).
+    eol = "\r\n" if path.is_file() and b"\r\n" in path.read_bytes() else "\n"
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8", newline="\n") as f:
+    with open(path, "w", encoding="utf-8", newline=eol) as f:
         f.write(text)
 
 
