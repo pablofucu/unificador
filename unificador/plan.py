@@ -27,6 +27,7 @@ import argparse
 import json
 import os
 import re
+import unicodedata
 import shutil
 import sys
 import time
@@ -43,6 +44,17 @@ MARKS = {PENDING: "·", DOING: "▶", DONE: "✔"}
 COLORS = 8  # la interfaz tiene una paleta de 8 colores; cada rama guarda su índice
 GENERIC_PHASE = re.compile(r"^\s*(fase|etapa|paso|parte|phase|step|stage|sprint)?\s*[\d\W]*\s*$", re.I)
 MAX_NAME = 60
+CATS = ("codigo", "interfaz", "pruebas", "investigar", "decidir")
+CAT_ALIASES = {
+    "codigo": "codigo", "code": "codigo",
+    "interfaz": "interfaz", "ui": "interfaz", "diseno": "interfaz",
+    "pruebas": "pruebas", "prueba": "pruebas", "test": "pruebas", "tests": "pruebas", "probar": "pruebas",
+    "investigar": "investigar", "investigacion": "investigar", "research": "investigar",
+    "decidir": "decidir", "decision": "decidir",
+}
+CAT_EXAMPLE = '"interfaz: Elegir colores"'
+EMPTY_PHASE_WORDS = {"varios", "otros", "general", "misc", "pendiente", "pendientes", "resto", "tareas",
+                     "cosas", "extra", "extras", "inicio", "final"}
 WAITING, APPROVED, CHANGES = "waiting", "approved", "changes"  # revisión de una fase
 QUESTION, PROPOSAL = "question", "proposal"
 PROPOSALS_DIR = ".unificador/propuestas"
@@ -227,6 +239,48 @@ def find_ask(plan: Dict[str, Any], ask_id: str) -> dict:
 
 # ── Cambios ──────────────────────────────────────────────────────────────────
 
+def _fold(text: Any) -> str:
+    """Minúsculas y sin tildes, para comparar alias y nombres."""
+    text = unicodedata.normalize("NFD", str(text or ""))
+    return "".join(c for c in text if not unicodedata.combining(c)).strip().lower()
+
+
+def norm_cat(value: Any) -> str:
+    """La categoría canónica de un alias, o «» si no lo es."""
+    return CAT_ALIASES.get(_fold(value), "")
+
+
+def _cat_error() -> str:
+    return ("el paso necesita una categoría como prefijo del título: " + ", ".join(CATS)
+            + f". Ejemplo: {CAT_EXAMPLE}")
+
+
+_PREFIX = re.compile(r"^\s*(\+)?\s*([^:+]{1,20}?)\s*:\s*(.*)$", re.S)
+
+
+def split_title(raw: Any, cat_key: Any = None, together_key: bool = False) -> Tuple[str, bool, str]:
+    """«+pruebas: Probar» → («pruebas», True, «Probar»). Lanza ValueError con el motivo si no hay categoría."""
+    text = str(raw or "")
+    cat, together = (norm_cat(cat_key) if cat_key else ""), bool(together_key)
+    if cat_key and not cat:
+        raise ValueError(f"«{cat_key}» no es una categoría; " + _cat_error().split(": ", 1)[1])
+    m = _PREFIX.match(text)
+    if m and norm_cat(m.group(2)):
+        cat, together, text = norm_cat(m.group(2)), together or bool(m.group(1)), m.group(3)
+    elif not cat:
+        raise ValueError(_cat_error())
+    elif text.lstrip().startswith("+"):
+        together, text = True, text.lstrip()[1:]
+    return cat, together, _clean(text)
+
+
+def _phase_name_error(name: str) -> str:
+    if GENERIC_PHASE.match(name) or _fold(name) in EMPTY_PHASE_WORDS:
+        return (f"«{name}» no dice nada como nombre de fase. Ponle un nombre que se reconozca "
+                "(p. ej. «Cimientos», «Pagos», «Pulido»).")
+    return ""
+
+
 def _clean(value: Any) -> str:
     return " ".join(str(value or "").split())
 
@@ -278,14 +332,13 @@ def check_branches(plan: Dict[str, Any], data: Any) -> List[dict]:
             pwhere = f"{where}, fase {pi}"
             if not pname:
                 errors.append(f"{pwhere}: falta «name».")
-            elif GENERIC_PHASE.match(pname):
-                errors.append(f"{pwhere}: «{pname}» no dice nada. Ponle un nombre que se reconozca "
-                              "(p. ej. «Cimientos», «Pagos», «Pulido»).")
+            elif _phase_name_error(pname):
+                errors.append(f"{pwhere}: " + _phase_name_error(pname))
             elif len(pname) > MAX_NAME:
                 errors.append(f"{pwhere}: el nombre pasa de {MAX_NAME} caracteres.")
-            elif pname.lower() in seen:
+            elif _fold(pname) in seen:
                 errors.append(f"{pwhere}: el nombre «{pname}» está repetido en la rama.")
-            seen.add(pname.lower())
+            seen.add(_fold(pname))
             steps = p.get("steps") if isinstance(p, dict) else None
             if not isinstance(steps, list) or not steps:
                 errors.append(f"{pwhere}: necesita al menos un paso en «steps».")
@@ -298,7 +351,19 @@ def check_branches(plan: Dict[str, Any], data: Any) -> List[dict]:
                 if not title:
                     errors.append(f"{pwhere}, paso {si}: falta «title».")
                     continue
-                clean_steps.append({"title": title, "desc": str(s.get("desc") or "").strip()})
+                try:
+                    cat, together, title = split_title(title, s.get("cat"), bool(s.get("together")))
+                except ValueError as e:
+                    errors.append(f"{pwhere}, paso {si} («{title}»): {e}")
+                    continue
+                if not title:
+                    errors.append(f"{pwhere}, paso {si}: después de la categoría falta el título.")
+                    continue
+                if together and not clean_steps:
+                    errors.append(f"{pwhere}, paso {si}: «+» (a la vez que el anterior) no vale en el primer paso de una fase.")
+                    continue
+                clean_steps.append({"title": title, "desc": str(s.get("desc") or "").strip(),
+                                    "cat": cat, "together": together})
             clean_phases.append({"name": pname, "icon": _clean(p.get("icon"))[:4] if isinstance(p, dict) else "",
                                  "steps": clean_steps})
         out.append({"name": name, "goal": str(b.get("goal") or "").strip(),
@@ -323,17 +388,22 @@ def add_branches(plan: Dict[str, Any], data: Any, by: str = "ia") -> List[dict]:
         for p in b["phases"]:
             phase = {"name": p["name"], "icon": p["icon"], "steps": []}
             for s in p["steps"]:
-                phase["steps"].append(_new_step(branch, s["title"], s["desc"]))
+                phase["steps"].append(_new_step(branch, s["title"], s["desc"], s["cat"], s["together"]))
             branch["phases"].append(phase)
         plan["branches"].append(branch)
         created.append(branch)
     return created
 
 
-def _new_step(branch: dict, title: str, desc: str = "") -> dict:
+def _new_step(branch: dict, title: str, desc: str = "", cat: str = "", together: bool = False) -> dict:
     n = branch.get("next_id", 1)
     branch["next_id"] = n + 1
-    return {"id": f"{branch['key']}-{n}", "title": title, "desc": desc, "state": PENDING, "notes": []}
+    step = {"id": f"{branch['key']}-{n}", "title": title, "desc": desc, "state": PENDING, "notes": []}
+    if cat:
+        step["cat"] = cat
+    if together:
+        step["together"] = True
+    return step
 
 
 def add_step(plan: Dict[str, Any], branch_ref: str, phase_name: str, title: str, desc: str = "",
@@ -343,25 +413,105 @@ def add_step(plan: Dict[str, Any], branch_ref: str, phase_name: str, title: str,
     phase_name, title = _clean(phase_name), _clean(title)
     if not title:
         raise PlanError("El paso necesita un título.")
+    try:
+        cat, together, title = split_title(title)
+    except ValueError as e:
+        raise PlanError(f"No se ha guardado: {e}")
+    if not title:
+        raise PlanError("El paso necesita un título después de la categoría.")
     phase = next((p for p in branch["phases"] if p["name"].lower() == phase_name.lower()), None)
+    if together and (phase is None or not phase["steps"]):
+        raise PlanError("«+» (a la vez que el anterior) no vale en el primer paso de una fase.")
     if phase is None:
-        if GENERIC_PHASE.match(phase_name):
-            raise PlanError(f"«{phase_name}» no dice nada como nombre de fase. Usa uno que se reconozca.")
+        if not phase_name:
+            raise PlanError("La fase necesita un nombre.")
+        if _phase_name_error(phase_name):
+            raise PlanError(_phase_name_error(phase_name))
         phase = {"name": phase_name, "icon": "", "steps": []}
         branch["phases"].append(phase)
     _clear_review(phase)  # con un paso nuevo, la fase deja de estar terminada
-    step = _new_step(branch, title, desc.strip())
+    step = _new_step(branch, title, desc.strip(), cat, together)
     step["by"] = by
     phase["steps"].append(step)
     branch.pop("archived", None)
     return step
 
 
-def set_state(plan: Dict[str, Any], step_id: str, state: str, by: str = "ia", text: str = "") -> dict:
+def waiting_on(plan: Dict[str, Any], branch: dict, phase: dict) -> List[Tuple[dict, dict]]:
+    """Las fases de las que depende esta y que aún tienen pasos sin hacer."""
+    out = []
+    for dep in phase.get("after") or []:
+        ob = next((b for b in plan.get("branches", []) if b["key"] == dep.get("branch")), None)
+        op = next((p for p in (ob or {}).get("phases", []) if p["name"] == dep.get("phase")), None)
+        if op is not None and any(s["state"] != DONE for s in op["steps"]):
+            out.append((ob, op))
+    return out
+
+
+def _after_graph(plan: Dict[str, Any]) -> Dict[Tuple[str, str], List[Tuple[str, str]]]:
+    graph: Dict[Tuple[str, str], List[Tuple[str, str]]] = {}
+    for b in plan.get("branches", []):
+        for p in b.get("phases", []):
+            graph[(b["key"], p["name"])] = [(d.get("branch"), d.get("phase")) for d in p.get("after") or []]
+    return graph
+
+
+def set_after(plan: Dict[str, Any], branch_ref: str, phase_name: str, other_ref: str, other_phase: str,
+              remove: bool = False) -> dict:
+    """La fase espera a otra (o, con remove, deja de esperar). Rechaza fases inexistentes y ciclos."""
+    branch, other = find_branch(plan, branch_ref), find_branch(plan, other_ref)
+    if not _clean(phase_name) or not _clean(other_phase):
+        raise PlanError(f'Faltan los nombres de fase: {UNI} after RAMA "Fase" OTRA "Fase otra"')
+    phase, ophase = find_phase(branch, phase_name), find_phase(other, other_phase)
+    dep = {"branch": other["key"], "phase": ophase["name"]}
+    if remove:
+        if dep not in (phase.get("after") or []):
+            raise PlanError(f"«{phase['name']}» no esperaba a «{ophase['name']}» de {other['key']}.")
+        phase["after"].remove(dep)
+        if not phase["after"]:
+            del phase["after"]
+        return phase
+    if phase is ophase:
+        raise PlanError("Una fase no puede esperar a sí misma.")
+    if dep in (phase.get("after") or []):
+        return phase
+    graph = _after_graph(plan)
+    me, todo, seen = (branch["key"], phase["name"]), [(other["key"], ophase["name"])], set()
+    while todo:
+        node = todo.pop()
+        if node == me:
+            raise PlanError(f"Ciclo: «{ophase['name']}» de {other['key']} ya espera (directa o indirectamente) "
+                            f"a «{phase['name']}» de {branch['key']}.")
+        if node not in seen:
+            seen.add(node)
+            todo.extend(graph.get(node, []))
+    phase.setdefault("after", []).append(dep)
+    return phase
+
+
+def set_cat(plan: Dict[str, Any], step_id: str, cat: str) -> dict:
+    canon = norm_cat(cat)
+    if not canon:
+        raise PlanError(f"«{cat}» no es una categoría. Usa una de: {', '.join(CATS)}. Ejemplo: {UNI} cat IN2-3 interfaz")
+    step = find_step(plan, step_id)[2]
+    step["cat"] = canon
+    return step
+
+
+def set_state(plan: Dict[str, Any], step_id: str, state: str, by: str = "ia", text: str = "",
+              force: bool = False) -> dict:
     if state not in STATES:
         raise PlanError(f"Estado desconocido: {state}. Usa pending, doing o done.")
     branch, phase, step = find_step(plan, step_id)
     text = (text or "").strip()
+    if state == DOING:
+        waits = waiting_on(plan, branch, phase)
+        names = ", ".join(f"«{p['name']}» de {b['key']}" for b, p in waits)
+        if waits and not force:
+            raise PlanError(f"{step['id']} no puede empezar: la fase «{phase['name']}» espera a {names}, "
+                            f"que aún tiene pasos sin hacer. Si la persona ya lo sabe: {UNI} start {step['id']} --force")
+        if waits:
+            text = (text + " " if text else "") + f"(empezado con --force, esperando a {names})"
     if state == DONE:
         step["result"] = text or step.get("result", "")
         step.pop("change", None)
@@ -591,6 +741,10 @@ def drop_branch(plan: Dict[str, Any], ref: str, folder: Optional[Path] = None) -
 
 # ── Texto para la terminal ───────────────────────────────────────────────────
 
+def _wait_flag(plan: Dict[str, Any], branch: dict, phase: dict) -> str:
+    return "".join(f"  espera a «{p['name']}» de {b['name']}" for b, p in waiting_on(plan, branch, phase))
+
+
 def _phase_flag(phase: dict) -> str:
     st = review_state(phase)
     if st == WAITING:
@@ -655,12 +809,12 @@ def render_status(plan: Dict[str, Any]) -> str:
         for p in b["phases"]:
             st = phase_state(p)
             if p is current or st == DOING:
-                lines.append(f"  {MARKS[DOING]} {p['name']}{_phase_flag(p)}")
+                lines.append(f"  {MARKS[DOING]} {p['name']}{_phase_flag(p)}{_wait_flag(plan, b, p)}")
                 lines += [f"      {MARKS[s['state']]} {s['id']}  {s['title']}"
                           + ("  (en curso)" if s["state"] == DOING else "") for s in p["steps"]]
             else:
                 n = len(p["steps"])
-                lines.append(f"  {MARKS[st]} {p['name']}  ({n} paso{'s' if n != 1 else ''}){_phase_flag(p)}")
+                lines.append(f"  {MARKS[st]} {p['name']}  ({n} paso{'s' if n != 1 else ''}){_phase_flag(p)}{_wait_flag(plan, b, p)}")
     doing = [s for _, _, s in iter_steps(plan) if s["state"] == DOING]
     nxt = [n for n in (next_step(b) for b in branches) if n and n["state"] == PENDING]
     if doing:
@@ -745,7 +899,7 @@ Preguntas y propuestas (se contestan en el chat o en la web):
 BRANCH_HINT = ('Crea la rama con una sola orden, cada cosa entre comillas:\n'
                '  python .unificador/uni.py branch "Nombre de la rama" --goal "Para qué sirve" '
                '--phase "Nombre de fase" "Primer paso" "Segundo paso" --phase "Otra fase" "Otro paso"')
-ORDERS = "status, branch, add, start, done, note, show, approve, revise, nonstop, ask, propose, answer, wait, inbox"
+ORDERS = "status, branch, add, cat, after, start, done, note, show, approve, revise, nonstop, ask, propose, answer, wait, inbox"
 
 
 def branch_from_args(name: str, icon: str, goal: str, phases: List[List[str]]) -> dict:
@@ -865,16 +1019,28 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--icon", default="", help="un emoji")
     s.add_argument("--goal", default="", help="para qué sirve")
     s.add_argument("--phase", dest="phases", action="append", nargs="+", default=[], metavar="TEXTO",
-                   help='nombre de la fase y después sus pasos: --phase "Cimientos" "Paso uno" "Paso dos"')
+                   help='nombre de la fase y después sus pasos, cada uno con su categoría '
+                        '(codigo, interfaz, pruebas, investigar, decidir) y «+» si va a la vez que el anterior: '
+                        '--phase "Cimientos" "codigo: Paso uno" "+pruebas: Probarlo"')
     s = sub.add_parser("plan", help="crea ramas nuevas desde JSON (--file o entrada estándar)")
     s.add_argument("--file", help="fichero JSON con el plan")
     s = sub.add_parser("add", help="añade un paso a una fase de una rama (crea la fase si no existe)")
     s.add_argument("branch", help="clave o nombre de la rama")
     s.add_argument("phase", help="nombre de la fase")
-    s.add_argument("title")
+    s.add_argument("title", help='con categoría delante: "interfaz: Elegir colores" ("+pruebas: ..." = a la vez que el anterior)')
     s.add_argument("-d", "--desc", default="")
+    s = sub.add_parser("cat", help="pone o cambia la categoría de un paso")
+    s.add_argument("id")
+    s.add_argument("category", help="codigo, interfaz, pruebas, investigar o decidir")
+    s = sub.add_parser("after", help='una fase espera a otra: after RAMA "Fase" OTRA "Fase otra"')
+    s.add_argument("branch")
+    s.add_argument("phase")
+    s.add_argument("other_branch", metavar="OTRA")
+    s.add_argument("other_phase", metavar="FASE_OTRA")
+    s.add_argument("--remove", action="store_true", help="quita la dependencia")
     s = sub.add_parser("start", help="empieza un paso")
     s.add_argument("id")
+    s.add_argument("--force", action="store_true", help="empezar aunque su fase espere a otra sin terminar")
     s.add_argument("-m", "--message", default="")
     s = sub.add_parser("done", help="da un paso por hecho; -m cuenta qué ha cambiado y cómo se comprueba")
     s.add_argument("id")
@@ -1003,9 +1169,18 @@ def main(argv: Optional[List[str]] = None) -> int:
         elif cmd == "add":
             s = mutate(path, lambda plan: add_step(plan, args.branch, args.phase, args.title, args.desc, by))
             print(f"+ {s['id']}  {s['title']}")
+        elif cmd == "cat":
+            s = mutate(path, lambda plan: set_cat(plan, args.id, args.category))
+            print(f"{s['id']}  categoría: {s['cat']}")
+        elif cmd == "after":
+            ph = mutate(path, lambda plan: set_after(plan, args.branch, args.phase, args.other_branch,
+                                                     args.other_phase, args.remove))
+            print(f"«{ph['name']}»: " + ("dependencia quitada." if args.remove else
+                  "espera a " + ", ".join(f"«{d['phase']}» de {d['branch']}" for d in ph["after"]) + "."))
         elif cmd in ("start", "done", "reopen"):
             state = {"start": DOING, "done": DONE, "reopen": PENDING}[cmd]
-            s = mutate(path, lambda plan: set_state(plan, args.id, state, by, args.message))
+            s = mutate(path, lambda plan: set_state(plan, args.id, state, by, args.message,
+                                                    bool(getattr(args, "force", False))))
             print(f"{MARKS[state]} {s['id']}  {s['title']}  [{STATE_NAMES[state]}]")
             if cmd == "start":
                 warning = _start_warning(load(path), s["id"])

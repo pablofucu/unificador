@@ -13,8 +13,8 @@ from unificador import plan as P
 SAMPLE = {"branches": [{
     "name": "Carrito de compra", "icon": "🛒", "goal": "Comprar desde la web",
     "phases": [
-        {"name": "Cimientos", "steps": [{"title": "Modelo del carrito", "desc": "Hecho cuando se guarda"}]},
-        {"name": "Pagos", "steps": [{"title": "Pasarela"}, "Recibo por correo"]},
+        {"name": "Cimientos", "steps": [{"title": "codigo: Modelo del carrito", "desc": "Hecho cuando se guarda"}]},
+        {"name": "Pagos", "steps": [{"title": "codigo: Pasarela"}, "pruebas: Recibo por correo"]},
     ]}]}
 
 
@@ -54,8 +54,8 @@ class PlanTest(unittest.TestCase):
 
     def test_branch_in_one_command_without_json(self):
         code, out, err = run(self.path, "branch", "Web de recetas", "--icon", "🍲", "--goal", "Ver recetas",
-                             "--phase", "Cimientos", "Página principal", "Ficha :: Hecha cuando se ve una receta",
-                             "--phase", "Pulido", "Buscador")
+                             "--phase", "Cimientos", "codigo: Página principal", "interfaz: Ficha :: Hecha cuando se ve una receta",
+                             "--phase", "Pulido", "interfaz: Buscador")
         self.assertEqual(code, 0, err)
         self.assertIn("start WDR-1", out)  # dice qué escribir después
         b = P.load(self.path)["branches"][0]
@@ -77,7 +77,7 @@ class PlanTest(unittest.TestCase):
 
     def test_generic_phase_names_are_rejected_and_nothing_is_saved(self):
         for bad in ("Fase 1", "fase 2:", "Etapa 3", "1", "Step 2"):
-            data = {"branches": [{"name": "X", "phases": [{"name": bad, "steps": ["a"]}]}]}
+            data = {"branches": [{"name": "X", "phases": [{"name": bad, "steps": ["codigo: a"]}]}]}
             code, _, err = run(self.path, "plan", stdin=json.dumps(data))
             self.assertEqual(code, 1, bad)
             self.assertIn("no dice nada", err)
@@ -88,7 +88,7 @@ class PlanTest(unittest.TestCase):
                  '{"branches": [{"name": "A"}]}',
                  '{"branches": [{"name": "A", "phases": [{"name": "Base", "steps": []}]}]}',
                  '{"branches": [{"name": "A", "phases": [{"name": "Base", "steps": [{"desc": "x"}]}]}]}',
-                 '{"branches": [{"phases": [{"name": "Base", "steps": ["a"]}]}]}']
+                 '{"branches": [{"phases": [{"name": "Base", "steps": ["codigo: a"]}]}]}']
         for raw in cases:
             code, _, err = run(self.path, "plan", stdin=raw)
             self.assertEqual(code, 1, raw)
@@ -125,13 +125,13 @@ class PlanTest(unittest.TestCase):
 
     def test_add_step_and_new_phase(self):
         self.make()
-        self.assertEqual(run(self.path, "add", "CDC", "Pagos", "Devoluciones")[0], 0)
-        self.assertEqual(run(self.path, "add", "carrito de compra", "Pulido", "Animaciones")[0], 0)
+        self.assertEqual(run(self.path, "add", "CDC", "Pagos", "codigo: Devoluciones")[0], 0)
+        self.assertEqual(run(self.path, "add", "carrito de compra", "Pulido", "interfaz: Animaciones")[0], 0)
         b = P.load(self.path)["branches"][0]
         self.assertEqual([p["name"] for p in b["phases"]], ["Cimientos", "Pagos", "Pulido"])
         self.assertEqual(b["phases"][1]["steps"][-1]["id"], "CDC-4")
         self.assertEqual(b["phases"][2]["steps"][0]["id"], "CDC-5")
-        self.assertEqual(run(self.path, "add", "CDC", "Fase 4", "x")[0], 1)
+        self.assertEqual(run(self.path, "add", "CDC", "Fase 4", "codigo: x")[0], 1)
 
     def test_change_request_shows_in_status_until_done(self):
         self.make()
@@ -166,7 +166,7 @@ class PlanTest(unittest.TestCase):
     def test_colors_do_not_repeat_between_live_branches(self):
         for name in ("Uno mas", "Dos mas", "Tres mas"):
             P.mutate(self.path, lambda plan, n=name: P.add_branches(
-                plan, {"name": n, "phases": [{"name": "Base", "steps": ["a"]}]}))
+                plan, {"name": n, "phases": [{"name": "Base", "steps": ["codigo: a"]}]}))
         self.assertEqual([b["color"] for b in P.load(self.path)["branches"]], [0, 1, 2])
 
     def test_broken_file_gives_clear_error(self):
@@ -232,7 +232,7 @@ class PlanTest(unittest.TestCase):
         run(self.path, "reopen", "CDC-1")
         self.assertNotIn("review", self.phase(0))
         run(self.path, "done", "CDC-1", "-m", "ok")
-        run(self.path, "add", "CDC", "Cimientos", "Uno más")  # paso nuevo: deja de esperar
+        run(self.path, "add", "CDC", "Cimientos", "codigo: Uno más")  # paso nuevo: deja de esperar
         self.assertNotIn("review", self.phase(0))
 
     def test_approve_without_waiting_phase_explains(self):
@@ -401,6 +401,122 @@ class PlanTest(unittest.TestCase):
         self.assertEqual(run(self.path, "ask", "¿Y ahora?")[0], 0)
         plan = P.load(self.path)
         self.assertEqual((plan["version"], plan["asks"][0]["id"]), (1, "P-1"))
+
+    # ── categorías, «a la vez», dependencias y nombres de fase ──
+
+    def _branch(self, *phases):
+        argv = ["branch", "Tienda", "--goal", "x"]
+        for ph in phases:
+            argv += ["--phase", *ph]
+        return run(self.path, *argv)
+
+    def test_category_prefix_aliases_and_stripped_title(self):
+        code, _, err = self._branch(("Cimientos", "Código: Modelo", "UI: Colores", "DISEÑO: Menú", "tests: Uno",
+                                     "Research: Estudio", "decisión: Elegir"))
+        self.assertEqual(code, 0, err)
+        steps = P.load(self.path)["branches"][0]["phases"][0]["steps"]
+        self.assertEqual([s["cat"] for s in steps],
+                         ["codigo", "interfaz", "interfaz", "pruebas", "investigar", "decidir"])
+        self.assertEqual(steps[0]["title"], "Modelo")
+        self.assertNotIn("together", steps[0])
+
+    def test_json_accepts_cat_key(self):
+        data = {"branches": [{"name": "X", "phases": [{"name": "Base", "steps": [
+            {"title": "Algo", "cat": "ui"}, {"title": "Otro", "cat": "pruebas", "together": True}]}]}]}
+        self.assertEqual(run(self.path, "plan", stdin=json.dumps(data))[0], 0)
+        steps = P.load(self.path)["branches"][0]["phases"][0]["steps"]
+        self.assertEqual([(s["cat"], s.get("together", False)) for s in steps], [("interfaz", False), ("pruebas", True)])
+
+    def test_missing_category_rejects_whole_command_atomically(self):
+        code, _, err = self._branch(("Cimientos", "codigo: Bien", "Sin categoría"), ("Pagos", "raro: Mal"))
+        self.assertEqual(code, 1)
+        for cat in P.CATS:
+            self.assertIn(cat, err)
+        self.assertIn('"interfaz: Elegir colores"', err)
+        self.assertFalse(self.path.exists() and P.load(self.path)["branches"])
+        self.assertEqual(self._branch(("Cimientos", "codigo: Uno"))[0], 0)
+        before = P.load(self.path)
+        self.assertEqual(run(self.path, "add", "TI", "Cimientos", "sin categoria")[0], 1)
+        self.assertEqual(P.load(self.path), before)
+        self.assertEqual(run(self.path, "add", "TI", "Cimientos", "decision: Elegir")[0], 0)
+
+    def test_old_plan_without_cat_loads_and_cat_command_sets_it(self):
+        self.assertEqual(self._branch(("Cimientos", "codigo: Uno"))[0], 0)
+        plan = P.load(self.path)
+        del plan["branches"][0]["phases"][0]["steps"][0]["cat"]
+        P.save(self.path, plan)
+        self.assertEqual(run(self.path, "status")[0], 0)
+        self.assertEqual(run(self.path, "start", "TI-1")[0], 0)
+        self.assertEqual(run(self.path, "cat", "TI-1", "Pruebas")[0], 0)
+        self.assertEqual(P.load(self.path)["branches"][0]["phases"][0]["steps"][0]["cat"], "pruebas")
+        code, _, err = run(self.path, "cat", "TI-1", "cosas")
+        self.assertEqual(code, 1)
+        self.assertIn("interfaz", err)
+
+    def test_plus_means_together_and_fails_on_first_step(self):
+        self.assertEqual(self._branch(("Cimientos", "codigo: Uno", "+pruebas: Probar en tablet"))[0], 0)
+        steps = P.load(self.path)["branches"][0]["phases"][0]["steps"]
+        self.assertEqual((steps[1]["title"], steps[1]["cat"], steps[1]["together"]), ("Probar en tablet", "pruebas", True))
+        self.assertEqual(run(self.path, "add", "TI", "Cimientos", "+codigo: Extra")[0], 0)
+        self.assertTrue(P.load(self.path)["branches"][0]["phases"][0]["steps"][2]["together"])
+        self.assertEqual(run(self.path, "add", "TI", "Pagos", "+codigo: Primero")[0], 1)
+        self.path.unlink()
+        code, _, err = self._branch(("Cimientos", "+codigo: Uno"))
+        self.assertEqual(code, 1)
+        self.assertIn("primer paso", err)
+        self.assertFalse(self.path.exists() and P.load(self.path)["branches"])
+
+    def _three_phases(self):
+        self.assertEqual(self._branch(("Cimientos", "codigo: Uno"), ("Pagos", "codigo: Dos"), ("Pulido", "codigo: Tres"))[0], 0)
+
+    def test_after_adds_removes_and_rejects_bad_ones(self):
+        self._three_phases()
+        self.assertEqual(run(self.path, "after", "TI", "Pagos", "TI", "Cimientos")[0], 0)
+        self.assertEqual(P.load(self.path)["branches"][0]["phases"][1]["after"], [{"branch": "TI", "phase": "Cimientos"}])
+        for argv in (["TI", "Pagos", "TI", "Nada"], ["TI", "Nada", "TI", "Pagos"], ["TI", "Pagos", "TI", "Pagos"]):
+            self.assertEqual(run(self.path, "after", *argv)[0], 1)
+        self.assertEqual(run(self.path, "after", "TI", "Pagos", "TI", "Cimientos", "--remove")[0], 0)
+        self.assertNotIn("after", P.load(self.path)["branches"][0]["phases"][1])
+
+    def test_after_rejects_cycles_direct_and_indirect(self):
+        self._three_phases()
+        self.assertEqual(run(self.path, "after", "TI", "Pagos", "TI", "Cimientos")[0], 0)
+        code, _, err = run(self.path, "after", "TI", "Cimientos", "TI", "Pagos")
+        self.assertEqual(code, 1)
+        self.assertIn("Ciclo", err)
+        self.assertEqual(run(self.path, "after", "TI", "Pulido", "TI", "Pagos")[0], 0)
+        self.assertEqual(run(self.path, "after", "TI", "Cimientos", "TI", "Pulido")[0], 1)
+        self.assertNotIn("after", P.load(self.path)["branches"][0]["phases"][0])
+
+    def test_start_blocked_by_unfinished_phase_and_force(self):
+        self._three_phases()
+        run(self.path, "after", "TI", "Pagos", "TI", "Cimientos")
+        self.assertIn("espera a «Cimientos» de Tienda", run(self.path, "status")[1])
+        code, _, err = run(self.path, "start", "TI-2")
+        self.assertEqual(code, 1)
+        self.assertIn("Cimientos", err)
+        self.assertEqual(P.load(self.path)["branches"][0]["phases"][1]["steps"][0]["state"], "pending")
+        self.assertEqual(run(self.path, "start", "TI-2", "--force")[0], 0)
+        step = P.load(self.path)["branches"][0]["phases"][1]["steps"][0]
+        self.assertEqual(step["state"], "doing")
+        self.assertIn("--force", step["notes"][-1]["text"])
+        run(self.path, "done", "TI-1", "-m", "ok")
+        self.assertNotIn("espera a", run(self.path, "status")[1])
+        self.assertEqual(run(self.path, "start", "TI-3")[0], 0)
+
+    def test_phase_names_must_say_something(self):
+        for bad in ("Varios", "otros", "General", "Misc", "Pendiente", "Pendientes", "Resto", "Tareas", "Cosas",
+                    "Extra", "Extras", "Inicio", "FINAL", "Fase 1"):
+            data = {"branches": [{"name": "X" + bad, "phases": [{"name": bad, "steps": ["codigo: a"]}]}]}
+            code, _, err = run(self.path, "plan", stdin=json.dumps(data))
+            self.assertEqual(code, 1, bad)
+            self.assertIn("Cimientos", err)
+        self.assertEqual(self._branch(("Cimientos", "codigo: a"))[0], 0)
+        self.assertEqual(run(self.path, "add", "TI", "Varios", "codigo: x")[0], 1)
+        self.assertEqual(run(self.path, "add", "TI", "Finalización", "codigo: x")[0], 0)  # solo la palabra sola
+        code, _, err = run(self.path, "branch", "Otra", "--phase", "Base", "codigo: a", "--phase", "base", "codigo: b")
+        self.assertEqual(code, 1)
+        self.assertIn("repetido", err)
 
 
 if __name__ == "__main__":

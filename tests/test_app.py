@@ -15,8 +15,8 @@ from unificador import plan as P
 from unificador import projects as R
 
 PLAN = {"branches": [{"name": "Carrito", "phases": [
-    {"name": "Cimientos", "steps": [{"title": "Modelo"}]},
-    {"name": "Pagos", "steps": [{"title": "Pasarela"}]}]}]}
+    {"name": "Cimientos", "steps": [{"title": "codigo: Modelo"}]},
+    {"name": "Pagos", "steps": [{"title": "codigo: Pasarela"}]}]}]}
 
 
 class ServerCase(unittest.TestCase):
@@ -181,7 +181,7 @@ class AppTest(ServerCase):
         other = Path(self.tmp.name) / "Blog"
         other.mkdir()
         P.mutate(other / P.PLAN_FILE, lambda plan: P.add_branches(plan, {"branches": [
-            {"name": "Entradas", "phases": [{"name": "Base", "steps": [{"title": "Uno"}, {"title": "Dos"}]}]}]}, "ia"))
+            {"name": "Entradas", "phases": [{"name": "Base", "steps": [{"title": "codigo: Uno"}, {"title": "pruebas: Dos"}]}]}]}, "ia"))
         P.mutate(other / P.PLAN_FILE, lambda plan: P.add_ask(plan, "¿Título?"))
         (other / P.PROPOSALS_DIR / "P-1").mkdir(parents=True)
         (other / P.PROPOSALS_DIR / "P-1" / "1.html").write_text("blog", encoding="utf-8")

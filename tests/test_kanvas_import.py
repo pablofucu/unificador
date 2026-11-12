@@ -47,7 +47,7 @@ class ImportTest(unittest.TestCase):
             K.import_board(root, force=True)
             path = root / P.PLAN_FILE
             P.mutate(path, lambda plan: P.set_state(plan, "it-04", P.DONE, "yo", "ok"))
-            P.mutate(path, lambda plan: P.add_step(plan, "IT", "Corregir", "Otro"))
+            P.mutate(path, lambda plan: P.add_step(plan, "IT", "Corregir", "codigo: Otro"))
             plan = P.load(path)
             self.assertEqual(P.find_step(plan, "IT-6")[2]["title"], "Otro")
             self.assertIn("Interfaz", P.render_status(plan))
