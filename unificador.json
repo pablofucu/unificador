@@ -2183,10 +2183,10 @@
             }
           ],
           "review": {
-            "state": "waiting",
+            "state": "approved",
             "text": "",
-            "by": "claude",
-            "at": "2026-11-12T14:14:31+01:00",
+            "by": "persona",
+            "at": "2026-11-12T14:36:33+01:00",
             "seen": true
           }
         },
@@ -2198,9 +2198,17 @@
               "id": "IN2-6",
               "title": "Vista de todos los proyectos",
               "desc": "",
-              "state": "pending",
-              "notes": [],
-              "cat": "interfaz"
+              "state": "doing",
+              "notes": [
+                {
+                  "at": "2026-11-12T14:38:41+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-12T14:38:41+01:00"
             },
             {
               "id": "IN2-7",
