@@ -27,10 +27,12 @@ import argparse
 import json
 import os
 import re
+import unicodedata
 import shutil
 import sys
 import time
 from datetime import datetime
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
@@ -43,6 +45,17 @@ MARKS = {PENDING: "·", DOING: "▶", DONE: "✔"}
 COLORS = 8  # la interfaz tiene una paleta de 8 colores; cada rama guarda su índice
 GENERIC_PHASE = re.compile(r"^\s*(fase|etapa|paso|parte|phase|step|stage|sprint)?\s*[\d\W]*\s*$", re.I)
 MAX_NAME = 60
+CATS = ("codigo", "interfaz", "pruebas", "investigar", "decidir")
+CAT_ALIASES = {
+    "codigo": "codigo", "code": "codigo",
+    "interfaz": "interfaz", "ui": "interfaz", "diseno": "interfaz",
+    "pruebas": "pruebas", "prueba": "pruebas", "test": "pruebas", "tests": "pruebas", "probar": "pruebas",
+    "investigar": "investigar", "investigacion": "investigar", "research": "investigar",
+    "decidir": "decidir", "decision": "decidir",
+}
+CAT_EXAMPLE = '"interfaz: Elegir colores"'
+EMPTY_PHASE_WORDS = {"varios", "otros", "general", "misc", "pendiente", "pendientes", "resto", "tareas",
+                     "cosas", "extra", "extras", "inicio", "final"}
 WAITING, APPROVED, CHANGES = "waiting", "approved", "changes"  # revisión de una fase
 QUESTION, PROPOSAL = "question", "proposal"
 PROPOSALS_DIR = ".unificador/propuestas"
@@ -227,6 +240,48 @@ def find_ask(plan: Dict[str, Any], ask_id: str) -> dict:
 
 # ── Cambios ──────────────────────────────────────────────────────────────────
 
+def _fold(text: Any) -> str:
+    """Minúsculas y sin tildes, para comparar alias y nombres."""
+    text = unicodedata.normalize("NFD", str(text or ""))
+    return "".join(c for c in text if not unicodedata.combining(c)).strip().lower()
+
+
+def norm_cat(value: Any) -> str:
+    """La categoría canónica de un alias, o «» si no lo es."""
+    return CAT_ALIASES.get(_fold(value), "")
+
+
+def _cat_error() -> str:
+    return ("el paso necesita una categoría como prefijo del título: " + ", ".join(CATS)
+            + f". Ejemplo: {CAT_EXAMPLE}")
+
+
+_PREFIX = re.compile(r"^\s*(\+)?\s*([^:+]{1,20}?)\s*:\s*(.*)$", re.S)
+
+
+def split_title(raw: Any, cat_key: Any = None, together_key: bool = False) -> Tuple[str, bool, str]:
+    """«+pruebas: Probar» → («pruebas», True, «Probar»). Lanza ValueError con el motivo si no hay categoría."""
+    text = str(raw or "")
+    cat, together = (norm_cat(cat_key) if cat_key else ""), bool(together_key)
+    if cat_key and not cat:
+        raise ValueError(f"«{cat_key}» no es una categoría; " + _cat_error().split(": ", 1)[1])
+    m = _PREFIX.match(text)
+    if m and norm_cat(m.group(2)):
+        cat, together, text = norm_cat(m.group(2)), together or bool(m.group(1)), m.group(3)
+    elif not cat:
+        raise ValueError(_cat_error())
+    elif text.lstrip().startswith("+"):
+        together, text = True, text.lstrip()[1:]
+    return cat, together, _clean(text)
+
+
+def _phase_name_error(name: str) -> str:
+    if GENERIC_PHASE.match(name) or _fold(name) in EMPTY_PHASE_WORDS:
+        return (f"«{name}» no dice nada como nombre de fase. Ponle un nombre que se reconozca "
+                "(p. ej. «Cimientos», «Pagos», «Pulido»).")
+    return ""
+
+
 def _clean(value: Any) -> str:
     return " ".join(str(value or "").split())
 
@@ -278,14 +333,13 @@ def check_branches(plan: Dict[str, Any], data: Any) -> List[dict]:
             pwhere = f"{where}, fase {pi}"
             if not pname:
                 errors.append(f"{pwhere}: falta «name».")
-            elif GENERIC_PHASE.match(pname):
-                errors.append(f"{pwhere}: «{pname}» no dice nada. Ponle un nombre que se reconozca "
-                              "(p. ej. «Cimientos», «Pagos», «Pulido»).")
+            elif _phase_name_error(pname):
+                errors.append(f"{pwhere}: " + _phase_name_error(pname))
             elif len(pname) > MAX_NAME:
                 errors.append(f"{pwhere}: el nombre pasa de {MAX_NAME} caracteres.")
-            elif pname.lower() in seen:
+            elif _fold(pname) in seen:
                 errors.append(f"{pwhere}: el nombre «{pname}» está repetido en la rama.")
-            seen.add(pname.lower())
+            seen.add(_fold(pname))
             steps = p.get("steps") if isinstance(p, dict) else None
             if not isinstance(steps, list) or not steps:
                 errors.append(f"{pwhere}: necesita al menos un paso en «steps».")
@@ -298,7 +352,19 @@ def check_branches(plan: Dict[str, Any], data: Any) -> List[dict]:
                 if not title:
                     errors.append(f"{pwhere}, paso {si}: falta «title».")
                     continue
-                clean_steps.append({"title": title, "desc": str(s.get("desc") or "").strip()})
+                try:
+                    cat, together, title = split_title(title, s.get("cat"), bool(s.get("together")))
+                except ValueError as e:
+                    errors.append(f"{pwhere}, paso {si} («{title}»): {e}")
+                    continue
+                if not title:
+                    errors.append(f"{pwhere}, paso {si}: después de la categoría falta el título.")
+                    continue
+                if together and not clean_steps:
+                    errors.append(f"{pwhere}, paso {si}: «+» (a la vez que el anterior) no vale en el primer paso de una fase.")
+                    continue
+                clean_steps.append({"title": title, "desc": str(s.get("desc") or "").strip(),
+                                    "cat": cat, "together": together})
             clean_phases.append({"name": pname, "icon": _clean(p.get("icon"))[:4] if isinstance(p, dict) else "",
                                  "steps": clean_steps})
         out.append({"name": name, "goal": str(b.get("goal") or "").strip(),
@@ -323,17 +389,22 @@ def add_branches(plan: Dict[str, Any], data: Any, by: str = "ia") -> List[dict]:
         for p in b["phases"]:
             phase = {"name": p["name"], "icon": p["icon"], "steps": []}
             for s in p["steps"]:
-                phase["steps"].append(_new_step(branch, s["title"], s["desc"]))
+                phase["steps"].append(_new_step(branch, s["title"], s["desc"], s["cat"], s["together"]))
             branch["phases"].append(phase)
         plan["branches"].append(branch)
         created.append(branch)
     return created
 
 
-def _new_step(branch: dict, title: str, desc: str = "") -> dict:
+def _new_step(branch: dict, title: str, desc: str = "", cat: str = "", together: bool = False) -> dict:
     n = branch.get("next_id", 1)
     branch["next_id"] = n + 1
-    return {"id": f"{branch['key']}-{n}", "title": title, "desc": desc, "state": PENDING, "notes": []}
+    step = {"id": f"{branch['key']}-{n}", "title": title, "desc": desc, "state": PENDING, "notes": []}
+    if cat:
+        step["cat"] = cat
+    if together:
+        step["together"] = True
+    return step
 
 
 def add_step(plan: Dict[str, Any], branch_ref: str, phase_name: str, title: str, desc: str = "",
@@ -343,25 +414,105 @@ def add_step(plan: Dict[str, Any], branch_ref: str, phase_name: str, title: str,
     phase_name, title = _clean(phase_name), _clean(title)
     if not title:
         raise PlanError("El paso necesita un título.")
+    try:
+        cat, together, title = split_title(title)
+    except ValueError as e:
+        raise PlanError(f"No se ha guardado: {e}")
+    if not title:
+        raise PlanError("El paso necesita un título después de la categoría.")
     phase = next((p for p in branch["phases"] if p["name"].lower() == phase_name.lower()), None)
+    if together and (phase is None or not phase["steps"]):
+        raise PlanError("«+» (a la vez que el anterior) no vale en el primer paso de una fase.")
     if phase is None:
-        if GENERIC_PHASE.match(phase_name):
-            raise PlanError(f"«{phase_name}» no dice nada como nombre de fase. Usa uno que se reconozca.")
+        if not phase_name:
+            raise PlanError("La fase necesita un nombre.")
+        if _phase_name_error(phase_name):
+            raise PlanError(_phase_name_error(phase_name))
         phase = {"name": phase_name, "icon": "", "steps": []}
         branch["phases"].append(phase)
     _clear_review(phase)  # con un paso nuevo, la fase deja de estar terminada
-    step = _new_step(branch, title, desc.strip())
+    step = _new_step(branch, title, desc.strip(), cat, together)
     step["by"] = by
     phase["steps"].append(step)
     branch.pop("archived", None)
     return step
 
 
-def set_state(plan: Dict[str, Any], step_id: str, state: str, by: str = "ia", text: str = "") -> dict:
+def waiting_on(plan: Dict[str, Any], branch: dict, phase: dict) -> List[Tuple[dict, dict]]:
+    """Las fases de las que depende esta y que aún tienen pasos sin hacer."""
+    out = []
+    for dep in phase.get("after") or []:
+        ob = next((b for b in plan.get("branches", []) if b["key"] == dep.get("branch")), None)
+        op = next((p for p in (ob or {}).get("phases", []) if p["name"] == dep.get("phase")), None)
+        if op is not None and any(s["state"] != DONE for s in op["steps"]):
+            out.append((ob, op))
+    return out
+
+
+def _after_graph(plan: Dict[str, Any]) -> Dict[Tuple[str, str], List[Tuple[str, str]]]:
+    graph: Dict[Tuple[str, str], List[Tuple[str, str]]] = {}
+    for b in plan.get("branches", []):
+        for p in b.get("phases", []):
+            graph[(b["key"], p["name"])] = [(d.get("branch"), d.get("phase")) for d in p.get("after") or []]
+    return graph
+
+
+def set_after(plan: Dict[str, Any], branch_ref: str, phase_name: str, other_ref: str, other_phase: str,
+              remove: bool = False) -> dict:
+    """La fase espera a otra (o, con remove, deja de esperar). Rechaza fases inexistentes y ciclos."""
+    branch, other = find_branch(plan, branch_ref), find_branch(plan, other_ref)
+    if not _clean(phase_name) or not _clean(other_phase):
+        raise PlanError(f'Faltan los nombres de fase: {UNI} after RAMA "Fase" OTRA "Fase otra"')
+    phase, ophase = find_phase(branch, phase_name), find_phase(other, other_phase)
+    dep = {"branch": other["key"], "phase": ophase["name"]}
+    if remove:
+        if dep not in (phase.get("after") or []):
+            raise PlanError(f"«{phase['name']}» no esperaba a «{ophase['name']}» de {other['key']}.")
+        phase["after"].remove(dep)
+        if not phase["after"]:
+            del phase["after"]
+        return phase
+    if phase is ophase:
+        raise PlanError("Una fase no puede esperar a sí misma.")
+    if dep in (phase.get("after") or []):
+        return phase
+    graph = _after_graph(plan)
+    me, todo, seen = (branch["key"], phase["name"]), [(other["key"], ophase["name"])], set()
+    while todo:
+        node = todo.pop()
+        if node == me:
+            raise PlanError(f"Ciclo: «{ophase['name']}» de {other['key']} ya espera (directa o indirectamente) "
+                            f"a «{phase['name']}» de {branch['key']}.")
+        if node not in seen:
+            seen.add(node)
+            todo.extend(graph.get(node, []))
+    phase.setdefault("after", []).append(dep)
+    return phase
+
+
+def set_cat(plan: Dict[str, Any], step_id: str, cat: str) -> dict:
+    canon = norm_cat(cat)
+    if not canon:
+        raise PlanError(f"«{cat}» no es una categoría. Usa una de: {', '.join(CATS)}. Ejemplo: {UNI} cat IN2-3 interfaz")
+    step = find_step(plan, step_id)[2]
+    step["cat"] = canon
+    return step
+
+
+def set_state(plan: Dict[str, Any], step_id: str, state: str, by: str = "ia", text: str = "",
+              force: bool = False) -> dict:
     if state not in STATES:
         raise PlanError(f"Estado desconocido: {state}. Usa pending, doing o done.")
     branch, phase, step = find_step(plan, step_id)
     text = (text or "").strip()
+    if state == DOING:
+        waits = waiting_on(plan, branch, phase)
+        names = ", ".join(f"«{p['name']}» de {b['key']}" for b, p in waits)
+        if waits and not force:
+            raise PlanError(f"{step['id']} no puede empezar: la fase «{phase['name']}» espera a {names}, "
+                            f"que aún tiene pasos sin hacer. Si la persona ya lo sabe: {UNI} start {step['id']} --force")
+        if waits:
+            text = (text + " " if text else "") + f"(empezado con --force, esperando a {names})"
     if state == DONE:
         step["result"] = text or step.get("result", "")
         step.pop("change", None)
@@ -431,41 +582,169 @@ def _ask_target(plan: Dict[str, Any], step: Optional[str], branch: Optional[str]
     return None, None
 
 
+MAX_DESC = 160
+MAX_CONTEXT = 800
+OPTION_EXAMPLE = '--option "Azul | se ve más limpio" --option "Verde | más contraste" --recommend 1'
+PROPOSE_EXAMPLE = '--option "Clara | fondo blanco" a.html --option "Oscura | fondo negro" b.html --recommend 1'
+
+
+def split_option(text: Any) -> Tuple[str, str]:
+    """«Título | qué implica» -> (título, descripción)."""
+    label, _, desc = str(text or "").partition("|")
+    return _clean(label), _clean(desc)
+
+
+def _check_options(options: List[dict], recommend: Optional[int], kind: str) -> Optional[int]:
+    """Valida la ficha de una decisión (desc en cada opción y recommend). Devuelve recommend."""
+    if not options:
+        return None
+    ex = OPTION_EXAMPLE if kind == QUESTION else PROPOSE_EXAMPLE
+    errors = []
+    for n, o in enumerate(options, 1):
+        if not o.get("desc"):
+            errors.append(f'A la opción {n} («{o["label"]}») le falta qué implica: escríbela como "Título | qué implica".')
+        elif len(o["desc"]) > MAX_DESC:
+            errors.append(f"La descripción de la opción {n} tiene {len(o['desc'])} caracteres; el máximo es {MAX_DESC}.")
+    if recommend is None:
+        errors.append(f"Falta --recommend N (1 a {len(options)}; 0 si no tienes preferencia).")
+    else:
+        try:
+            recommend = int(recommend)
+        except (TypeError, ValueError):
+            raise PlanError(f"--recommend debe ser un número de 0 a {len(options)}. Ejemplo: {ex}")
+        if not 0 <= recommend <= len(options):
+            errors.append(f"--recommend va de 1 a {len(options)} (0 = sin preferencia), no {recommend}.")
+    if errors:
+        raise PlanError("La decisión no se ha guardado:\n- " + "\n- ".join(errors) + f"\nEjemplo (vale en PowerShell): {ex}")
+    return recommend
+
+
 def add_ask(plan: Dict[str, Any], title: str, kind: str = QUESTION, text: str = "", step: Optional[str] = None,
-            branch: Optional[str] = None, options: Optional[List[Any]] = None, by: str = "ia") -> dict:
-    """Apunta una pregunta (opciones = textos; vacío = respuesta libre) o una propuesta
-    (opciones = {"label", "file"}). Devuelve la pregunta creada."""
+            branch: Optional[str] = None, options: Optional[List[Any]] = None, by: str = "ia",
+            recommend: Optional[int] = None) -> dict:
+    """Apunta una pregunta (opciones = "Título | qué implica" o {"label","desc"}; vacío = respuesta libre)
+    o una propuesta (opciones con "file"). Con opciones, desc en todas y ``recommend`` son obligatorios.
+    Devuelve la pregunta creada."""
     title = _clean(title)
     if not title:
         raise PlanError('Escribe la pregunta entre comillas: python .unificador/uni.py ask "¿Qué prefieres?"')
     if kind not in (QUESTION, PROPOSAL):
         raise PlanError("El tipo es «question» o «proposal».")
+    text = (text or "").strip()
+    if len(text) > MAX_CONTEXT:
+        raise PlanError(f"El contexto (-d) tiene {len(text)} caracteres; el máximo es {MAX_CONTEXT}. Resúmelo; ejemplo: -d 'Contexto en dos líneas' {OPTION_EXAMPLE}")
     clean_options = []
     for o in options or []:
-        o = dict(o) if isinstance(o, dict) else {"label": o}
-        o["label"] = _clean(o.get("label"))
+        if isinstance(o, dict):
+            o = dict(o)
+            label, desc = split_option(o.get("label"))
+            o["desc"] = _clean(o.get("desc")) or desc
+        else:
+            label, desc = split_option(o)
+            o = {"desc": desc}
+        o["label"] = label
         if not o["label"]:
             raise PlanError("Hay una opción vacía: escribe cada opción entre comillas.")
         clean_options.append(o)
     if len(clean_options) == 1:
-        raise PlanError('Pon al menos dos opciones (--option "A" --option "B") o ninguna para una respuesta libre.')
+        raise PlanError(f"Pon al menos dos opciones ({OPTION_EXAMPLE}) o ninguna para una respuesta libre.")
+    recommend = _check_options(clean_options, recommend, kind)
     step_id, branch_key = _ask_target(plan, step, branch)
     n = int(plan.get("next_ask") or 1)
     used = {a["id"].upper() for a in plan.get("asks", [])}
     while f"P-{n}" in used:
         n += 1
     plan["next_ask"] = n + 1
-    ask = {"id": f"P-{n}", "kind": kind, "title": title, "text": (text or "").strip(), "step": step_id,
-           "branch": branch_key, "options": clean_options, "answer": None, "by": by, "created": now()}
+    ask = {"id": f"P-{n}", "kind": kind, "title": title, "text": text, "step": step_id,
+           "branch": branch_key, "options": clean_options, "recommend": recommend, "answer": None, "by": by,
+           "created": now()}
     plan.setdefault("asks", []).append(ask)
     return ask
+
+
+# ── HTML de propuestas listo para incrustar ──
+
+_EXTERNAL = re.compile(r"^\s*(?:https?:)?//", re.I)
+_CSS_URL = re.compile(r"url\(\s*['\"]?\s*(?:https?:)?//", re.I)
+_CSS_IMPORT = re.compile(r"@import\s+(?:url\(\s*)?['\"]?\s*(?:https?:)?//", re.I)
+BASE_STYLE = ("<style>*,*::before,*::after{box-sizing:border-box}"
+              "body{font-family:system-ui,sans-serif;margin:0;padding:16px;box-sizing:border-box}</style>")
+VIEWPORT = '<meta name="viewport" content="width=device-width,initial-scale=1">'
+
+
+class _HtmlScan(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=False)
+        self.found: List[Tuple[int, str]] = []
+        self.tags: set = set()
+        self.viewport = False
+        self._css = False
+
+    def _css_check(self, css: str, line: int) -> None:
+        for i, text in enumerate(css.split("\n")):
+            if _CSS_URL.search(text) or _CSS_IMPORT.search(text):
+                self.found.append((line + i, "recurso externo en el CSS (url(...) o @import)"))
+
+    def handle_starttag(self, tag: str, attrs: list) -> None:
+        d = {k: (v or "") for k, v in attrs}
+        self.tags.add(tag)
+        line = self.getpos()[0]
+        if tag == "meta" and d.get("name", "").lower() == "viewport":
+            self.viewport = True
+        if "src" in d and _EXTERNAL.match(d["src"]):
+            self.found.append((line, f'<{tag} src="{d["src"].strip()}"> carga algo de fuera'))
+        if tag == "link" and "href" in d and _EXTERNAL.match(d["href"]):
+            self.found.append((line, f'<link href="{d["href"].strip()}"> carga algo de fuera'))
+        if "style" in d:
+            self._css_check(d["style"], line)
+        if tag == "style":
+            self._css = True
+
+    def handle_startendtag(self, tag: str, attrs: list) -> None:
+        self.handle_starttag(tag, attrs)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "style":
+            self._css = False
+
+    def handle_data(self, data: str) -> None:
+        if self._css:
+            self._css_check(data, self.getpos()[0])
+
+
+def prepare_html(raw: str, name: str = "el fichero") -> str:
+    """Rechaza recursos de fuera (con fichero y línea) y devuelve el HTML listo para incrustar:
+    un fragmento se envuelve en un esqueleto; un documento sin viewport lo recibe."""
+    scan = _HtmlScan()
+    scan.feed(raw)
+    scan.close()
+    if scan.found:
+        lines = "\n".join(f"  {name}, línea {n}: {what}" for n, what in sorted(set(scan.found)))
+        raise PlanError("La propuesta no puede cargar nada de fuera (http://, https:// ni //); incrusta el CSS, "
+                        "el JS y las imágenes (data: o SVG en línea). Los enlaces <a href> sí valen.\n" + lines)
+    if "html" not in scan.tags and "body" not in scan.tags:
+        return ('<!doctype html>\n<html lang="es">\n<head>\n<meta charset="utf-8">\n' + VIEWPORT + "\n"
+                + BASE_STYLE + "\n</head>\n<body>\n" + raw + "\n</body>\n</html>\n")
+    if scan.viewport:
+        return raw
+    m = re.search(r"<head\b[^>]*>", raw, re.I)
+    if m:
+        return raw[:m.end()] + "\n" + VIEWPORT + raw[m.end():]
+    m = re.search(r"<html\b[^>]*>", raw, re.I)
+    if m:
+        return raw[:m.end()] + "\n<head>" + VIEWPORT + "</head>" + raw[m.end():]
+    return "<head>" + VIEWPORT + "</head>\n" + raw
+
+
+def _read_html(src: Path) -> str:
+    return Path(src).read_text(encoding="utf-8-sig", errors="replace")
 
 
 def check_proposal_files(options: List[Tuple[str, Any]]) -> List[Tuple[str, Path]]:
     """Valida las opciones de una propuesta: [(nombre, ruta.html)], al menos dos."""
     if len(options) < 2:
-        raise PlanError('Una propuesta necesita al menos dos opciones, cada una con nombre y fichero: '
-                        '--option "Clara" a.html --option "Oscura" b.html')
+        raise PlanError('Una propuesta necesita al menos dos opciones, cada una con nombre, qué cambia y fichero: '
+                        + PROPOSE_EXAMPLE)
     out, errors = [], []
     for label, file in options:
         src = Path(file)
@@ -475,6 +754,11 @@ def check_proposal_files(options: List[Tuple[str, Any]]) -> List[Tuple[str, Path
             errors.append(f"No encuentro «{file}» (ruta relativa a la carpeta donde ejecutas la orden).")
         elif src.stat().st_size > MAX_PROPOSAL:
             errors.append(f"«{file}» pasa de 2 MB; hazlo más ligero (sin imágenes incrustadas).")
+        else:
+            try:
+                prepare_html(_read_html(src), src.name)
+            except PlanError as e:
+                errors.append(str(e))
         out.append((label, src))
     if errors:
         raise PlanError("La propuesta no se ha guardado:\n- " + "\n- ".join(errors))
@@ -482,17 +766,19 @@ def check_proposal_files(options: List[Tuple[str, Any]]) -> List[Tuple[str, Path
 
 
 def add_proposal(plan: Dict[str, Any], folder: Path, title: str, options: List[Tuple[str, Any]], text: str = "",
-                 step: Optional[str] = None, branch: Optional[str] = None, by: str = "ia") -> dict:
-    """Apunta una propuesta y copia cada HTML a ``<folder>/.unificador/propuestas/<id>/<n>.html``."""
+                 step: Optional[str] = None, branch: Optional[str] = None, by: str = "ia",
+                 recommend: Optional[int] = None) -> dict:
+    """Apunta una propuesta y copia cada HTML (ya listo para incrustar) a
+    ``<folder>/.unificador/propuestas/<id>/<n>.html``. El fichero original no se toca."""
     files = check_proposal_files(options)
-    ask = add_ask(plan, title, PROPOSAL, text, step, branch, [{"label": label} for label, _ in files], by)
+    ask = add_ask(plan, title, PROPOSAL, text, step, branch, [{"label": label} for label, _ in files], by, recommend)
     target = Path(folder) / PROPOSALS_DIR / ask["id"]
     try:
         if target.exists():
             shutil.rmtree(target)
         target.mkdir(parents=True)
         for n, (option, (_, src)) in enumerate(zip(ask["options"], files), 1):
-            shutil.copyfile(src, target / f"{n}.html")
+            (target / f"{n}.html").write_text(prepare_html(_read_html(src), Path(src).name), encoding="utf-8")
             option["file"] = f"{PROPOSALS_DIR}/{ask['id']}/{n}.html"
     except OSError:
         shutil.rmtree(target, ignore_errors=True)
@@ -591,6 +877,10 @@ def drop_branch(plan: Dict[str, Any], ref: str, folder: Optional[Path] = None) -
 
 # ── Texto para la terminal ───────────────────────────────────────────────────
 
+def _wait_flag(plan: Dict[str, Any], branch: dict, phase: dict) -> str:
+    return "".join(f"  espera a «{p['name']}» de {b['name']}" for b, p in waiting_on(plan, branch, phase))
+
+
 def _phase_flag(phase: dict) -> str:
     st = review_state(phase)
     if st == WAITING:
@@ -608,9 +898,77 @@ def _ask_line(ask: dict) -> str:
     line = f"  {ask['id']}  [{kind}]{where} {ask['title']}"
     opts = ask.get("options") or []
     if opts:
-        line += "\n" + "\n".join(f"      {n}) {o['label']}" + (f"  → {o['file']}" if o.get("file") else "")
-                                 for n, o in enumerate(opts, 1))
+        line += "\n" + "\n".join(_option_line(n, o, ask.get("recommend")) for n, o in enumerate(opts, 1))
     return line
+
+
+def _option_line(n: int, o: dict, recommend: Any = None) -> str:
+    star = "  [recomendada]" if recommend and recommend == n else ""
+    out = f"      {n}) {o['label']}{star}" + (f"  → {o['file']}" if o.get("file") else "")
+    if o.get("desc"):
+        out += f"\n         {o['desc']}"
+    return out
+
+
+# ── Revisión de cumplimiento ─────────────────────────────────────────────────
+
+CHECKED = re.compile(r"comprob|prueb|test|captur|verific|pasa|ejecut|revis", re.I)
+
+
+def audit(plan: Dict[str, Any], folder: Optional[Path] = None) -> List[dict]:
+    """Lo que no cumple las reglas del plan: [{"level": "error"|"aviso", "ref", "text"}].
+    Con ``folder`` (la carpeta del plan) comprueba que existen los ficheros de las propuestas."""
+    out: List[dict] = []
+
+    def add(level: str, ref: str, text: str) -> None:
+        out.append({"level": level, "ref": ref, "text": text})
+
+    for b, p, s in iter_steps(plan):
+        if not s.get("cat"):
+            add("aviso", s["id"], f"«{s['title']}» no tiene categoría ({UNI} cat {s['id']} codigo).")
+        if s.get("state") == DONE:
+            result = (s.get("result") or "").strip()
+            if len(result) < 25 or not CHECKED.search(result):
+                add("aviso", s["id"], f"«{s['title']}» está hecho pero su resultado no dice cómo se comprobó.")
+    for b in plan.get("branches", []):
+        if b.get("archived"):
+            continue
+        for p in b.get("phases", []):
+            ref = f"{b['key']}/{p['name']}"
+            if GENERIC_PHASE.match(p["name"] or ""):
+                add("aviso", ref, f"La fase «{p['name']}» tiene un nombre genérico; ponle uno que se reconozca.")
+            for dep in p.get("after") or []:
+                dep = dep if isinstance(dep, dict) else {}
+                target = next((x for x in plan.get("branches", []) if x.get("key") == dep.get("branch")), None)
+                if not target or not any(q.get("name") == dep.get("phase") for q in target.get("phases", [])):
+                    add("error", ref, f"Espera a la fase «{dep.get('phase')}» de [{dep.get('branch')}], que no existe.")
+    for a in plan.get("asks", []):
+        if a.get("answer"):
+            continue
+        opts = a.get("options") or []
+        if opts and (not all(o.get("desc") for o in opts) or a.get("recommend") is None):
+            add("error", a["id"], f"«{a['title']}» está abierta con opciones sin descripción o sin recomendación.")
+        for o in opts:
+            if folder and o.get("file") and not (Path(folder) / o["file"]).is_file():
+                add("error", a["id"], f"La propuesta «{a['title']}» apunta a {o['file']}, que falta.")
+    return out
+
+
+def audit_file(path: Path) -> List[dict]:
+    """``audit`` de un plan en disco (así comprueba también que existen los ficheros de las propuestas)."""
+    return audit(load(path), Path(path).resolve().parent)
+
+
+def render_audit(items: List[dict]) -> str:
+    if not items:
+        return "Todo en orden."
+    lines = []
+    for level, title in (("error", "ERRORES (arréglalos antes de cerrar la fase)"), ("aviso", "AVISOS")):
+        group = [i for i in items if i["level"] == level]
+        if group:
+            lines.append(f"{title}:")
+            lines += [f"  {i['ref']}  {i['text']}" for i in group]
+    return "\n".join(lines)
 
 
 def _answer_text(ask: dict) -> str:
@@ -655,12 +1013,12 @@ def render_status(plan: Dict[str, Any]) -> str:
         for p in b["phases"]:
             st = phase_state(p)
             if p is current or st == DOING:
-                lines.append(f"  {MARKS[DOING]} {p['name']}{_phase_flag(p)}")
+                lines.append(f"  {MARKS[DOING]} {p['name']}{_phase_flag(p)}{_wait_flag(plan, b, p)}")
                 lines += [f"      {MARKS[s['state']]} {s['id']}  {s['title']}"
                           + ("  (en curso)" if s["state"] == DOING else "") for s in p["steps"]]
             else:
                 n = len(p["steps"])
-                lines.append(f"  {MARKS[st]} {p['name']}  ({n} paso{'s' if n != 1 else ''}){_phase_flag(p)}")
+                lines.append(f"  {MARKS[st]} {p['name']}  ({n} paso{'s' if n != 1 else ''}){_phase_flag(p)}{_wait_flag(plan, b, p)}")
     doing = [s for _, _, s in iter_steps(plan) if s["state"] == DOING]
     nxt = [n for n in (next_step(b) for b in branches) if n and n["state"] == PENDING]
     if doing:
@@ -669,7 +1027,11 @@ def render_status(plan: Dict[str, Any]) -> str:
         lines.append("Siguiente: " + "; ".join(f"{s['id']} {s['title']}" for s in nxt))
     if not doing and not nxt:
         lines.append("\nTodo lo planificado está hecho.")
-    return "\n".join(lines + _render_open_asks(plan))
+    lines += _render_open_asks(plan)
+    n_audit = len(audit(plan))
+    if n_audit:
+        lines.append(f"\nAvisos: {n_audit}  ({UNI} check)")
+    return "\n".join(lines)
 
 
 def _render_open_asks(plan: Dict[str, Any]) -> List[str]:
@@ -726,26 +1088,30 @@ def _revise_hint(branch: dict, phase: dict) -> str:
 EXAMPLE = """ejemplo (vale igual en PowerShell, cmd y bash):
 
   python .unificador/uni.py branch "Carrito de compra" --icon 🛒 --goal "Poder comprar desde la web" \
-      --phase "Cimientos" "Modelo del carrito" "Guardar y recuperar" \
-      --phase "Pagos" "Pasarela de pago" "Recibo por correo"
+      --phase "Cimientos" "codigo: Modelo del carrito" "codigo: Guardar y recuperar" "+pruebas: Probar el guardado" \
+      --phase "Pagos" "decidir: Elegir pasarela" "codigo: Pasarela de pago" "interfaz: Recibo por correo"
   python .unificador/uni.py start CDC-1
   python .unificador/uni.py done CDC-1 -m "qué ha cambiado y cómo lo he comprobado"
 
 Cada --phase lleva el nombre de la fase y después sus pasos, cada cosa entre comillas.
+Cada paso empieza por su categoría: codigo, interfaz, pruebas, investigar o decidir.
+Un + delante = se hace a la vez que el anterior. Cambiar la de un paso: cat CDC-3 pruebas
+Una fase que espera a otra: after CDC "Pagos" OTRA "Fase de la otra rama"
 Para un plan con descripciones: `plan --file plan.json` (mismo formato que unificador.json).
 
-Al terminar una fase, para y pregunta a la persona; cuando conteste:
+Al terminar una fase, pasa `check` (sin errores), para y pregunta a la persona; cuando conteste:
   python .unificador/uni.py approve CDC          (o  revise CDC -m "qué quiere cambiar")
-Preguntas y propuestas (se contestan en el chat o en la web):
-  python .unificador/uni.py ask "¿Qué color?" --step CDC-1 --option "Azul" --option "Verde"
-  python .unificador/uni.py propose "Portada" --option "Clara" a.html --option "Oscura" b.html
+Preguntas y propuestas: cada opción "Título | qué implica" y --recommend N (0 = sin preferencia):
+  python .unificador/uni.py ask "¿Qué color?" -d "Contexto breve" --step CDC-1 --option "Azul | más sobrio" --option "Verde | más contraste" --recommend 1
+  python .unificador/uni.py propose "Portada" --option "Clara | fondo blanco" a.html --option "Oscura | fondo negro" b.html --recommend 1
   python .unificador/uni.py answer P-1 2 -m "lo que ha dicho en el chat"
   python .unificador/uni.py wait P-1             (espera a que conteste en la web)
 """
-BRANCH_HINT = ('Crea la rama con una sola orden, cada cosa entre comillas:\n'
+BRANCH_HINT = ('Crea la rama con una sola orden, cada cosa entre comillas (cada paso con su categoría):\n'
                '  python .unificador/uni.py branch "Nombre de la rama" --goal "Para qué sirve" '
-               '--phase "Nombre de fase" "Primer paso" "Segundo paso" --phase "Otra fase" "Otro paso"')
-ORDERS = "status, branch, add, start, done, note, show, approve, revise, nonstop, ask, propose, answer, wait, inbox"
+               '--phase "Nombre de fase" "codigo: Primer paso" "+pruebas: Probarlo" --phase "Otra fase" "interfaz: Otro paso"')
+ORDERS = ("status, branch, add, cat, after, start, done, note, show, approve, revise, nonstop, ask, propose, "
+          "answer, wait, inbox, check")
 
 
 def branch_from_args(name: str, icon: str, goal: str, phases: List[List[str]]) -> dict:
@@ -865,16 +1231,28 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--icon", default="", help="un emoji")
     s.add_argument("--goal", default="", help="para qué sirve")
     s.add_argument("--phase", dest="phases", action="append", nargs="+", default=[], metavar="TEXTO",
-                   help='nombre de la fase y después sus pasos: --phase "Cimientos" "Paso uno" "Paso dos"')
+                   help='nombre de la fase y después sus pasos, cada uno con su categoría '
+                        '(codigo, interfaz, pruebas, investigar, decidir) y «+» si va a la vez que el anterior: '
+                        '--phase "Cimientos" "codigo: Paso uno" "+pruebas: Probarlo"')
     s = sub.add_parser("plan", help="crea ramas nuevas desde JSON (--file o entrada estándar)")
     s.add_argument("--file", help="fichero JSON con el plan")
     s = sub.add_parser("add", help="añade un paso a una fase de una rama (crea la fase si no existe)")
     s.add_argument("branch", help="clave o nombre de la rama")
     s.add_argument("phase", help="nombre de la fase")
-    s.add_argument("title")
+    s.add_argument("title", help='con categoría delante: "interfaz: Elegir colores" ("+pruebas: ..." = a la vez que el anterior)')
     s.add_argument("-d", "--desc", default="")
+    s = sub.add_parser("cat", help="pone o cambia la categoría de un paso")
+    s.add_argument("id")
+    s.add_argument("category", help="codigo, interfaz, pruebas, investigar o decidir")
+    s = sub.add_parser("after", help='una fase espera a otra: after RAMA "Fase" OTRA "Fase otra"')
+    s.add_argument("branch")
+    s.add_argument("phase")
+    s.add_argument("other_branch", metavar="OTRA")
+    s.add_argument("other_phase", metavar="FASE_OTRA")
+    s.add_argument("--remove", action="store_true", help="quita la dependencia")
     s = sub.add_parser("start", help="empieza un paso")
     s.add_argument("id")
+    s.add_argument("--force", action="store_true", help="empezar aunque su fase espere a otra sin terminar")
     s.add_argument("-m", "--message", default="")
     s = sub.add_parser("done", help="da un paso por hecho; -m cuenta qué ha cambiado y cómo se comprueba")
     s.add_argument("id")
@@ -907,7 +1285,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--step", help="paso al que se refiere")
     s.add_argument("--branch", help="rama a la que se refiere")
     s.add_argument("--option", dest="options", action="append", default=[], metavar="TEXTO",
-                   help='una opción; repítelo: --option "A" --option "B" (sin opciones, respuesta libre)')
+                   help='una opción "Título | qué implica"; repítelo: --option "A | si..." --option "B | si..." '
+                        '(sin opciones, respuesta libre)')
+    s.add_argument("--recommend", type=int, default=None, metavar="N",
+                   help="opción que recomiendas, 1..n (0 = sin preferencia); obligatorio si hay opciones")
     s.add_argument("--wait", type=float, default=0, metavar="SEG", help="espera la respuesta de la web")
     s = sub.add_parser("propose", help="propuestas visuales en HTML para que la persona elija")
     s.add_argument("title", help="qué se propone, entre comillas")
@@ -915,7 +1296,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--step", help="paso al que se refiere")
     s.add_argument("--branch", help="rama a la que se refiere")
     s.add_argument("--option", dest="options", action="append", nargs=2, default=[], metavar=("NOMBRE", "RUTA"),
-                   help='nombre y fichero .html; repítelo: --option "Clara" a.html --option "Oscura" b.html')
+                   help='"Nombre | qué cambia" y fichero .html; repítelo: '
+                        '--option "Clara | fondo blanco" a.html --option "Oscura | fondo negro" b.html')
+    s.add_argument("--recommend", type=int, default=None, metavar="N",
+                   help="opción que recomiendas, 1..n (0 = sin preferencia); obligatorio")
     s.add_argument("--wait", type=float, default=0, metavar="SEG", help="espera la respuesta de la web")
     s = sub.add_parser("answer", help="apunta lo que la persona contestó en el chat")
     s.add_argument("id", help="la pregunta, p. ej. P-1")
@@ -924,6 +1308,7 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("wait", help="espera a que la persona conteste en la web")
     s.add_argument("id", nargs="?", default=None, help="la pregunta (sin ella, cualquier novedad)")
     s.add_argument("--seconds", type=float, default=240)
+    sub.add_parser("check", help="revisa si el plan cumple las reglas (sale con 1 si hay errores)")
     sub.add_parser("inbox", help="lo que la persona dejó en la web y aún no has visto (silencio si no hay nada)")
     return p
 
@@ -933,12 +1318,16 @@ def _print_ask(ask: dict, path: Path) -> None:
     if ask["kind"] == PROPOSAL:
         print(f"Propuesta {ask['id']} guardada: {ask['title']}")
         for n, o in enumerate(ask["options"], 1):
-            print(f"  {n}) {o['label']}: {folder / o['file']}")
+            print(f"  {n}) {o['label']}{' [recomendada]' if ask.get('recommend') == n else ''}: {folder / o['file']}")
+            if o.get("desc"):
+                print(f"     {o['desc']}")
         print("Ahora enséñale a la persona estas rutas en el chat y pregúntale cuál prefiere (también puede elegir en la web).")
     else:
         print(f"Pregunta {ask['id']} apuntada: {ask['title']}")
         for n, o in enumerate(ask["options"], 1):
-            print(f"  {n}) {o['label']}")
+            print(f"  {n}) {o['label']}{' [recomendada]' if ask.get('recommend') == n else ''}")
+            if o.get("desc"):
+                print(f"     {o['desc']}")
         print("Ahora házsela también a la persona en el chat (puede contestar allí o en la web).")
     num = " N" if ask["options"] else ""
     print(f'Si contesta en el chat: {UNI} answer {ask["id"]}{num} -m "lo que ha dicho".  '
@@ -978,6 +1367,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         if cmd == "status":
             print(render_status(load(path)))
+        elif cmd == "check":
+            items = audit_file(path)
+            print(render_audit(items))
+            if any(i["level"] == "error" for i in items):
+                return 1
         elif cmd == "show":
             print(render_step(load(path), args.id))
         elif cmd in ("plan", "branch"):
@@ -1003,9 +1397,18 @@ def main(argv: Optional[List[str]] = None) -> int:
         elif cmd == "add":
             s = mutate(path, lambda plan: add_step(plan, args.branch, args.phase, args.title, args.desc, by))
             print(f"+ {s['id']}  {s['title']}")
+        elif cmd == "cat":
+            s = mutate(path, lambda plan: set_cat(plan, args.id, args.category))
+            print(f"{s['id']}  categoría: {s['cat']}")
+        elif cmd == "after":
+            ph = mutate(path, lambda plan: set_after(plan, args.branch, args.phase, args.other_branch,
+                                                     args.other_phase, args.remove))
+            print(f"«{ph['name']}»: " + ("dependencia quitada." if args.remove else
+                  "espera a " + ", ".join(f"«{d['phase']}» de {d['branch']}" for d in ph["after"]) + "."))
         elif cmd in ("start", "done", "reopen"):
             state = {"start": DOING, "done": DONE, "reopen": PENDING}[cmd]
-            s = mutate(path, lambda plan: set_state(plan, args.id, state, by, args.message))
+            s = mutate(path, lambda plan: set_state(plan, args.id, state, by, args.message,
+                                                    bool(getattr(args, "force", False))))
             print(f"{MARKS[state]} {s['id']}  {s['title']}  [{STATE_NAMES[state]}]")
             if cmd == "start":
                 warning = _start_warning(load(path), s["id"])
@@ -1042,12 +1445,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         elif cmd in ("ask", "propose"):
             if cmd == "ask":
                 ask = mutate(path, lambda plan: add_ask(plan, args.title, QUESTION, args.desc, args.step,
-                                                        args.branch, args.options, by))
+                                                        args.branch, args.options, by, args.recommend))
             else:
                 check_proposal_files(args.options)  # antes de tocar el plan
                 folder = path.resolve().parent
                 ask = mutate(path, lambda plan: add_proposal(plan, folder, args.title, args.options, args.desc,
-                                                             args.step, args.branch, by))
+                                                             args.step, args.branch, by, args.recommend))
             _print_ask(ask, path)
             if args.wait > 0:
                 print(wait_answer(path, ask["id"], args.wait))
