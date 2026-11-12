@@ -187,7 +187,9 @@ def get_project(project, args, query, body):
 
 @route("GET", "/api/plan")
 def get_plan(project, args, query, body):
-    return P.load(project.plan_path)
+    plan = P.load(project.plan_path)
+    plan["audit"] = P.audit(plan, project.plan_path.resolve().parent)  # solo en la respuesta, no se guarda
+    return plan
 
 
 @route("POST", "/api/plan/steps/([^/]+)/state")
