@@ -9,6 +9,17 @@
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.unificador/uni.py\" inbox",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }

@@ -4,41 +4,66 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Unificador</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="app.css">
 </head>
-<body data-tab="plan">
+<body>
+  <a class="skip" href="#main">Saltar al contenido</a>
   <div class="layout">
-    <aside id="chat" aria-label="Chat">
-      <nav id="chat-rail" class="rail" aria-label="Agentes"></nav>
-      <div class="chat-main">
-        <div id="chat-bar" class="chat-bar"></div>
-        <div id="chat-list" class="chat-list" hidden></div>
-        <div id="chat-log" class="chat-log" role="log" aria-live="polite"></div>
-        <div id="chat-toast" class="chat-toast" role="status" hidden></div>
-        <form id="chat-form" class="composer">
-          <textarea id="chat-input" rows="1" placeholder="Escribe aquí…" title="Enter envía · Shift+Enter salta de línea" aria-label="Mensaje"></textarea>
-          <button id="chat-send" type="submit" data-mode="send">Enviar ➤</button>
-        </form>
-      </div>
-    </aside>
-    <main id="plan" aria-label="Plan del proyecto">
-      <header class="top">
-        <div class="top-title">
-          <h1 id="project-name">Unificador</h1>
-          <p id="project-sub" class="muted"></p>
-        </div>
-        <div class="total" id="total" hidden>
-          <strong id="total-text"></strong>
-          <div class="bar"><i id="total-bar"></i></div>
-        </div>
-      </header>
-      <div id="branches"></div>
+    <main id="main" tabindex="-1">
+      <!-- Portada: todos los proyectos -->
+      <section id="home" aria-labelledby="home-title" hidden>
+        <header class="top">
+          <div class="top-title">
+            <h1 id="home-title">Tus proyectos</h1>
+            <p class="muted">Tu agente trabaja en su propio programa; aquí ves cómo va todo y decides lo que te toca.</p>
+          </div>
+        </header>
+        <div id="projects" class="projects"></div>
+      </section>
+
+      <!-- Tablero de un proyecto -->
+      <section id="board" aria-labelledby="project-name" hidden>
+        <nav class="crumbs" id="crumbs" hidden><a id="back" href="#">← Todos los proyectos</a></nav>
+        <header class="top">
+          <div class="top-title">
+            <h1 id="project-name">Unificador</h1>
+            <p id="project-sub" class="muted"></p>
+          </div>
+          <div class="total" id="total" hidden>
+            <strong id="total-text"></strong>
+            <div class="bar"><i id="total-bar"></i></div>
+          </div>
+        </header>
+        <section id="inbox" class="inbox" aria-label="Te toca" hidden></section>
+        <div id="decided"></div>
+        <div id="branches"></div>
+      </section>
     </main>
   </div>
-  <nav class="tabs" aria-label="Secciones">
-    <button type="button" data-tab="plan" aria-pressed="true">🗺️ Plan</button>
-    <button type="button" data-tab="chat" aria-pressed="false">💬 Chat</button>
-  </nav>
+
+  <dialog id="viewer" class="viewer" aria-labelledby="v-title">
+    <div class="v-bar">
+      <div class="v-info">
+        <strong id="v-title"></strong>
+        <span id="v-count" class="muted"></span>
+      </div>
+      <div class="v-tools">
+        <div class="v-widths" role="group" aria-label="Ancho de la vista">
+          <button type="button" class="pill" data-w="390">📱 Móvil</button>
+          <button type="button" class="pill" data-w="820">Tableta</button>
+          <button type="button" class="pill" data-w="1280">🖥️ Escritorio</button>
+        </div>
+        <button type="button" class="pill icon" id="v-prev" aria-label="Propuesta anterior">←</button>
+        <button type="button" class="pill icon" id="v-next" aria-label="Propuesta siguiente">→</button>
+        <button type="button" class="pill primary" id="v-pick">Elegir esta</button>
+        <button type="button" class="pill icon" id="v-close" aria-label="Cerrar">✕</button>
+      </div>
+    </div>
+    <div class="v-stage" id="v-stage"></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script type="module" src="app.js"></script>
 </body>
 </html>

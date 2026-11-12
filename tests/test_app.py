@@ -2,6 +2,7 @@
 
 import http.client
 import json
+import os
 import tempfile
 import threading
 import unittest
@@ -11,6 +12,7 @@ from pathlib import Path
 from unificador import app as A
 from unificador import cli
 from unificador import plan as P
+from unificador import projects as R
 
 PLAN = {"branches": [{"name": "Carrito", "phases": [
     {"name": "Cimientos", "steps": [{"title": "Modelo"}]},
@@ -20,7 +22,12 @@ PLAN = {"branches": [{"name": "Carrito", "phases": [
 class ServerCase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self.tmp.name)
+        self.root = Path(self.tmp.name) / "Tienda"
+        self.root.mkdir()
+        self.home = Path(self.tmp.name) / "home"  # registro de proyectos de mentira
+        env = mock.patch.dict(os.environ, {"UNIFICADOR_HOME": str(self.home)})
+        env.start()
+        self.addCleanup(env.stop)
         P.mutate(self.root / P.PLAN_FILE, lambda plan: P.add_branches(plan, PLAN, "ia"))
         self.server = A.make_server(self.root, 0)
         self.port = self.server.server_address[1]
@@ -52,8 +59,7 @@ class AppTest(ServerCase):
         status, data, r = self.call("GET", "/api/project")
         self.assertEqual(status, 200)
         self.assertEqual(data["name"], self.root.resolve().name)
-        self.assertEqual([a["id"] for a in data["agents"]], ["claude", "antigravity"])
-        self.assertEqual(data["settings"]["agent"], "claude")
+        self.assertEqual(sorted(data), ["id", "name", "path"])
         self.assertIsNone(r.getheader("Access-Control-Allow-Origin"))
         status, plan, _ = self.call("GET", "/api/plan")
         self.assertEqual(plan["branches"][0]["name"], "Carrito")
@@ -92,28 +98,8 @@ class AppTest(ServerCase):
         self.assertEqual(self.call("POST", path, body, {"Origin": ok, "Sec-Fetch-Site": "same-origin"})[0], 200)
         self.assertEqual(self.call("GET", "/api/plan", host=f"localhost:{self.port}")[0], 200)
 
-    def test_agent_path_from_the_web(self):
-        with mock.patch.object(A.G, "set_path", side_effect=A.G.AgentError("Ahí no hay ningún programa: x")) as fake:
-            status, data, _ = self.call("POST", "/api/settings", {"paths": {"antigravity": "x"}})
-        self.assertEqual((status, fake.call_args.args), (400, ("antigravity", "x")))
-        self.assertIn("no hay ningún programa", data["error"])
-
-    def test_settings_are_cleaned_and_kept_local(self):
-        status, data, _ = self.call("POST", "/api/settings", {
-            "agent": "antigravity", "otra": "cosa",
-            "agents": {"claude": {"model": "opus", "effort": "high", "mode": "bypassPermissions"},
-                       "antigravity": {"model": "gemini; rm -rf", "effort": "max"}}})
-        self.assertEqual(status, 200)
-        self.assertEqual(data, {"agent": "antigravity", "agents": {
-            "claude": {"model": "opus", "effort": "high", "mode": "auto"},
-            "antigravity": {"model": "", "effort": "", "mode": "auto"}}})
-        self.assertEqual(self.call("GET", "/api/project")[1]["settings"], data)
-        self.assertTrue((self.root / ".unificador/local.json").is_file())
-
     def test_live_events(self):
-        from unittest import mock
-        from unificador import agents as G
-        with mock.patch.object(G, "WATCH_EVERY", 0.05):
+        with mock.patch.object(A, "WATCH_EVERY", 0.05):
             conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
             conn.request("GET", "/api/events", headers={"Host": f"127.0.0.1:{self.port}"})
             r = conn.getresponse()
@@ -125,13 +111,135 @@ class AppTest(ServerCase):
             conn.close()
         self.assertEqual(self.call("GET", "/api/events", host="evil.example")[0], 403)
 
+    def test_review_phase_and_nonstop(self):
+        path = "/api/plan/phases/review"
+        status, plan, _ = self.call("POST", path, {"branch": "CA", "phase": "Cimientos", "verdict": "approved"})
+        self.assertEqual(status, 200, plan)
+        review = plan["branches"][0]["phases"][0]["review"]
+        self.assertEqual((review["state"], review["by"], review["seen"]), ("approved", "persona", False))
+        status, plan, _ = self.call("POST", path, {"branch": "Carrito", "phase": "Pagos", "verdict": "changes",
+                                                   "text": "Más colores"})
+        review = plan["branches"][0]["phases"][1]["review"]
+        self.assertEqual((review["state"], review["text"], review["seen"]), ("changes", "Más colores", False))
+        self.assertEqual(self.call("POST", path, {"branch": "CA", "phase": "Pagos", "verdict": "changes"})[0], 400)
+        self.assertEqual(self.call("POST", path, {"branch": "CA", "phase": "Pagos", "verdict": "quizá"})[0], 400)
+        self.assertEqual(self.call("POST", path, {"branch": "CA", "verdict": "approved"})[0], 400)
+        self.assertEqual(self.call("POST", path, {"branch": "XX", "phase": "Pagos", "verdict": "approved"})[0], 400)
+
+        status, plan, _ = self.call("POST", "/api/plan/branches/CA/nonstop", {"on": True})
+        self.assertTrue(plan["branches"][0]["nonstop"])
+        status, plan, _ = self.call("POST", "/api/plan/branches/ca/nonstop", {"on": False})
+        self.assertNotIn("nonstop", plan["branches"][0])
+        self.assertEqual(self.call("POST", "/api/plan/branches/CA/nonstop", {"on": "sí"})[0], 400)
+        self.assertEqual(self.call("POST", "/api/plan/branches/XX/nonstop", {"on": True})[0], 400)
+
+    def test_answer_asks(self):
+        def add(plan):
+            P.add_ask(plan, "¿Color?", options=["Azul", "Verde"], step="CA-1")
+            P.add_ask(plan, "¿Nombre?")
+        P.mutate(self.root / P.PLAN_FILE, add)
+        path = "/api/plan/asks/P-1/answer"
+        status, plan, _ = self.call("POST", path, {"option": 2, "text": "mejor así"})
+        self.assertEqual(status, 200, plan)
+        answer = plan["asks"][0]["answer"]
+        self.assertEqual((answer["option"], answer["text"], answer["by"], answer["seen"]),
+                         (2, "mejor así", "persona", False))
+        status, plan, _ = self.call("POST", "/api/plan/asks/p-2/answer", {"option": None, "text": "Tiendita"})
+        self.assertEqual(plan["asks"][1]["answer"]["text"], "Tiendita")
+        self.assertEqual(self.call("POST", path, {"option": 3})[0], 400)
+        self.assertEqual(self.call("POST", path, {"option": "1"})[0], 400)
+        self.assertEqual(self.call("POST", path, {"option": True})[0], 400)
+        self.assertEqual(self.call("POST", path, {})[0], 400)
+        self.assertEqual(self.call("POST", "/api/plan/asks/P-9/answer", {"option": 1})[0], 400)
+
+    def test_proposals_are_sandboxed(self):
+        folder = self.root / P.PROPOSALS_DIR / "P-1"
+        folder.mkdir(parents=True)
+        (folder / "1.html").write_text("<h1>Clara</h1>", encoding="utf-8")
+        (self.root / "secreto.html").write_text("no", encoding="utf-8")
+        status, page, r = self.call("GET", "/propuestas/P-1/1.html",
+                                    headers={"Sec-Fetch-Site": "same-origin", "Sec-Fetch-Dest": "iframe"})
+        self.assertEqual(status, 200)
+        self.assertIn("Clara", page)
+        self.assertIn("text/html", r.getheader("Content-Type"))
+        csp = r.getheader("Content-Security-Policy")
+        self.assertTrue(csp.startswith("sandbox allow-scripts;"), csp)
+        self.assertIn("default-src 'none'", csp)
+        self.assertNotIn("allow-same-origin", csp)
+        self.assertEqual(self.call("GET", f"/propuestas/P-1/1.html?project={A.project_id(self.root)}")[0], 200)
+        for bad in ("/propuestas/P-1/2.html", "/propuestas/P-1/../../secreto.html", "/propuestas/../secreto.html",
+                    "/propuestas/P-1/%2e%2e/%2e%2e/secreto.html", "/propuestas/P-1/1.htm", "/propuestas/x/1.html",
+                    "/propuestas/P-1/1.html/", "/propuestas/P-1/a.html", "/propuestas/P-1/1.html?project=../..",
+                    "/propuestas/P-1/1.html?project=abcdef1234", "/propuestas/P-1/..%5C..%5Csecreto.html"):
+            self.assertEqual(self.call("GET", bad)[0], 404, bad)
+        self.assertEqual(self.call("POST", "/propuestas/P-1/1.html", {})[0], 405)
+        self.assertEqual(self.call("GET", "/propuestas/P-1/1.html", headers={"Sec-Fetch-Site": "cross-site"})[0], 403)
+        _, _, r = self.call("GET", "/")
+        self.assertIn("frame-src 'self'", r.getheader("Content-Security-Policy"))
+
+    def test_several_projects(self):
+        other = Path(self.tmp.name) / "Blog"
+        other.mkdir()
+        P.mutate(other / P.PLAN_FILE, lambda plan: P.add_branches(plan, {"branches": [
+            {"name": "Entradas", "phases": [{"name": "Base", "steps": [{"title": "Uno"}, {"title": "Dos"}]}]}]}, "ia"))
+        P.mutate(other / P.PLAN_FILE, lambda plan: P.add_ask(plan, "¿Título?"))
+        (other / P.PROPOSALS_DIR / "P-1").mkdir(parents=True)
+        (other / P.PROPOSALS_DIR / "P-1" / "1.html").write_text("blog", encoding="utf-8")
+        gone = Path(self.tmp.name) / "Borrado"
+        R.register(other)
+        R.register(gone)
+        status, data, _ = self.call("GET", "/api/projects")
+        self.assertEqual(status, 200)
+        items = {p["name"]: p for p in data["projects"]}
+        self.assertEqual(sorted(items), ["Blog", "Borrado", "Tienda"])
+        self.assertTrue(items["Tienda"]["current"])
+        self.assertFalse(items["Blog"]["current"])
+        self.assertEqual((items["Tienda"]["done"], items["Tienda"]["total"], items["Tienda"]["waiting"]), (0, 2, 0))
+        self.assertEqual((items["Blog"]["done"], items["Blog"]["total"], items["Blog"]["waiting"]), (0, 2, 1))
+        self.assertFalse(items["Borrado"]["exists"])
+        blog = items["Blog"]["id"]
+
+        status, plan, _ = self.call("GET", f"/api/plan?project={blog}")
+        self.assertEqual(plan["branches"][0]["name"], "Entradas")
+        self.assertEqual(self.call("GET", f"/api/project?project={blog}")[1]["name"], "Blog")
+        tienda = items["Tienda"]["id"]
+        self.assertEqual(self.call("GET", f"/api/plan?project={tienda}")[1]["branches"][0]["name"], "Carrito")
+        status, plan, _ = self.call("POST", f"/api/plan/steps/EN-1/state?project={blog}", {"state": "done"})
+        self.assertEqual(status, 200, plan)
+        self.assertEqual(P.load(other / P.PLAN_FILE)["branches"][0]["phases"][0]["steps"][0]["state"], "done")
+        self.assertEqual(self.call("GET", f"/propuestas/P-1/1.html?project={blog}")[1], "blog")
+        # nada fuera del registro: ids inventados, rutas o carpetas que ya no existen
+        for pid in ("abcdef1234", "..", str(other), items["Borrado"]["id"]):
+            self.assertEqual(self.call("GET", f"/api/plan?project={pid}")[0], 404, pid)
+        R.forget(other)
+        self.assertEqual(self.call("GET", f"/api/plan?project={blog}")[0], 404)
+
+    def test_live_events_follow_the_project(self):
+        other = Path(self.tmp.name) / "Blog"
+        other.mkdir()
+        R.register(other)
+        pid = A.project_id(other)
+        with mock.patch.object(A, "WATCH_EVERY", 0.05):
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+            conn.request("GET", f"/api/events?project={pid}", headers={"Host": f"127.0.0.1:{self.port}"})
+            r = conn.getresponse()
+            self.assertEqual(r.fp.readline(), b"retry: 2000\n")
+            P.mutate(other / P.PLAN_FILE, lambda plan: P.add_ask(plan, "¿Algo?"))
+            lines = [r.fp.readline() for _ in range(3)]
+            self.assertIn(b"event: plan\n", lines)
+            conn.close()
+
+    def test_chat_routes_are_gone(self):
+        for method, path in (("GET", "/api/sessions"), ("GET", "/api/sessions/claude/x"),
+                             ("POST", "/api/settings"), ("POST", "/api/chat"),
+                             ("POST", "/api/chat/stop"), ("POST", "/api/open-native")):
+            self.assertEqual(self.call(method, path, {} if method == "POST" else None)[0], 404, path)
+
     def test_bad_requests(self):
         conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
-        conn.request("POST", "/api/settings", body=b"{roto", headers={"Content-Type": "application/json"})
+        conn.request("POST", "/api/plan/steps/CA-1/state", body=b"{roto", headers={"Content-Type": "application/json"})
         self.assertEqual(conn.getresponse().status, 400)
         conn.close()
-        self.assertEqual(self.call("GET", "/api/sessions?agent=otro")[0], 400)
-        self.assertEqual(self.call("GET", "/api/sessions/claude/..%2F..%2Fx")[0], 400)
 
     def test_next_free_port_and_cli(self):
         other = A.make_server(self.root, self.port)
@@ -140,13 +248,10 @@ class AppTest(ServerCase):
         finally:
             other.server_close()
         with tempfile.TemporaryDirectory() as tmp:
-            with mock.patch.object(cli, "_agent_lines", lambda: ["  ✔ Claude Code: x"]):
-                self.assertEqual(cli.main(["doctor", tmp]), 1)  # faltan las reglas, y no las pone él
-                self.assertEqual(list(Path(tmp).iterdir()), [])
-                self.assertEqual(cli.main(["install", tmp]), 0)
-                self.assertEqual(cli.main(["doctor", tmp]), 0)
-            with mock.patch.object(cli, "_agent_lines", lambda: ["  ✘ Claude Code: no lo encuentro."]):
-                self.assertEqual(cli.main(["doctor", tmp]), 1)
+            self.assertEqual(cli.main(["doctor", tmp]), 1)  # faltan las reglas, y no las pone él
+            self.assertEqual(list(Path(tmp).iterdir()), [])
+            self.assertEqual(cli.main(["install", tmp]), 0)
+            self.assertEqual(cli.main(["doctor", tmp]), 0)  # sin ningún cliente instalado tampoco es error
             self.assertTrue((Path(tmp) / ".unificador/uni.py").is_file())
             self.assertEqual(cli.main(["import-kanvas", tmp]), 1)
             (Path(tmp) / "kanvas.json").write_text(json.dumps({"tasks": [

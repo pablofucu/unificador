@@ -1,13 +1,16 @@
 """
-Lo que Unificador instala dentro de cada proyecto para que cualquier IA trabaje igual
-desde la web, la terminal o la app de escritorio:
+Lo que Unificador instala dentro de cada proyecto para que Claude Code, Antigravity y Codex
+trabajen igual con el mismo plan:
 
 - ``.unificador/uni.py``: copia de ``plan.py`` (un solo fichero, sin dependencias). Viaja con el proyecto.
-- Un bloque gestionado en ``AGENTS.md`` con las reglas del plan (ramas → fases → pasos).
+- Un bloque gestionado en ``AGENTS.md`` con las reglas del plan (ramas → fases → pasos, paradas, propuestas).
 - ``CLAUDE.md`` con ``@AGENTS.md`` (Claude Code no lee AGENTS.md por su cuenta).
-- Un hook SessionStart de Claude Code que enseña el plan al empezar cada sesión.
+- Avisos automáticos, para que el agente se entere solo de lo que la persona contesta en la web:
+  Claude Code (``.claude/settings.json``): SessionStart (status) y UserPromptSubmit (inbox);
+  Codex (``.codex/hooks.json``): lo mismo; Antigravity: sin fichero, se cubre con la regla de AGENTS.md.
+- El proyecto se apunta en el registro de proyectos (``projects.py``).
 
-No hay aprobaciones: la IA planifica y sigue; la persona corrige cuando quiere.
+Unificador es un apoyo: nada bloquea; la persona trabaja en el chat de su agente.
 """
 
 from __future__ import annotations
@@ -17,11 +20,11 @@ from pathlib import Path
 from typing import List
 
 from unificador import plan as plan_module
+from unificador import projects
 
 LOCAL_DIR = ".unificador"
 UNI_REL = f"{LOCAL_DIR}/uni.py"
 UNI = f"python {UNI_REL}"
-LOCAL_SETTINGS = "local.json"  # ajustes de esta máquina (modelo elegido…): no se comparten
 
 # Bloque gestionado de AGENTS.md: Unificador lo reescribe entero; el resto del fichero es de la persona.
 BLOCK_START = "<!-- unificador:inicio (lo mantiene Unificador; los cambios aquí se pierden) -->"
@@ -32,9 +35,12 @@ AGENTS_BLOCK = f"""{BLOCK_START}
 
 La persona sigue este proyecto en Unificador, que enseña el plan como **ramas → fases → pasos**.
 El plan vive en `{plan_module.PLAN_FILE}` y se toca solo con `{UNI}` (nunca edites el JSON a mano).
-Vale igual si te hablan desde la web, la terminal o la app.
+Unificador es un apoyo: la persona te habla en tu chat y puede contestar también en la web.
+Cuando preguntes algo, pregúntalo SIEMPRE en el chat (y apúntalo con `ask` si quieres que se vea en la web).
 
 - **Al empezar**, mira cómo va: `{UNI} status`. Si un paso dice «PIDE CAMBIOS», atiéndelo lo primero.
+- **Al empezar tu turno**, si no te ha llegado ya un aviso automático, ejecuta `{UNI} inbox`:
+  imprime lo que la persona dejó en la web (y nada si no hay nada). Hazle caso.
 - **Trabajo nuevo** (algo más que una pregunta o un retoque): apúntalo ANTES de empezar, como una rama,
   con esta única orden (vale en PowerShell, cmd y bash; cada cosa entre comillas dobles):
 
@@ -51,12 +57,28 @@ Vale igual si te hablan desde la web, la terminal o la app.
 - **En cada paso**: `{UNI} start ID` → trabaja → `{UNI} done ID -m "qué ha cambiado y cómo lo has comprobado"`.
   Cada orden te dice cuál es la siguiente. Termina las fases en orden; si descubres algo que la persona
   deba saber, `{UNI} note ID "…"`.
+- **Al cerrar una fase**: PARA, resume qué se ha hecho y pregunta en el chat si sigues.
+  Si dice que sí: `{UNI} approve RAMA`. Si pide cambios: `{UNI} revise RAMA -m "qué quiere cambiar"`.
+  Si la rama es «sin paradas», no hace falta preguntar.
+- **Dudas con opciones**: `{UNI} ask "Pregunta" --step ID --option "A" --option "B"`.
+- **Varias propuestas de diseño o estilos**: haz un HTML por propuesta. Cada uno AUTOCONTENIDO
+  (CSS y JS dentro del fichero, sin recursos de internet, imágenes como `data:` o SVG en línea),
+  que se vea bien a cualquier ancho (móvil incluido), con contenido realista del proyecto,
+  y que solo sea distinto lo que cambia entre propuestas. Después:
+  `{UNI} propose "Título" --step ID --option "Nombre" ruta.html --option "Nombre2" ruta2.html`,
+  enseña las rutas en el chat y pregunta cuál prefiere.
+  Si contesta en el chat: `{UNI} answer P-1 N -m "lo que dijo"`. Para esperar un rato a la web: `{UNI} wait P-1`.
 - Firma con `--as <tu nombre>` (por ejemplo `--as claude`) salvo que `UNI_AGENT` ya esté puesto.
 - Preguntas y cambios diminutos: contesta sin tocar el plan.
 {BLOCK_END}"""
 
 CLAUDE_IMPORT = "@AGENTS.md"
 HOOK_COMMAND = f'python "$CLAUDE_PROJECT_DIR/{UNI_REL}" status'
+INBOX_COMMAND = f'python "$CLAUDE_PROJECT_DIR/{UNI_REL}" inbox'
+HOOK_TIMEOUT = 30
+CODEX_FILE = ".codex/hooks.json"
+CODEX_STATUS = f"python3 {UNI_REL} status"
+CODEX_INBOX = f"python3 {UNI_REL} inbox"
 # Hook que instalaba la versión anterior (basada en Kanvas): se sustituye por el nuevo.
 OLD_HOOK_COMMAND = 'python "$CLAUDE_PROJECT_DIR/.agents/skills/kanvas/kanvas.py" status'
 
@@ -96,7 +118,7 @@ def _ensure_uni(root: Path) -> bool:
 def _ensure_local_ignore(root: Path) -> bool:
     """Los ajustes locales y el cerrojo del plan no van al repositorio."""
     p = root / LOCAL_DIR / ".gitignore"
-    wanted = f"{LOCAL_SETTINGS}\n__pycache__/\n"
+    wanted = "local.json\n__pycache__/\n"
     if _read(p) == wanted:
         return False
     _write(p, wanted)
@@ -122,37 +144,84 @@ def _ensure_claude(root: Path) -> bool:
     return True
 
 
-def _ensure_hook(root: Path) -> bool:
-    p = root / ".claude" / "settings.json"
+def _commands(data, event: str) -> List[str]:
+    """Las órdenes de un evento de hooks; vacío si el JSON no tiene esa forma."""
+    try:
+        return [h.get("command") for g in data["hooks"][event] for h in g["hooks"]]
+    except (KeyError, TypeError, AttributeError):
+        return []
+
+
+def _add_hook(data: dict, event: str, command: str, extra: dict) -> bool:
+    """Pone la orden en el evento si no está, sin tocar lo demás. False si el JSON no tiene la forma esperada."""
+    groups = data["hooks"].setdefault(event, [])
+    if not isinstance(groups, list):
+        return False
+    for g in groups:
+        if isinstance(g, dict) and isinstance(g.get("hooks"), list):
+            g["hooks"] = [h for h in g["hooks"]
+                          if not (isinstance(h, dict) and h.get("command") == OLD_HOOK_COMMAND)]
+    groups[:] = [g for g in groups if not (isinstance(g, dict) and g.get("hooks") == [])]
+    if command not in _commands(data, event):
+        groups.append({"hooks": [{"type": "command", "command": command, **extra}]})
+    return True
+
+
+def _ensure_hooks_file(root: Path, rel: str, wanted: list) -> bool:
+    """``wanted``: (evento, orden, campos extra). Fusiona con lo que ya haya en el fichero."""
+    p = root / rel
     try:
         data = json.loads(_read(p) or "{}")
     except (OSError, ValueError):
-        return False  # no se toca un settings.json que no se entiende
+        return False  # no se toca un fichero que no se entiende
     if not isinstance(data, dict) or not isinstance(data.setdefault("hooks", {}), dict):
         return False
-    groups = data["hooks"].setdefault("SessionStart", [])
-    if not isinstance(groups, list):
-        return False
     before = json.dumps(data, sort_keys=True)
-    found = False
-    for g in groups:
-        if not isinstance(g, dict) or not isinstance(g.get("hooks"), list):
-            continue
-        g["hooks"] = [h for h in g["hooks"]
-                      if not (isinstance(h, dict) and h.get("command") == OLD_HOOK_COMMAND)]
-        found = found or any(isinstance(h, dict) and h.get("command") == HOOK_COMMAND for h in g["hooks"])
-    groups[:] = [g for g in groups if not (isinstance(g, dict) and g.get("hooks") == [])]
-    if not found:
-        groups.append({"hooks": [{"type": "command", "command": HOOK_COMMAND}]})
+    for event, command, extra in wanted:
+        if not _add_hook(data, event, command, extra):
+            return False
     if json.dumps(data, sort_keys=True) == before:
         return False
     _write(p, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
     return True
 
 
+def _ensure_hook(root: Path) -> bool:
+    return _ensure_hooks_file(root, ".claude/settings.json", [
+        ("SessionStart", HOOK_COMMAND, {}),
+        ("UserPromptSubmit", INBOX_COMMAND, {"timeout": HOOK_TIMEOUT})])
+
+
+def _ensure_codex(root: Path) -> bool:
+    return _ensure_hooks_file(root, CODEX_FILE, [
+        ("SessionStart", CODEX_STATUS, {"commandWindows": f"python {UNI_REL} status", "timeout": HOOK_TIMEOUT}),
+        ("UserPromptSubmit", CODEX_INBOX, {"commandWindows": f"python {UNI_REL} inbox", "timeout": HOOK_TIMEOUT})])
+
+
+def _load_json(root: Path, rel: str):
+    try:
+        return json.loads(_read(root / rel))
+    except (OSError, ValueError):
+        return {}
+
+
+def claude_hooks(root: Path) -> dict:
+    """Qué avisos de Claude Code hay puestos: ``{"start": bool, "message": bool}``."""
+    data = _load_json(root, ".claude/settings.json")
+    return {"start": HOOK_COMMAND in _commands(data, "SessionStart"),
+            "message": INBOX_COMMAND in _commands(data, "UserPromptSubmit")}
+
+
+def codex_hooks(root: Path) -> dict:
+    """Qué avisos de Codex hay puestos: ``{"start": bool, "message": bool}``."""
+    data = _load_json(root, CODEX_FILE)
+    return {"start": CODEX_STATUS in _commands(data, "SessionStart"),
+            "message": CODEX_INBOX in _commands(data, "UserPromptSubmit")}
+
+
 STEPS = ((UNI_REL, _ensure_uni), (f"{LOCAL_DIR}/.gitignore", _ensure_local_ignore),
          ("AGENTS.md", _ensure_agents), ("CLAUDE.md", _ensure_claude),
-         (".claude/settings.json", _ensure_hook))
+         (".claude/settings.json", _ensure_hook), (CODEX_FILE, _ensure_codex))
 
 
 def missing(project_path: str | Path) -> List[str]:
@@ -166,6 +235,10 @@ def missing(project_path: str | Path) -> List[str]:
         out.append("AGENTS.md")
     if CLAUDE_IMPORT not in _read(root / "CLAUDE.md"):
         out.append("CLAUDE.md")
+    if not all(claude_hooks(root).values()):
+        out.append(".claude/settings.json")
+    if not all(codex_hooks(root).values()):
+        out.append(CODEX_FILE)
     return out
 
 
@@ -175,6 +248,10 @@ def install(project_path: str | Path) -> List[str]:
     if not root.is_dir():
         return []
     changed = []
+    try:
+        projects.register(root)
+    except OSError:
+        pass
     for name, fn in STEPS:
         try:
             if fn(root):

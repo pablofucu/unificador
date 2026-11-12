@@ -1,11 +1,13 @@
 """Lo que Unificador instala en cada proyecto."""
 
 import json
+import os
 import shlex
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from unificador import rules as R
@@ -15,6 +17,11 @@ class RulesTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
+        home = tempfile.TemporaryDirectory()  # que install no escriba el registro real
+        self.addCleanup(home.cleanup)
+        self.env = mock.patch.dict(os.environ, {"UNIFICADOR_HOME": home.name})
+        self.env.start()
+        self.addCleanup(self.env.stop)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -22,11 +29,56 @@ class RulesTest(unittest.TestCase):
     def test_install_is_complete_and_idempotent(self):
         changed = R.install(self.root)
         self.assertEqual(changed, [".unificador/uni.py", ".unificador/.gitignore", "AGENTS.md",
-                                   "CLAUDE.md", ".claude/settings.json"])
+                                   "CLAUDE.md", ".claude/settings.json", ".codex/hooks.json"])
         self.assertEqual(R.install(self.root), [])
+        self.assertEqual(R.missing(self.root), [])
         self.assertIn("@AGENTS.md", (self.root / "CLAUDE.md").read_text(encoding="utf-8"))
         hooks = json.loads((self.root / ".claude/settings.json").read_text(encoding="utf-8"))
         self.assertEqual(hooks["hooks"]["SessionStart"][0]["hooks"][0]["command"], R.HOOK_COMMAND)
+        prompt = hooks["hooks"]["UserPromptSubmit"][0]["hooks"][0]
+        self.assertEqual((prompt["type"], prompt["command"], prompt["timeout"]),
+                         ("command", R.INBOX_COMMAND, 30))
+        self.assertIn(" inbox", prompt["command"])
+        codex = json.loads((self.root / ".codex/hooks.json").read_text(encoding="utf-8"))
+        self.assertEqual(codex["hooks"]["UserPromptSubmit"][0]["hooks"][0], {
+            "type": "command", "command": "python3 .unificador/uni.py inbox",
+            "commandWindows": "python .unificador/uni.py inbox", "timeout": 30})
+        self.assertEqual(codex["hooks"]["SessionStart"][0]["hooks"][0]["command"],
+                         "python3 .unificador/uni.py status")
+        self.assertFalse((self.root / ".agents").exists())  # Antigravity: sin ficheros de hooks
+
+    def test_codex_hooks_merge_keeps_foreign_content(self):
+        (self.root / ".codex").mkdir()
+        (self.root / ".codex/hooks.json").write_text(json.dumps({
+            "extra": 1, "hooks": {"Stop": [{"hooks": [{"type": "command", "command": "x"}]}],
+                                  "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "mio"}]}]}}),
+            encoding="utf-8")
+        R.install(self.root)
+        R.install(self.root)
+        data = json.loads((self.root / ".codex/hooks.json").read_text(encoding="utf-8"))
+        self.assertEqual(data["extra"], 1)
+        self.assertEqual(len(data["hooks"]["Stop"]), 1)
+        cmds = [h["command"] for g in data["hooks"]["UserPromptSubmit"] for h in g["hooks"]]
+        self.assertEqual(cmds, ["mio", R.CODEX_INBOX])
+
+    def test_missing_reports_each_notice_and_rules_text(self):
+        self.assertIn(".claude/settings.json", R.missing(self.root))
+        self.assertIn(".codex/hooks.json", R.missing(self.root))
+        R.install(self.root)
+        p = self.root / ".claude/settings.json"
+        data = json.loads(p.read_text(encoding="utf-8"))
+        del data["hooks"]["UserPromptSubmit"]
+        p.write_text(json.dumps(data), encoding="utf-8")
+        self.assertEqual(R.missing(self.root), [".claude/settings.json"])
+        self.assertEqual(R.claude_hooks(self.root), {"start": True, "message": False})
+        for word in ("inbox", "approve RAMA", "revise RAMA", "ask ", "propose ", "answer P-1", "wait P-1",
+                     "AUTOCONTENIDO"):
+            self.assertIn(word, R.AGENTS_BLOCK)
+
+    def test_install_registers_the_project(self):
+        from unificador import projects
+        R.install(self.root)
+        self.assertEqual([p["path"] for p in projects.listing()], [os.path.abspath(self.root)])
 
     def test_copied_cli_works_alone_and_example_in_rules_is_valid(self):
         R.install(self.root)

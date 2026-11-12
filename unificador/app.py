@@ -1,36 +1,43 @@
 """
-Servidor local de Unificador: un proyecto, una web, solo para esta máquina.
+Servidor local de Unificador: una web con todos tus proyectos, solo para esta máquina.
 
+- Sirve el proyecto con el que arrancó y los del registro (``projects.py``), elegidos con ``?project=<id>``;
+  nunca una carpeta que no salga de ahí.
 - Escucha únicamente en 127.0.0.1 y no envía cabeceras CORS: ninguna otra web puede leerlo.
-- Rechaza peticiones que no vengan de la propia página (Host, Origin y Sec-Fetch-Site).
+- Rechaza peticiones que no vengan de la propia página (Host, Origin y Sec-Fetch-Site). Los mockups de
+  ``/propuestas/`` se sirven con una CSP ``sandbox``: sin origen propio, sin red y sin acceso a la página.
 - Los GET no cambian nada; los cambios van por POST con JSON.
 - Las rutas están en una tabla (``ROUTES``): método, patrón y función.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import mimetypes
-import queue
+import os
 import re
-import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 from urllib.parse import parse_qs, unquote, urlsplit
 
-from unificador import agents as G
 from unificador import plan as P
-from unificador import rules as R
-from unificador import sessions as S
+from unificador import projects as R
 
 WEB_DIR = Path(__file__).parent / "web"
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "[::1]"}
 DEFAULT_PORT = 8766
+WATCH_EVERY = 1.0
 MAX_BODY = 1_000_000
 PERSON = "persona"
-CSP = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'"
+CSP = ("default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src 'self'; "
+       "frame-ancestors 'none'")
+# Los mockups los escribe el agente: van aislados (sin origen propio, sin red, sin tocar la aplicación).
+PROPOSAL_CSP = ("sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
+                "img-src data:; font-src data:; media-src data:; frame-ancestors 'self'")
+PROPOSAL_PATH = re.compile(r"^/propuestas/(P-\d{1,6})/(\d{1,3})\.html$")
 
 
 class ApiError(Exception):
@@ -40,40 +47,46 @@ class ApiError(Exception):
 
 
 class Stream:
-    """Respuesta que se va enviando a trozos (chat y avisos en vivo)."""
+    """Respuesta que se va enviando a trozos (los avisos en vivo)."""
 
-    def __init__(self, chunks: Iterator[str], content_type: str = "application/x-ndjson"):
+    def __init__(self, chunks: Iterator[str], content_type: str = "text/event-stream"):
         self.chunks = chunks
         self.content_type = content_type
 
 
 class Project:
-    """El proyecto que se está viendo: su carpeta, su plan y los ajustes de esta máquina."""
+    """El proyecto que se está viendo: su carpeta y su plan."""
 
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, pid: Optional[str] = None):
         self.path = Path(path).resolve()
         self.plan_path = self.path / P.PLAN_FILE
-        self.settings_path = self.path / R.LOCAL_DIR / R.LOCAL_SETTINGS
-        self._lock = threading.Lock()
+        self.id = pid or project_id(self.path)
 
     @property
     def name(self) -> str:
         return self.path.name
 
-    def settings(self) -> Dict[str, Any]:
-        try:
-            data = json.loads(self.settings_path.read_text(encoding="utf-8"))
-            return data if isinstance(data, dict) else {}
-        except (OSError, ValueError):
-            return {}
 
-    def save_settings(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        with self._lock:
-            self.settings_path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = self.settings_path.with_name(self.settings_path.name + ".tmp")
-            tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-            tmp.replace(self.settings_path)
-        return data
+def project_id(path: str | Path) -> str:
+    """El id con el que el registro conoce la carpeta (o el que tendría si se apuntara)."""
+    wanted = os.path.normcase(os.path.abspath(str(path)))
+    for item in R.listing():
+        if os.path.normcase(os.path.abspath(item["path"])) == wanted:
+            return item["id"]
+    return hashlib.sha1(wanted.encode("utf-8")).hexdigest()[:10]  # misma cuenta que projects.py
+
+
+def resolve(start: "Project", query: Dict[str, str]) -> "Project":
+    """El proyecto de ``?project=``: el de arranque o uno del registro. Nunca una ruta libre."""
+    pid = (query.get("project") or "").strip()
+    if not pid or pid == start.id:
+        return start
+    if not re.fullmatch(r"[0-9a-f]{4,40}", pid):
+        raise ApiError("Ese proyecto no existe.", 404)
+    found = R.find(pid)
+    if found is None or not Path(found).is_dir():
+        raise ApiError("Ese proyecto no existe o su carpeta ya no está.", 404)
+    return Project(found, pid)
 
 
 # ----------------------------------------------------------------------------- seguridad
@@ -122,10 +135,47 @@ def _text(body: Dict[str, Any], key: str, limit: int = 20000) -> str:
     return value.strip()[:limit]
 
 
+def waiting_count(plan: Dict[str, Any]) -> int:
+    """Cosas que esperan a la persona: fases por revisar y preguntas sin responder."""
+    phases = sum(1 for b in plan.get("branches", []) if not b.get("archived")
+                 for p in b.get("phases", []) if P.review_state(p) == P.WAITING)
+    return phases + sum(1 for a in plan.get("asks", []) if not a.get("answer"))
+
+
+def summary(project: "Project") -> Dict[str, Any]:
+    out: Dict[str, Any] = {"done": 0, "total": 0, "waiting": 0}
+    if not project.path.is_dir():
+        return out
+    try:
+        plan = P.load(project.plan_path)
+    except P.PlanError as e:
+        return {**out, "error": str(e)}
+    for b in plan.get("branches", []):
+        if not b.get("archived"):
+            done, total = P.branch_progress(b)
+            out["done"] += done
+            out["total"] += total
+    out["waiting"] = waiting_count(plan)
+    out["title"] = plan.get("title") or ""
+    return out
+
+
+@route("GET", "/api/projects")
+def get_projects(project, args, query, body):
+    """El de arranque (``current``) y los del registro, con su progreso resumido."""
+    start = project
+    items = [{"id": start.id, "name": start.name, "path": str(start.path), "exists": start.path.is_dir()}]
+    items += [i for i in R.listing() if i["id"] != start.id]
+    out = []
+    for item in items:
+        p = start if item["id"] == start.id else Project(item["path"], item["id"])
+        out.append({**item, "current": item["id"] == start.id, **summary(p)})
+    return {"projects": out}
+
+
 @route("GET", "/api/project")
 def get_project(project, args, query, body):
-    return {"name": project.name, "path": str(project.path), "agents": G.available(),
-            "settings": G.clean_settings(project.settings())}
+    return {"id": project.id, "name": project.name, "path": str(project.path)}
 
 
 @route("GET", "/api/plan")
@@ -147,71 +197,36 @@ def post_step_change(project, args, query, body):
     return P.load(project.plan_path)
 
 
-@route("GET", "/api/sessions")
-def get_sessions(project, args, query, body):
-    return {"sessions": G.list_sessions(project.path, query.get("agent", ""))}
+@route("POST", "/api/plan/phases/review")
+def post_phase_review(project, args, query, body):
+    """Aprobar una fase o pedir cambios. Queda sin ver para que el agente lo reciba solo."""
+    branch, phase, verdict = _text(body, "branch", 200), _text(body, "phase", 200), _text(body, "verdict", 20)
+    if not branch or not phase:
+        raise ApiError("Falta la rama o la fase.")
+    if verdict not in (P.APPROVED, P.CHANGES):
+        raise ApiError("La revisión es «approved» o «changes».")
+    text = _text(body, "text")
+    P.mutate(project.plan_path, lambda plan: P.review_phase(plan, branch, phase, verdict, text, by=PERSON, seen=False))
+    return P.load(project.plan_path)
 
 
-@route("GET", "/api/sessions/([a-z]+)/([^/]+)")
-def get_session(project, args, query, body):
-    return G.read_session(project.path, args[0], args[1])
+@route("POST", "/api/plan/asks/([^/]+)/answer")
+def post_ask_answer(project, args, query, body):
+    option = body.get("option")
+    if option is not None and (isinstance(option, bool) or not isinstance(option, int)):
+        raise ApiError("«option» tiene que ser un número (1, 2…) o null.")
+    text = _text(body, "text")
+    P.mutate(project.plan_path, lambda plan: P.answer_ask(plan, args[0], option, text, by=PERSON, seen=False))
+    return P.load(project.plan_path)
 
 
-@route("POST", "/api/settings")
-def post_settings(project, args, query, body):
-    paths = body.pop("paths", None)
-    if isinstance(paths, dict):  # dónde está cada agente: es del ordenador, no del proyecto
-        for agent, path in paths.items():
-            try:
-                G.set_path(str(agent), path if isinstance(path, str) else "")
-            except G.AgentError as e:
-                raise ApiError(str(e))
-    return project.save_settings(G.clean_settings({**project.settings(), **body}))
-
-
-def _detached(events: Iterator[Dict[str, Any]]) -> Iterator[Dict[str, Any]]:
-    """Recorre ``events`` en un hilo aparte: si la página se cierra, el agente termina su trabajo."""
-    box: "queue.Queue[Optional[Dict[str, Any]]]" = queue.Queue()
-
-    def work() -> None:
-        try:
-            for ev in events:
-                box.put(ev)
-        finally:
-            box.put(None)
-
-    threading.Thread(target=work, daemon=True).start()
-    while True:
-        ev = box.get()
-        if ev is None:
-            return
-        yield ev
-
-
-@route("POST", "/api/chat")
-def post_chat(project, args, query, body):
-    """Envía el mensaje tal cual al agente y va devolviendo su respuesta, un evento JSON por línea."""
-    saved = G.clean_settings(project.settings())
-    agent = _text(body, "agent", 40) or saved["agent"]
-    if agent not in G.AGENTS:
-        raise ApiError(f"No conozco el agente «{agent}».")
-    text = _text(body, "text", 200000)
-    if not text:
-        raise ApiError("Escribe algo para enviar.")
-    chosen = {k: (_text(body, k, 80) if k in body else saved["agents"][agent][k])
-              for k in ("model", "effort", "mode")}
-    events = _detached(G.stream(project.path, agent, text, _text(body, "session", 80), **chosen))
-    return Stream(json.dumps(ev, ensure_ascii=False) + "\n" for ev in events)
-
-
-@route("POST", "/api/chat/stop")
-def post_chat_stop(project, args, query, body):
-    return {"stopped": G.stop(_text(body, "run", 80))}
-
-
-@route("POST", "/api/open-native")
-def post_open_native(project, args, query, body):
-    return {"message": G.open_native(project.path, _text(body, "agent", 40), _text(body, "session", 80))}
+@route("POST", "/api/plan/branches/([^/]+)/nonstop")
+def post_branch_nonstop(project, args, query, body):
+    on = body.get("on")
+    if not isinstance(on, bool):
+        raise ApiError("«on» tiene que ser true o false.")
+    P.mutate(project.plan_path, lambda plan: P.set_nonstop(plan, args[0], on))
+    return P.load(project.plan_path)
 
 
 def _mtime(path: Path) -> float:
@@ -222,22 +237,15 @@ def _mtime(path: Path) -> float:
 
 
 def watch(project: "Project", every: float = 1.0, ping: float = 15.0) -> Iterator[str]:
-    """Avisos en vivo (SSE): ``plan`` cuando cambia el plan y ``sessions`` cuando alguien escribe
-    en una conversación, sea desde la web, la terminal o la app."""
-    def look() -> Dict[str, Any]:
-        return {"plan": _mtime(project.plan_path),
-                "sessions": (G.latest_mtime(project.path), sorted(G.busy_sessions()))}
-
-    seen, quiet = look(), 0.0
+    """Avisos en vivo (SSE): ``plan`` cuando cambia el fichero del plan."""
+    seen, quiet = _mtime(project.plan_path), 0.0
     yield "retry: 2000\n\n"
     while True:
         time.sleep(every)
-        now, quiet = look(), quiet + every
-        for name in now:
-            if now[name] != seen[name]:
-                quiet = 0.0
-                yield f"event: {name}\ndata: {{}}\n\n"
-        seen = now
+        now, quiet = _mtime(project.plan_path), quiet + every
+        if now != seen:
+            quiet, seen = 0.0, now
+            yield "event: plan\ndata: {}\n\n"
         if quiet >= ping:
             quiet = 0.0
             yield ": sigo aquí\n\n"  # también sirve para notar que la página se ha cerrado
@@ -245,7 +253,7 @@ def watch(project: "Project", every: float = 1.0, ping: float = 15.0) -> Iterato
 
 @route("GET", "/api/events")
 def get_events(project, args, query, body):
-    return Stream(watch(project, G.WATCH_EVERY), "text/event-stream")
+    return Stream(watch(project, WATCH_EVERY), "text/event-stream")
 
 
 # ----------------------------------------------------------------------------- servidor
@@ -258,13 +266,13 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):  # silencio: la terminal es para la persona
         pass
 
-    def _send(self, status: int, body: bytes, content_type: str) -> None:
+    def _send(self, status: int, body: bytes, content_type: str, csp: str = CSP) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Content-Security-Policy", CSP)
+        self.send_header("Content-Security-Policy", csp)
         if self.command == "POST" and not getattr(self, "_read_body", False):
             self.send_header("Connection", "close")  # no se ha leído el cuerpo: no reutilizar
             self.close_connection = True
@@ -308,6 +316,21 @@ class Handler(BaseHTTPRequestHandler):
             kind += "; charset=utf-8"
         self._send(200, target.read_bytes(), kind)
 
+    def _proposal(self, path: str, query: Dict[str, str]) -> None:
+        """Un mockup de ``.unificador/propuestas/<P-n>/<n>.html``; nada más se sirve por aquí."""
+        m = PROPOSAL_PATH.match(path)
+        if not m:
+            return self._json({"error": "No existe."}, 404)
+        try:
+            project = resolve(self.project, query)
+        except ApiError as e:
+            return self._json({"error": str(e)}, e.status)
+        folder = (project.path / P.PROPOSALS_DIR).resolve()
+        target = (folder / m.group(1) / f"{int(m.group(2))}.html").resolve()
+        if folder not in target.parents or not target.is_file() or target.stat().st_size > P.MAX_PROPOSAL:
+            return self._json({"error": "No existe."}, 404)
+        self._send(200, target.read_bytes(), "text/html; charset=utf-8", PROPOSAL_CSP)
+
     def _body(self) -> Dict[str, Any]:
         try:
             length = int(self.headers.get("Content-Length") or 0)
@@ -332,11 +355,13 @@ class Handler(BaseHTTPRequestHandler):
         if why:
             return self._json({"error": why}, 403)
         url = urlsplit(self.path)
+        query = {k: v[-1] for k, v in parse_qs(url.query).items()}
         if not url.path.startswith("/api/"):
             if method != "GET":
                 return self._json({"error": "Método no permitido."}, 405)
+            if url.path.startswith("/propuestas/"):
+                return self._proposal(url.path, query)
             return self._static(url.path)
-        query = {k: v[-1] for k, v in parse_qs(url.query).items()}
         known = False
         for verb, pattern, fn in ROUTES:
             m = pattern.match(url.path)
@@ -347,10 +372,11 @@ class Handler(BaseHTTPRequestHandler):
                 continue
             try:
                 args = tuple(unquote(a) for a in m.groups())
-                result = fn(self.project, args, query, self._body() if method == "POST" else {})
+                project = self.project if fn is get_projects else resolve(self.project, query)
+                result = fn(project, args, query, self._body() if method == "POST" else {})
             except ApiError as e:
                 return self._json({"error": str(e)}, e.status)
-            except (P.PlanError, S.SessionError, G.AgentError) as e:
+            except P.PlanError as e:
                 return self._json({"error": str(e)}, 400)
             except Exception as e:  # un fallo nuestro no debe tirar el servidor
                 return self._json({"error": f"Error interno: {e}"}, 500)

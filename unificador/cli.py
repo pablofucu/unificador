@@ -11,6 +11,7 @@ Comando ``unificador``: abre la web del proyecto en el que estás.
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 import webbrowser
@@ -18,6 +19,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from unificador import plan as P
+from unificador import projects
 from unificador import rules
 
 COMMANDS = ("install", "doctor", "import-kanvas")
@@ -31,16 +33,18 @@ def _project(path: str) -> Path:
 
 
 def serve(root: Path, port: int, open_browser: bool) -> int:
-    from unificador import agents, app
+    from unificador import app
     changed = rules.install(root)
+    try:
+        projects.register(root)
+    except OSError:
+        pass
     server = app.make_server(root, port)
     url = f"http://127.0.0.1:{server.server_address[1]}/"
     print(f"Unificador · {root.name}")
     if changed:
         print("  Preparado: " + ", ".join(changed))
-    print("\n".join(_agent_lines()))
     print(f"  {url}   (Ctrl+C para cerrar)", flush=True)
-    agents.warm_up()
     if open_browser:
         try:
             webbrowser.open(url)
@@ -55,34 +59,50 @@ def serve(root: Path, port: int, open_browser: bool) -> int:
     return 0
 
 
-def _agent_lines() -> List[str]:
+def _client_lines(root: Path) -> List[str]:
+    """Una línea por cliente: (¿listo?, texto). Que falte un cliente no es un error."""
     from unificador import agents
-    lines = []
-    for a in agents.available():
-        if not a["installed"]:
-            lines.append(f"  ✘ {a['name']}: no lo encuentro. Instálalo o pega su ruta desde la web (clic en su icono).")
-        elif a["id"] == "antigravity" and a["path"].lower().endswith((".cmd", ".bat")):
-            lines.append(f"  ! {a['name']}: {a['path']} es un .cmd y no se puede usar con seguridad; hace falta agy.exe.")
-        else:
-            lines.append(f"  ✔ {a['name']}: {a['path']}")
-    return lines
+    out = []
+    for c in agents.available():
+        where = f"{c['path']}" if c["installed"] else "no lo encuentro (no pasa nada si no lo usas)"
+        out.append(f"{'✔' if c['installed'] else '-'} {c['name']} ({c['command']}): {where}")
+        out.append(f"    {_rules_line(root, c['id'])}")
+    return out
+
+
+def _rules_line(root: Path, client: str) -> str:
+    missing = rules.missing(root)
+    fix = " (unificador install)"
+    if client == "claude":
+        h = rules.claude_hooks(root)
+        if "CLAUDE.md" in missing or "AGENTS.md" in missing or not all(h.values()):
+            return "✘ faltan CLAUDE.md, las reglas o los avisos de .claude/settings.json" + fix
+        return "✔ reglas en CLAUDE.md; avisos: al iniciar y en cada mensaje (.claude/settings.json)"
+    if "AGENTS.md" in missing:
+        return "✘ faltan las reglas en AGENTS.md" + fix
+    if client == "codex":
+        h = rules.codex_hooks(root)
+        if not all(h.values()):
+            return "✘ falta el fichero de avisos .codex/hooks.json" + fix
+        return ("✔ reglas en AGENTS.md; avisos en .codex/hooks.json "
+                "(la primera vez hay que darlos por buenos con /hooks dentro de Codex)")
+    if client == "antigravity":
+        return "✔ reglas en AGENTS.md; se entera de la web por las reglas (ejecuta inbox al empezar)"
+    return "✔ reglas en AGENTS.md"
 
 
 def doctor(root: Path) -> int:
     """Repasa lo que hace falta para que funcione y dice, en llano, qué arreglar."""
-    from unificador import agents
     print(f"Unificador · comprobación de {root}")
-    lines = _agent_lines()
-    print("\n".join(lines))
-    ok = any(line.startswith("  ✔") for line in lines)
-    if not ok:
-        print("    Sin ningún agente no se puede escribir desde la web.")
+    ok = True
+    for line in _client_lines(root):
+        print("  " + line)
+        ok = ok and "✘" not in line
     pending = rules.missing(root)
     if pending:
         ok = False
         print("  ✘ Faltan las reglas del proyecto (" + ", ".join(pending) + "). Se arregla con: unificador install")
     else:
-        print("  ✔ Reglas del proyecto en su sitio (AGENTS.md, CLAUDE.md, .unificador/uni.py)")
         try:
             run = subprocess.run([sys.executable, str(root / rules.UNI_REL), "status"], cwd=str(root),
                                  capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20)
@@ -98,20 +118,8 @@ def doctor(root: Path) -> int:
     except (OSError, subprocess.SubprocessError):
         ok = False
         print("  ✘ La orden «python» no funciona en la terminal: los agentes no podrán apuntar el plan.")
-    if sys.platform == "win32":
-        mode = agents.clean_settings(agents_settings(root))["agents"]["antigravity"]["mode"]
-        if mode != "auto":
-            print("  ! Antigravity no está en modo Autónomo: en Windows no podrá ejecutar órdenes ni apuntar el plan.")
     print("Todo listo." if ok else "Hay cosas que arreglar (arriba, con ✘).")
     return 0 if ok else 1
-
-
-def agents_settings(root: Path) -> dict:
-    import json
-    try:
-        return json.loads((root / rules.LOCAL_DIR / rules.LOCAL_SETTINGS).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
 
 
 def main(argv: Optional[List[str]] = None) -> int:

@@ -1,120 +1,26 @@
-"""Agentes: órdenes, lectura de su salida y envío sin tocar el mensaje."""
+"""Clientes de IA (Claude Code, Antigravity, Codex) y la orden doctor."""
 
-import json
+import contextlib
+import io
+import os
 import sys
 import tempfile
-import threading
-import time
-import os
 import unittest
 from pathlib import Path
 from unittest import mock
 
 from unificador import agents as G
-
-sys.path.insert(0, str(Path(__file__).parent))
-from test_app import ServerCase  # noqa: E402
-
-FAKE = str(Path(__file__).with_name("fake_agent.py"))
-real_build = G.build_command
-
-
-class FakeAgents:
-    """Sustituye las CLI por ``fake_agent.py`` conservando los argumentos reales."""
-
-    def start_fakes(self, folder):
-        self.log = str(Path(folder) / "recibido.json")
-
-        def build(agent, exe, *rest, **kw):
-            cmd, stdin = real_build(agent, exe, *rest, **kw)
-            return [sys.executable, "-X", "utf8", FAKE, agent, self.log] + cmd[1:], stdin
-
-        for target, value in (("build_command", build), ("_exe", lambda agent: "falso.exe")):
-            p = mock.patch.object(G, target, value)
-            p.start()
-            self.addCleanup(p.stop)
-
-    def received(self):
-        return json.loads(Path(self.log).read_text(encoding="utf-8"))
-
-
-class CommandTest(unittest.TestCase):
-    def test_claude_command(self):
-        cmd, stdin = G.build_command("claude", "claude", "hola", "abc", True, "opus", "high", "plan")
-        self.assertEqual(stdin, "hola")
-        self.assertNotIn("hola", cmd)
-        self.assertEqual(cmd[cmd.index("--model") + 1], "opus")
-        self.assertEqual(cmd[cmd.index("--effort") + 1], "high")
-        self.assertEqual(cmd[cmd.index("--permission-mode") + 1], "plan")
-        self.assertEqual(cmd[-2:], ["--session-id", "abc"])
-        cmd, _ = G.build_command("claude", "claude", "hola", "abc", False)
-        self.assertEqual(cmd[-2:], ["--resume", "abc"])
-        self.assertNotIn("--model", cmd)
-        self.assertNotIn("--effort", cmd)
-
-    def test_agy_command(self):
-        cmd, stdin = G.build_command("antigravity", "agy", "hola", "", True, "gemini-4-argon-high", "", "acceptEdits")
-        self.assertIsNone(stdin)
-        self.assertEqual(cmd[-2:], ["-p", "hola"])
-        self.assertEqual(cmd[cmd.index("--mode") + 1], "accept-edits")
-        self.assertEqual(cmd[cmd.index("--model") + 1], "gemini-4-argon-high")
-        self.assertNotIn("--conversation", cmd)
-        cmd, _ = G.build_command("antigravity", "agy", "hola", "c1", False)
-        self.assertEqual(cmd[cmd.index("--conversation") + 1], "c1")
-
-    def test_agy_autonomous_on_windows_approves_everything(self):
-        with mock.patch.object(G.sys, "platform", "win32"):
-            cmd, _ = G.build_command("antigravity", "agy", "hola", "", True)
-            self.assertIn("--dangerously-skip-permissions", cmd)
-            self.assertNotIn("--mode", cmd)
-            cmd, _ = G.build_command("antigravity", "agy", "hola", "", True, mode="plan")
-            self.assertNotIn("--dangerously-skip-permissions", cmd)
-        with mock.patch.object(G.sys, "platform", "linux"):
-            cmd, _ = G.build_command("antigravity", "agy", "hola", "", True)
-            self.assertEqual(cmd[cmd.index("--mode") + 1], "auto")
-
-    def test_agy_new_tool_format_and_denials(self):
-        parse = G.agy_parser({"mode": "acceptEdits"})
-        step = {"conversation_id": "c", "step_index": 2, "state": "ACTIVE", "step_type": "tool",
-                "tool_name": "run_command", "tool_info": {"name": "run_command",
-                                                          "parameters": {"CommandLine": "python uni.py status"}}}
-        events = list(parse({"event": "step_update", "step_update": step}))
-        self.assertEqual(events[-1], {"type": "tool", "text": "Ejecuta python uni.py status"})
-        self.assertEqual(list(parse({"event": "step_update", "step_update": {**step, "state": "ERROR"}})), [])
-        events = list(parse({"event": "result", "result": {"status": "SUCCESS", "response": "", "denied_actions": [
-            {"action": "command", "display_name": "RunCommand"}]}}))
-        self.assertEqual([e["type"] for e in events], ["denied"])
-        self.assertIn("ejecutar órdenes", events[0]["text"])
-        self.assertTrue(events[0]["retry"])
-
-    def test_claude_denials(self):
-        parse = G.claude_parser({"mode": "auto"})
-        events = list(parse({"type": "result", "subtype": "success", "result": "ok",
-                             "permission_denials": [{"tool_name": "Bash"}]}))
-        self.assertEqual(events[0]["type"], "denied")
-        self.assertFalse(events[0]["retry"])
-
-    def test_models_and_settings(self):
-        out = "Fetching available models...\ngemini-4-argon-high\tGemini 4 Argon (High)\nraro; rm\tX\n\n"
-        self.assertEqual(G.parse_agy_models(out), [{"id": "gemini-4-argon-high", "name": "Gemini 4 Argon (High)"}])
-        clean = G.clean_settings({"agent": "codex", "agents": {"claude": {"model": "-x; rm", "effort": "x"}}})
-        self.assertEqual(clean["agent"], "claude")
-        self.assertEqual(clean["agents"]["claude"], {"model": "", "effort": "", "mode": "auto"})
-        self.assertEqual(G.clean_settings("x")["agents"]["antigravity"]["mode"], "auto")
-        self.assertEqual(G.clean_settings({"agents": {"claude": {"model": "--resume"}}})["agents"]["claude"]["model"], "")
+from unificador import cli
+from unificador import rules
 
 
 class FindTest(unittest.TestCase):
-    """Encontrar los agentes aunque la terminal no los tenga en el PATH."""
+    """Encontrar los clientes aunque la terminal no los tenga en el PATH."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.home = Path(self.tmp.name)
-        for target, value in (("PATHS_FILE", self.home / "cfg" / "agentes.json"), ("_paths", None)):
-            patcher = mock.patch.object(G, target, value)
-            patcher.start()
-            self.addCleanup(patcher.stop)
         for target, value in (("shutil.which", lambda name: None), ("pathlib.Path.home", lambda: self.home)):
             patcher = mock.patch(target, value)
             patcher.start()
@@ -130,131 +36,45 @@ class FindTest(unittest.TestCase):
         return path
 
     def test_usual_folder_without_path(self):
-        self.assertEqual(G._exe("claude"), "")
+        self.assertEqual(G.find("claude"), "")
         found = self.exe(".local/bin", "claude")
-        self.assertEqual(G._exe("claude"), str(found))
-        agents = {a["id"]: a for a in G.available()}
-        self.assertEqual((agents["claude"]["installed"], agents["claude"]["path"]), (True, str(found)))
-        self.assertFalse(agents["antigravity"]["installed"])
-        # El agente elegido nunca es uno que no se puede usar.
-        self.assertEqual(G.clean_settings({"agent": "antigravity"})["agent"], "claude")
-
-    def test_path_set_by_hand(self):
-        with self.assertRaises(G.AgentError):
-            G.set_path("antigravity", str(self.home / "no-existe"))
-        other = self.exe("otro", "claude")
-        with self.assertRaises(G.AgentError):
-            G.set_path("antigravity", str(other))  # no es agy
-        agy = self.exe("mis cosas", "agy")
-        self.assertEqual(G.set_path("antigravity", f'"{agy.parent}"'), str(agy))  # vale la carpeta, con comillas
-        with mock.patch.object(G, "_paths", None):  # se recuerda al volver a arrancar
-            self.assertEqual(G._exe("antigravity"), str(agy))
-        self.assertEqual(G.set_path("antigravity", ""), "")
-        self.assertEqual(G.clean_settings({})["agent"], "claude")
+        self.assertEqual(G.find("claude"), str(found))
+        clients = {a["id"]: a for a in G.available()}
+        self.assertEqual(list(clients), ["claude", "antigravity", "codex"])
+        self.assertEqual((clients["claude"]["installed"], clients["claude"]["path"]), (True, str(found)))
+        self.assertFalse(clients["antigravity"]["installed"])
+        self.assertFalse(clients["codex"]["installed"])
+        codex = self.exe(".npm-global/bin", "codex")
+        self.assertEqual(G.find("codex"), str(codex))
 
 
-class StreamTest(FakeAgents, unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.start_fakes(self.tmp.name)
+class DoctorTest(FindTest):
+    def run_doctor(self, root):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = cli.doctor(Path(root))
+        return code, out.getvalue()
 
-    def test_claude_message_goes_untouched(self):
-        text = "Arregla   esto\n  «con» \"comillas\" & cosas raras %PATH% ñ"
-        events = list(G.stream(self.tmp.name, "claude", text, model="sonnet", effort="low"))
-        self.assertEqual([e["type"] for e in events], ["run", "session", "text", "model", "tool", "text", "done"])
-        self.assertEqual("".join(e["text"] for e in events if e["type"] == "text"), "Hola \n\nmundo")
-        got = self.received()
-        self.assertEqual(got["stdin"], text)
-        self.assertEqual(got["agent"], "claude")
-        args = got["args"]
-        session = events[1]["id"]
-        self.assertEqual(args[args.index("--session-id") + 1], session)
-        self.assertEqual((args[args.index("--model") + 1], args[args.index("--effort") + 1]), ("sonnet", "low"))
-        list(G.stream(self.tmp.name, "claude", "sigue", session))
-        args = self.received()["args"]
-        self.assertEqual(args[args.index("--resume") + 1], session)
-        self.assertEqual(G.busy_sessions(), [])
+    def test_reports_all_three_and_missing_client_is_not_an_error(self):
+        with tempfile.TemporaryDirectory() as proj:
+            code, text = self.run_doctor(proj)
+            self.assertEqual(code, 1)  # faltan las reglas
+            for name in ("Claude Code", "Antigravity", "Codex"):
+                self.assertIn(name, text)
+            rules.install(proj)
+            code, text = self.run_doctor(proj)
+            self.assertEqual(code, 0, text)  # ningún cliente instalado y aun así bien
+            self.assertIn("no lo encuentro", text)
+            self.assertIn("avisos: al iniciar y en cada mensaje", text)
+            self.assertIn("reglas en AGENTS.md", text)
 
-    def test_antigravity(self):
-        events = list(G.stream(self.tmp.name, "antigravity", "haz algo", mode="plan"))
-        self.assertEqual([e["type"] for e in events], ["run", "session", "tool", "text", "done"])
-        self.assertEqual(events[1]["id"], "11111111-2222-3333-4444-555555555555")
-        args = self.received()["args"]
-        self.assertEqual(args[-2:], ["-p", "haz algo"])
-        self.assertEqual(args[args.index("--mode") + 1], "plan")
-
-    def test_errors(self):
-        def last_error(*a, **kw):
-            events = list(G.stream(self.tmp.name, *a, **kw))
-            self.assertEqual(events[-1], {"type": "done"})
-            return events[-2]["text"] if len(events) > 1 and events[-2]["type"] == "error" else ""
-
-        self.assertIn("algo va mal", last_error("claude", "rompe"))
-        self.assertIn("Escribe", last_error("claude", "   "))
-        self.assertIn("no es válida", last_error("claude", "hola", "../../x"))
-        self.assertIn("No conozco", last_error("codex", "hola"))
-        self.assertIn("demasiado largo", last_error("antigravity", "a" * 30000))
-        with mock.patch.object(G, "_exe", lambda agent: ""):
-            self.assertIn("no está instalado", last_error("claude", "hola"))
-        with mock.patch.object(G, "_exe", lambda agent: "agy.CMD"), \
-                mock.patch.object(G, "build_command", real_build):
-            self.assertIn("no es seguro", last_error("antigravity", "hola & calc"))
-
-    def test_stop(self):
-        events, runs = [], []
-
-        def work():
-            for ev in G.stream(self.tmp.name, "claude", "duerme"):
-                events.append(ev)
-                if ev["type"] == "run":
-                    runs.append(ev["id"])
-
-        t = threading.Thread(target=work)
-        t.start()
-        for _ in range(100):
-            if any(e["type"] == "text" for e in events):
-                break
-            time.sleep(0.1)
-        self.assertEqual(len(G.busy_sessions()), 1)
-        busy = list(G.stream(self.tmp.name, "claude", "otra", G.busy_sessions()[0]))
-        self.assertIn("ya está respondiendo", busy[0]["text"])
-        self.assertTrue(G.stop(runs[0]))
-        t.join(15)
-        self.assertFalse(t.is_alive())
-        self.assertEqual([e["type"] for e in events][-2:], ["stopped", "done"])
-        self.assertFalse(G.stop("no-existe"))
-
-
-class ChatRouteTest(FakeAgents, ServerCase):
-    def setUp(self):
-        super().setUp()
-        self.start_fakes(self.root)
-
-    def test_chat_stream_uses_saved_settings(self):
-        self.call("POST", "/api/settings", {"agents": {"claude": {"model": "haiku", "effort": "max"}}})
-        status, raw, r = self.call("POST", "/api/chat", {"text": "hola"})
-        self.assertEqual(status, 200)
-        self.assertIn("ndjson", r.getheader("Content-Type"))
-        events = [json.loads(line) for line in raw.splitlines()]
-        self.assertEqual([e["type"] for e in events], ["run", "session", "text", "model", "tool", "text", "done"])
-        got = self.received()
-        self.assertEqual(got["stdin"], "hola")
-        args = got["args"]
-        self.assertEqual((args[args.index("--model") + 1], args[args.index("--effort") + 1]), ("haiku", "max"))
-        self.call("POST", "/api/chat", {"text": "hola", "model": "", "effort": "low"})
-        args = self.received()["args"]
-        self.assertNotIn("--model", args)
-        self.assertEqual(args[args.index("--effort") + 1], "low")
-
-    def test_chat_refusals(self):
-        self.assertEqual(self.call("POST", "/api/chat", {"text": ""})[0], 400)
-        self.assertEqual(self.call("POST", "/api/chat", {"text": "x", "agent": "codex"})[0], 400)
-        self.assertEqual(self.call("POST", "/api/chat", {"text": "x"}, {"Origin": "https://evil.example"})[0], 403)
-        self.assertEqual(self.call("GET", "/api/chat")[0], 405)
-        self.assertEqual(self.call("POST", "/api/chat/stop", {"run": "nada"})[1], {"stopped": False})
-        self.assertEqual(self.call("POST", "/api/open-native", {"agent": "codex"})[0], 400)
-        self.assertEqual(self.call("POST", "/api/open-native", {"agent": "claude", "session": "../x"})[0], 400)
+    def test_missing_hook_is_reported(self):
+        with tempfile.TemporaryDirectory() as proj:
+            rules.install(proj)
+            (Path(proj) / ".claude" / "settings.json").write_text("{}", encoding="utf-8")
+            code, text = self.run_doctor(proj)
+            self.assertEqual(code, 1)
+            self.assertIn("faltan CLAUDE.md, las reglas o los avisos", text)
 
 
 if __name__ == "__main__":

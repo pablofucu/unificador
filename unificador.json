@@ -561,13 +561,20 @@
                   "by": "claude",
                   "kind": "note",
                   "text": "Pausado por Pablo como propuesta de futuro: no empezarlo hasta que lo pida."
+                },
+                {
+                  "at": "2026-11-11T23:57:34+01:00",
+                  "by": "claude",
+                  "kind": "note",
+                  "text": "Descartado: se quita el chat de la web; Codex se usará desde su propio cliente."
                 }
               ],
-              "updated": "2026-11-11T16:39:38+01:00"
+              "updated": "2026-11-11T23:57:34+01:00"
             }
           ]
         }
-      ]
+      ],
+      "archived": true
     },
     {
       "key": "SR",
@@ -1150,6 +1157,804 @@
           ]
         }
       ]
+    },
+    {
+      "key": "QEC",
+      "name": "Quitar el chat",
+      "goal": "La web deja de enviar y de leer conversaciones; se trabaja siempre desde el cliente de cada agente",
+      "icon": "✂️",
+      "color": 2,
+      "created": "2026-11-11T23:57:34+01:00",
+      "by": "claude",
+      "next_id": 6,
+      "phases": [
+        {
+          "name": "Retirada",
+          "icon": "",
+          "steps": [
+            {
+              "id": "QEC-1",
+              "title": "Quitar el chat de la página",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T23:59:06+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-11T23:59:26+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Borrado chat.js y todo el chat de index.html, app.css y app.js; plan.js ocupa la página (post local, sin envío al agente)"
+                }
+              ],
+              "updated": "2026-11-11T23:59:26+01:00",
+              "result": "Borrado chat.js y todo el chat de index.html, app.css y app.js; plan.js ocupa la página (post local, sin envío al agente)"
+            },
+            {
+              "id": "QEC-2",
+              "title": "Quitar del servidor el envío y la lectura de conversaciones",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T23:59:27+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-11T23:59:37+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "app.py sin sesiones, ajustes, chat, stop ni open-native; watch solo emite plan; /api/project devuelve nombre y ruta; Project sin settings"
+                }
+              ],
+              "updated": "2026-11-11T23:59:37+01:00",
+              "result": "app.py sin sesiones, ajustes, chat, stop ni open-native; watch solo emite plan; /api/project devuelve nombre y ruta; Project sin settings"
+            },
+            {
+              "id": "QEC-3",
+              "title": "Borrar los módulos y pruebas que ya no se usan",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T23:59:37+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:01:05+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Borrados sessions, agy_sessions, adapters, config, models, git_service, fake_agent y sus pruebas; agents.py reducido a localizar claude/agy/codex; sin imports rotos y pruebas en verde"
+                }
+              ],
+              "updated": "2026-11-12T00:01:05+01:00",
+              "result": "Borrados sessions, agy_sessions, adapters, config, models, git_service, fake_agent y sus pruebas; agents.py reducido a localizar claude/agy/codex; sin imports rotos y pruebas en verde"
+            }
+          ]
+        },
+        {
+          "name": "Tres agentes por igual",
+          "icon": "",
+          "steps": [
+            {
+              "id": "QEC-4",
+              "title": "install y doctor para Claude Code, Antigravity y Codex",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:01:05+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:01:06+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "doctor repasa Claude Code, Antigravity y Codex (ejecutable y reglas; falta de cliente no es error), quitado agents_settings; pruebas en test_agents.py"
+                }
+              ],
+              "updated": "2026-11-12T00:01:06+01:00",
+              "result": "doctor repasa Claude Code, Antigravity y Codex (ejecutable y reglas; falta de cliente no es error), quitado agents_settings; pruebas en test_agents.py"
+            },
+            {
+              "id": "QEC-5",
+              "title": "Documentación al día",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:01:06+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:01:21+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "README y ARCHITECTURE sin chat, sesiones ni modulos aparcados; tabla de API real"
+                }
+              ],
+              "updated": "2026-11-12T00:01:21+01:00",
+              "result": "README y ARCHITECTURE sin chat, sesiones ni modulos aparcados; tabla de API real"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "ISF",
+      "name": "Integración sin fricción",
+      "goal": "Lo que se responde en la web le llega al agente solo, sin tener que nombrar a Unificador",
+      "icon": "🔌",
+      "color": 3,
+      "created": "2026-11-11T23:57:34+01:00",
+      "by": "claude",
+      "next_id": 5,
+      "phases": [
+        {
+          "name": "Averiguar",
+          "icon": "",
+          "steps": [
+            {
+              "id": "ISF-1",
+              "title": "Qué avisos automáticos permite cada cliente",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-11T23:59:01+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:00:18+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Averiguado en la documentación oficial, sin probar en máquina. Claude Code y Codex tienen aviso al enviar mensaje (UserPromptSubmit): la salida de la orden entra en el contexto; ficheros .claude/settings.json y .codex/hooks.json (Codex pide confiar el hook una vez). Antigravity no tiene aviso por mensaje: lo más cercano es PreInvocation en .agents/hooks.json con salida en JSON (injectSteps), sin confirmar si salta una vez por mensaje; hay un informe de avisos que no saltan en Windows. Sin confirmar: cuánto deja esperar cada cliente a una orden en Codex y Antigravity (en Claude Code, 2 min por defecto y 10 de máximo)."
+                }
+              ],
+              "updated": "2026-11-12T00:00:18+01:00",
+              "result": "Averiguado en la documentación oficial, sin probar en máquina. Claude Code y Codex tienen aviso al enviar mensaje (UserPromptSubmit): la salida de la orden entra en el contexto; ficheros .claude/settings.json y .codex/hooks.json (Codex pide confiar el hook una vez). Antigravity no tiene aviso por mensaje: lo más cercano es PreInvocation en .agents/hooks.json con salida en JSON (injectSteps), sin confirmar si salta una vez por mensaje; hay un informe de avisos que no saltan en Windows. Sin confirmar: cuánto deja esperar cada cliente a una orden en Codex y Antigravity (en Claude Code, 2 min por defecto y 10 de máximo)."
+            }
+          ]
+        },
+        {
+          "name": "Montaje",
+          "icon": "",
+          "steps": [
+            {
+              "id": "ISF-2",
+              "title": "Orden de espera corta en uni.py",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:06:58+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:06:59+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Orden wait (y --wait en ask/propose): espera hasta 240 s por defecto a que se responda en la web; si caduca, dice al agente que termine el turno y pregunte en el chat. Probado que caduca y que recoge la respuesta."
+                }
+              ],
+              "updated": "2026-11-12T00:06:59+01:00",
+              "result": "Orden wait (y --wait en ask/propose): espera hasta 240 s por defecto a que se responda en la web; si caduca, dice al agente que termine el turno y pregunte en el chat. Probado que caduca y que recoge la respuesta."
+            },
+            {
+              "id": "ISF-3",
+              "title": "Aviso automático en el siguiente mensaje",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:08:03+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:09:58+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "rules.install pone UserPromptSubmit(inbox) en .claude/settings.json y .codex/hooks.json, fusionando sin duplicar; pruebas en test_rules"
+                }
+              ],
+              "updated": "2026-11-12T00:09:58+01:00",
+              "result": "rules.install pone UserPromptSubmit(inbox) en .claude/settings.json y .codex/hooks.json, fusionando sin duplicar; pruebas en test_rules"
+            },
+            {
+              "id": "ISF-4",
+              "title": "install lo deja puesto en los tres clientes",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:09:58+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:09:58+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "missing y doctor informan de cada aviso por cliente; install ejecutado en este proyecto; doctor en verde"
+                }
+              ],
+              "updated": "2026-11-12T00:09:58+01:00",
+              "result": "missing y doctor informan de cada aviso por cliente; install ejecutado en este proyecto; doctor en verde"
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-12T01:38:54+01:00",
+            "seen": true
+          }
+        }
+      ]
+    },
+    {
+      "key": "FCP",
+      "name": "Fases con parada suave",
+      "goal": "Al acabar una fase el agente resume y pregunta; se aprueba desde el chat o la web y nada se bloquea",
+      "icon": "🚦",
+      "color": 4,
+      "created": "2026-11-11T23:57:34+01:00",
+      "by": "claude",
+      "next_id": 5,
+      "phases": [
+        {
+          "name": "Modelo",
+          "icon": "",
+          "steps": [
+            {
+              "id": "FCP-1",
+              "title": "Estado de revisión de la fase en el plan",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:06:57+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:06:58+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "La fase guarda su revisión (esperando, aprobada, pide cambios) y la rama puede marcarse «sin paradas». Al cerrar el último paso de una fase, uni.py dice al agente que pare y pregunte. Probado en una carpeta temporal y con las pruebas (46 en verde)."
+                }
+              ],
+              "updated": "2026-11-12T00:06:58+01:00",
+              "result": "La fase guarda su revisión (esperando, aprobada, pide cambios) y la rama puede marcarse «sin paradas». Al cerrar el último paso de una fase, uni.py dice al agente que pare y pregunte. Probado en una carpeta temporal y con las pruebas (46 en verde)."
+            },
+            {
+              "id": "FCP-2",
+              "title": "Órdenes para aprobar o pedir cambios de una fase",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:06:57+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:06:58+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Órdenes approve, revise y nonstop. Nada bloquea: empezar la fase siguiente sin aprobar solo avisa. Probado a mano y con pruebas."
+                }
+              ],
+              "updated": "2026-11-12T00:06:58+01:00",
+              "result": "Órdenes approve, revise y nonstop. Nada bloquea: empezar la fase siguiente sin aprobar solo avisa. Probado a mano y con pruebas."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-12T01:38:54+01:00",
+            "seen": true
+          }
+        },
+        {
+          "name": "Reglas y web",
+          "icon": "",
+          "steps": [
+            {
+              "id": "FCP-3",
+              "title": "Reglas: parar y resumir al cerrar una fase",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:09:58+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:09:59+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "AGENTS_BLOCK reescrito (parada al cerrar fase, inbox, chat siempre); test_rules"
+                }
+              ],
+              "updated": "2026-11-12T00:09:59+01:00",
+              "result": "AGENTS_BLOCK reescrito (parada al cerrar fase, inbox, chat siempre); test_rules"
+            },
+            {
+              "id": "FCP-4",
+              "title": "Aprobar o pedir cambios desde la web",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:10:01+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:20:37+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "POST /api/plan/phases/review y /branches/<key>/nonstop (seen=False); botones Aprobar/Pedir cambios en la fase y en «Te toca», interruptor Sin paradas en el carril. Pruebas en test_app y probado en Edge sin ventana: queda approved/seen false y nonstop true."
+                }
+              ],
+              "updated": "2026-11-12T00:20:37+01:00",
+              "result": "POST /api/plan/phases/review y /branches/<key>/nonstop (seen=False); botones Aprobar/Pedir cambios en la fase y en «Te toca», interruptor Sin paradas en el carril. Pruebas en test_app y probado en Edge sin ventana: queda approved/seen false y nonstop true."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-12T01:39:10+01:00",
+            "seen": true
+          }
+        }
+      ]
+    },
+    {
+      "key": "PYD",
+      "name": "Propuestas y decisiones",
+      "goal": "Preguntas y mockups que se ven en la web y se responden desde la web o desde el chat",
+      "icon": "🎨",
+      "color": 5,
+      "created": "2026-11-11T23:57:34+01:00",
+      "by": "claude",
+      "next_id": 7,
+      "phases": [
+        {
+          "name": "Modelo",
+          "icon": "",
+          "steps": [
+            {
+              "id": "PYD-1",
+              "title": "Preguntas con opciones en el plan",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:06:57+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:06:58+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Orden ask: preguntas libres o con opciones, ligadas a un paso o a una rama. Con pruebas."
+                }
+              ],
+              "updated": "2026-11-12T00:06:58+01:00",
+              "result": "Orden ask: preguntas libres o con opciones, ligadas a un paso o a una rama. Con pruebas."
+            },
+            {
+              "id": "PYD-2",
+              "title": "Propuestas con mockups HTML en una carpeta común",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:06:57+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:06:58+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Orden propose: copia los HTML a .unificador/propuestas/P-n/ y da las rutas para enseñarlas también en el chat. Probado con dos mockups en una carpeta temporal."
+                }
+              ],
+              "updated": "2026-11-12T00:06:58+01:00",
+              "result": "Orden propose: copia los HTML a .unificador/propuestas/P-n/ y da las rutas para enseñarlas también en el chat. Probado con dos mockups en una carpeta temporal."
+            },
+            {
+              "id": "PYD-3",
+              "title": "Apuntar la respuesta venga del chat o de la web",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:06:58+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:06:58+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Orden answer para lo contestado en el chat; lo contestado en la web queda como novedad sin ver. Orden inbox: imprime las novedades de la web y calla si no hay. Con pruebas."
+                }
+              ],
+              "updated": "2026-11-12T00:06:58+01:00",
+              "result": "Orden answer para lo contestado en el chat; lo contestado en la web queda como novedad sin ver. Orden inbox: imprime las novedades de la web y calla si no hay. Con pruebas."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-12T01:38:54+01:00",
+            "seen": true
+          }
+        },
+        {
+          "name": "Verlas y elegir",
+          "icon": "",
+          "steps": [
+            {
+              "id": "PYD-4",
+              "title": "Mockups lado a lado en marcos aislados",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:10:01+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:20:37+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "GET /propuestas/<P-n>/<n>.html con regex y CSP sandbox; miniaturas en iframe sandbox renderizadas a 1280 px y reducidas, visor a pantalla completa con anterior/siguiente y ancho móvil/tableta/escritorio. Pruebas de rutas raras y CSP; capturas en Edge."
+                }
+              ],
+              "updated": "2026-11-12T00:20:37+01:00",
+              "result": "GET /propuestas/<P-n>/<n>.html con regex y CSP sandbox; miniaturas en iframe sandbox renderizadas a 1280 px y reducidas, visor a pantalla completa con anterior/siguiente y ancho móvil/tableta/escritorio. Pruebas de rutas raras y CSP; capturas en Edge."
+            },
+            {
+              "id": "PYD-5",
+              "title": "Elegir con un toque y añadir un comentario",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:10:02+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:20:38+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Elegir con un toque (botones grandes), comentario opcional, respuesta libre; tras responder se ve lo elegido y se puede cambiar; respondidas en su paso y en «Decisiones tomadas». POST /api/plan/asks/<id>/answer con seen=False, comprobado en navegador."
+                }
+              ],
+              "updated": "2026-11-12T00:20:38+01:00",
+              "result": "Elegir con un toque (botones grandes), comentario opcional, respuesta libre; tras responder se ve lo elegido y se puede cambiar; respondidas en su paso y en «Decisiones tomadas». POST /api/plan/asks/<id>/answer con seen=False, comprobado en navegador."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-12T01:39:10+01:00",
+            "seen": true
+          }
+        },
+        {
+          "name": "Reglas",
+          "icon": "",
+          "steps": [
+            {
+              "id": "PYD-6",
+              "title": "Formato común de mockups en las reglas del agente",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:09:58+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:09:59+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "AGENTS_BLOCK con regla de propuestas HTML autocontenidas, propose/answer/wait"
+                }
+              ],
+              "updated": "2026-11-12T00:09:59+01:00",
+              "result": "AGENTS_BLOCK con regla de propuestas HTML autocontenidas, propose/answer/wait"
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-12T01:39:11+01:00",
+            "seen": true
+          }
+        }
+      ]
+    },
+    {
+      "key": "TA",
+      "name": "Tablero",
+      "goal": "Todos los proyectos en una portada y cada rama en su carril de color con las fases separadas",
+      "icon": "🗂️",
+      "color": 6,
+      "created": "2026-11-11T23:57:34+01:00",
+      "by": "claude",
+      "next_id": 7,
+      "phases": [
+        {
+          "name": "Proyecto",
+          "icon": "",
+          "steps": [
+            {
+              "id": "TA-1",
+              "title": "Carriles por rama con su color",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:10:02+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:20:38+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Carril por rama con color de la paleta, icono, objetivo, anillo de progreso; ramas terminadas o archivadas plegadas en «Terminadas». Capturas a 1280 y 390 px."
+                }
+              ],
+              "updated": "2026-11-12T00:20:38+01:00",
+              "result": "Carril por rama con color de la paleta, icono, objetivo, anillo de progreso; ramas terminadas o archivadas plegadas en «Terminadas». Capturas a 1280 y 390 px."
+            },
+            {
+              "id": "TA-2",
+              "title": "Fases como tarjetas separadas en secuencia",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:10:02+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:20:38+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Fases como tarjetas separadas en fila con conector (apiladas en vertical por debajo de 760 px), estados pendiente/en curso/espera tu revisión/pide cambios/aprobada; el paso conserva detalle, notas, marcar a mano y pedir cambio. Capturas."
+                }
+              ],
+              "updated": "2026-11-12T00:20:38+01:00",
+              "result": "Fases como tarjetas separadas en fila con conector (apiladas en vertical por debajo de 760 px), estados pendiente/en curso/espera tu revisión/pide cambios/aprobada; el paso conserva detalle, notas, marcar a mano y pedir cambio. Capturas."
+            },
+            {
+              "id": "TA-3",
+              "title": "Bandeja de lo que espera respuesta",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:10:02+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:20:38+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Bandeja «Te toca» arriba: fases por revisar y preguntas/propuestas sin responder con su acción; vacía no se ve; no se repinta si no cambia (las miniaturas no se recargan)."
+                }
+              ],
+              "updated": "2026-11-12T00:20:38+01:00",
+              "result": "Bandeja «Te toca» arriba: fases por revisar y preguntas/propuestas sin responder con su acción; vacía no se ve; no se repinta si no cambia (las miniaturas no se recargan)."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-12T01:38:54+01:00",
+            "seen": true
+          }
+        },
+        {
+          "name": "Portada",
+          "icon": "",
+          "steps": [
+            {
+              "id": "TA-4",
+              "title": "Registro de proyectos instalados",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:09:59+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:09:59+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "projects.py con registro, rules.install y serve registran; tests/test_projects"
+                }
+              ],
+              "updated": "2026-11-12T00:09:59+01:00",
+              "result": "projects.py con registro, rules.install y serve registran; tests/test_projects"
+            },
+            {
+              "id": "TA-5",
+              "title": "Portada con todos los proyectos",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:20:48+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:20:49+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "GET /api/projects (arranque + registro, progreso y cuántas cosas esperan); portada con tarjetas por proyecto, aviso visible si algo espera; enlace «Todos los proyectos» para volver; con un solo proyecto se entra directo; rutas y SSE con ?project=. Pruebas test_several_projects y test_live_events_follow_the_project; captura de la portada."
+                }
+              ],
+              "updated": "2026-11-12T00:20:49+01:00",
+              "result": "GET /api/projects (arranque + registro, progreso y cuántas cosas esperan); portada con tarjetas por proyecto, aviso visible si algo espera; enlace «Todos los proyectos» para volver; con un solo proyecto se entra directo; rutas y SSE con ?project=. Pruebas test_several_projects y test_live_events_follow_the_project; captura de la portada."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-12T01:39:10+01:00",
+            "seen": true
+          }
+        },
+        {
+          "name": "Pulido",
+          "icon": "",
+          "steps": [
+            {
+              "id": "TA-6",
+              "title": "Que se use bien en móvil y tableta",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T00:20:49+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T00:20:49+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Fases apiladas por debajo de 760 px, zonas táctiles de 44 px o más, visor con barra que se reparte en dos filas y ancho móvil por defecto. Comprobado en Edge sin ventana a 360 y 390 px: sin desplazamiento horizontal de la página."
+                }
+              ],
+              "updated": "2026-11-12T00:20:49+01:00",
+              "result": "Fases apiladas por debajo de 760 px, zonas táctiles de 44 px o más, visor con barra que se reparte en dos filas y ancho móvil por defecto. Comprobado en Edge sin ventana a 360 y 390 px: sin desplazamiento horizontal de la página."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-12T01:39:11+01:00",
+            "seen": true
+          }
+        }
+      ]
+    },
+    {
+      "key": "PM",
+      "name": "Prompts maestros",
+      "goal": "Encargos habituales (revisión de interfaz, de código, a prueba de errores) listos para copiar o poner en cola",
+      "icon": "📜",
+      "color": 7,
+      "created": "2026-11-11T23:57:35+01:00",
+      "by": "claude",
+      "next_id": 5,
+      "phases": [
+        {
+          "name": "Biblioteca",
+          "icon": "",
+          "steps": [
+            {
+              "id": "PM-1",
+              "title": "Carpeta de prompts con unos de serie",
+              "desc": "",
+              "state": "pending",
+              "notes": []
+            },
+            {
+              "id": "PM-2",
+              "title": "Verlos y copiarlos desde la web",
+              "desc": "",
+              "state": "pending",
+              "notes": []
+            }
+          ]
+        },
+        {
+          "name": "Cola",
+          "icon": "",
+          "steps": [
+            {
+              "id": "PM-3",
+              "title": "Poner un prompt en cola sobre una rama o fase",
+              "desc": "",
+              "state": "pending",
+              "notes": []
+            },
+            {
+              "id": "PM-4",
+              "title": "Que el agente lo recoja con el aviso automático",
+              "desc": "",
+              "state": "pending",
+              "notes": []
+            }
+          ]
+        }
+      ]
     }
-  ]
+  ],
+  "asks": []
 }

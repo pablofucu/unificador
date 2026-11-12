@@ -1,12 +1,11 @@
 # Unificador
 
-El plan de tu proyecto y el chat con tus agentes de IA, en una web local muy sencilla.
+El plan de tu proyecto, a la vista, en una web local muy sencilla. Las conversaciones las llevas en el cliente de cada agente.
 
 - **El plan se ve de un vistazo**: ramas (áreas del proyecto) → fases con nombre → pasos pequeños.
-- **Chat integrado** con Claude Code y Antigravity, eligiendo modelo, esfuerzo y modo.
-- **Son las conversaciones de verdad**: lo que escribes en la web aparece en la terminal o en la
-  aplicación del agente, y al revés. Unificador no guarda copias; lee y continúa las sesiones nativas.
-- **Puedes corregir**: pide un cambio en cualquier paso y la IA lo retoma, o márcalo hecho a mano.
+- **Tres clientes por igual**: Claude Code, Antigravity y Codex leen y actualizan el mismo plan.
+- **La web solo enseña el plan**: no envía mensajes ni lee conversaciones; hablas con tu agente donde siempre.
+- **Puedes corregir**: pide un cambio en cualquier paso (queda apuntado y el agente lo ve en su próximo repaso), o márcalo hecho a mano.
 - **Sin dependencias**: solo Python 3.9 o superior. Nada de Node, ni bases de datos, ni cuentas.
 
 ## Ponerlo en marcha en un proyecto (dos pasos)
@@ -25,7 +24,7 @@ El plan de tu proyecto y el chat con tus agentes de IA, en una web local muy sen
    unificador
    ```
 
-Se abre el navegador con el plan a la izquierda y el chat a la derecha. La primera vez, Unificador deja
+Se abre el navegador con el plan. La primera vez, Unificador deja
 en el proyecto lo que la IA necesita para trabajar con el plan (no toca nada más):
 
 | Fichero | Para qué |
@@ -36,15 +35,14 @@ en el proyecto lo que la IA necesita para trabajar con el plan (no toca nada má
 | `AGENTS.md`, `CLAUDE.md` | Un bloque marcado con las reglas de trabajo; el resto del fichero no se toca. |
 | `.claude/settings.json` | Un aviso al empezar cada sesión de Claude Code con el estado del plan. |
 
-Puedes seguir usando Claude Code o Antigravity por tu cuenta, como siempre: verán el mismo plan y sus
-conversaciones aparecerán en la web.
+Abre tu agente (Claude Code, Antigravity o Codex) en esa carpeta y trabajad como siempre: todos ven el mismo plan.
 
 ## Órdenes
 
 ```text
 unificador [RUTA] [--port N] [--no-open]    abre la web del proyecto (por defecto, la carpeta actual)
 unificador install [RUTA]                   solo prepara el proyecto, sin abrir la web
-unificador doctor [RUTA]                    comprueba que todo está listo y dice qué falta
+unificador doctor [RUTA]                    comprueba clientes (claude, agy, codex) y reglas, y dice qué falta
 unificador import-kanvas [RUTA] [--force]   convierte un tablero Kanvas (kanvas.json) en plan
 ```
 
@@ -62,24 +60,20 @@ python .unificador/uni.py branch "Carrito" --icon 🛒 --goal "Comprar desde la 
 
 ## Cómo se trabaja
 
-1. Le pides algo a la IA en el chat (o en su terminal).
-2. La IA lo convierte en una rama con fases y pasos, y los va haciendo: empieza, apunta, termina.
-3. Tú lo ves moverse en directo. Si algo no te convence, abre el paso y pulsa **Pedir un cambio**.
+1. Le pides algo a tu agente, en su terminal o aplicación.
+2. El agente lo convierte en una rama con fases y pasos, y los va haciendo: empieza, apunta, termina.
+3. Tú lo ves moverse en directo en la web. Si algo no te convence, abre el paso y pulsa **Pedir un cambio**.
 
-Los modos del chat: **Autónomo** (hace el trabajo sin preguntar), **Edita sin preguntar** y **Solo planifica**.
+## Clientes
 
-## Agentes
-
-| Agente | Qué necesita | Estado |
+| Cliente | Orden | Lee las reglas de |
 | --- | --- | --- |
-| Claude Code | la orden `claude` | funciona |
-| Antigravity | la orden `agy` | funciona |
-| Codex | — | propuesta de futuro |
+| Claude Code | `claude` | `CLAUDE.md` (importa `AGENTS.md`) y el aviso de inicio de `.claude/settings.json` |
+| Antigravity | `agy` | `AGENTS.md` |
+| Codex | `codex` | `AGENTS.md` |
 
-Unificador los busca solo: en el PATH y en sus carpetas de instalación habituales. Si no encuentra alguno,
-pulsa su icono en la web y pega la ruta del programa (se guarda en `~/.unificador/agentes.json`).
-En Windows, Antigravity necesita el modo **Autónomo** para ejecutar órdenes y apuntar el plan; si se le
-deniega algo, el chat lo avisa y ofrece repetirlo en ese modo.
+`unificador doctor` dice cuáles encuentra (en el PATH y en sus carpetas habituales) y si el proyecto tiene
+sus reglas. Que falte un cliente no es un error: solo se informa.
 
 ## Desarrollo
 
