@@ -1954,7 +1954,192 @@
           ]
         }
       ]
+    },
+    {
+      "key": "IN2",
+      "name": "Interfaz nueva",
+      "goal": "Ver todos los proyectos o uno solo, moverse arrastrando, trabajo en paralelo sin lío y una categoría en cada paso",
+      "icon": "🎨",
+      "color": 0,
+      "created": "2026-11-12T04:08:25+01:00",
+      "by": "claude",
+      "next_id": 9,
+      "phases": [
+        {
+          "name": "Propuestas de distribución",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IN2-1",
+              "title": "Seis diseños distintos para comparar",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T04:09:43+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T04:15:44+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Seis maquetas autocontenidas en design/mockups/interfaz (vista de todos los proyectos y de un proyecto, con pasos a la vez, dependencias y categorías). Comprobadas con capturas de las 12 vistas en Edge sin ventana."
+                }
+              ],
+              "updated": "2026-11-12T04:15:44+01:00",
+              "result": "Seis maquetas autocontenidas en design/mockups/interfaz (vista de todos los proyectos y de un proyecto, con pasos a la vez, dependencias y categorías). Comprobadas con capturas de las 12 vistas en Edge sin ventana."
+            },
+            {
+              "id": "IN2-2",
+              "title": "Elegir distribución y animaciones",
+              "desc": "",
+              "state": "pending",
+              "notes": [
+                {
+                  "at": "2026-11-12T04:16:03+01:00",
+                  "by": "claude",
+                  "kind": "note",
+                  "text": "Bento descartado por la persona: no seguir por la línea de panel de azulejos."
+                },
+                {
+                  "at": "2026-11-12T12:26:52+01:00",
+                  "by": "claude",
+                  "kind": "note",
+                  "text": "Elegida B. Andenes. Mockup v2 sin emojis (iconos SVG), un proyecto por defecto con selector arriba, y decisiones dentro del recorrido: preguntas y propuestas en el propio andén, parada al cerrar fase y bandeja de decisiones: design/mockups/interfaz-andenes/andenes.html"
+                }
+              ],
+              "updated": "2026-11-12T12:26:52+01:00"
+            }
+          ]
+        },
+        {
+          "name": "Categorías y reglas del plan",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IN2-3",
+              "title": "Categoría obligatoria en cada paso",
+              "desc": "",
+              "state": "pending",
+              "notes": []
+            },
+            {
+              "id": "IN2-4",
+              "title": "Pedir nombres de fase descriptivos",
+              "desc": "",
+              "state": "pending",
+              "notes": []
+            },
+            {
+              "id": "IN2-5",
+              "title": "Pasos en paralelo y dependencias en el plan",
+              "desc": "",
+              "state": "pending",
+              "notes": []
+            }
+          ]
+        },
+        {
+          "name": "Montar el diseño elegido",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IN2-6",
+              "title": "Vista de todos los proyectos",
+              "desc": "",
+              "state": "pending",
+              "notes": []
+            },
+            {
+              "id": "IN2-7",
+              "title": "Proyecto con arrastre y paralelo",
+              "desc": "",
+              "state": "pending",
+              "notes": []
+            },
+            {
+              "id": "IN2-8",
+              "title": "Probar en ordenador y tablet",
+              "desc": "",
+              "state": "pending",
+              "notes": []
+            }
+          ]
+        }
+      ]
     }
   ],
-  "asks": []
+  "asks": [
+    {
+      "id": "P-1",
+      "kind": "proposal",
+      "title": "Distribución de la interfaz",
+      "text": "",
+      "step": "IN2-1",
+      "branch": "IN2",
+      "options": [
+        {
+          "label": "Carriles",
+          "file": ".unificador/propuestas/P-1/1.html"
+        },
+        {
+          "label": "Metro",
+          "file": ".unificador/propuestas/P-1/2.html"
+        },
+        {
+          "label": "Órbitas",
+          "file": ".unificador/propuestas/P-1/3.html"
+        },
+        {
+          "label": "Baraja",
+          "file": ".unificador/propuestas/P-1/4.html"
+        },
+        {
+          "label": "Línea del ahora",
+          "file": ".unificador/propuestas/P-1/5.html"
+        },
+        {
+          "label": "Bento",
+          "file": ".unificador/propuestas/P-1/6.html"
+        }
+      ],
+      "answer": null,
+      "by": "claude",
+      "created": "2026-11-12T04:15:44+01:00"
+    },
+    {
+      "id": "P-2",
+      "kind": "proposal",
+      "title": "Metro con tarjetas: que forma tienen las paradas",
+      "text": "",
+      "step": "IN2-2",
+      "branch": "IN2",
+      "options": [
+        {
+          "label": "A. Estaciones",
+          "file": ".unificador/propuestas/P-2/1.html"
+        },
+        {
+          "label": "B. Andenes",
+          "file": ".unificador/propuestas/P-2/2.html"
+        },
+        {
+          "label": "C. Cascada",
+          "file": ".unificador/propuestas/P-2/3.html"
+        }
+      ],
+      "answer": {
+        "option": 2,
+        "text": "B. Andenes, pero sin emojis (SVG o nada), con un solo proyecto por defecto y con las decisiones y propuestas de diseño dentro del recorrido",
+        "by": "persona",
+        "at": "2026-11-12T12:22:57+01:00",
+        "seen": true
+      },
+      "by": "claude",
+      "created": "2026-11-12T12:04:55+01:00"
+    }
+  ],
+  "next_ask": 3
 }

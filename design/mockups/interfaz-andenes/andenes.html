@@ -1,0 +1,450 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Unificador · Andenes</title>
+<style>
+:root{--bg:#f6f7fb;--panel:#fff;--ink:#1f2338;--muted:#6a7088;--line:#e4e7f1;--soft:#eff1f8;
+--shadow:0 2px 14px rgba(40,50,110,.08);--up:0 10px 30px rgba(40,50,110,.18);--ok:#1fa971;--warn:#e8930c;--dec:#8b5cf6}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* barra de arriba */
+.top{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);z-index:8}
+.logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px;white-space:nowrap}
+.logo svg{width:28px;height:28px}
+.pick{position:relative}
+.pickb{display:flex;align-items:center;gap:9px;padding:6px 12px 6px 8px;border-radius:14px;background:var(--soft);min-height:42px;font-weight:700}
+.pickb .sw{width:26px;height:26px;border-radius:8px;background:var(--c)}
+.pickb small{display:block;font-size:11px;color:var(--muted);font-weight:600;line-height:1}
+.menu{position:absolute;left:0;top:calc(100% + 6px);width:290px;background:var(--panel);border-radius:16px;box-shadow:var(--up);padding:6px;display:none;z-index:30}
+.menu.on{display:grid}
+.menu button{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:11px;text-align:left;min-height:46px}
+.menu button:hover,.menu button.on{background:var(--soft)}
+.menu .sw{width:22px;height:22px;border-radius:7px;background:var(--c);flex:none}
+.menu b{flex:1;font-size:14px}.menu small{color:var(--muted);font-size:12px;font-weight:700}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 6px}
+.menu .all{color:var(--muted);font-size:13px;font-weight:600}
+#legend{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px 3px 7px;border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap;min-height:32px;
+background:color-mix(in srgb,var(--k) 12%,#fff);color:color-mix(in srgb,var(--k) 75%,#000);border:1.5px solid transparent}
+.chip svg.i{width:14px;height:14px}.chip.on{border-color:var(--k)}
+.decb{position:relative;display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:99px;background:var(--ink);color:#fff;font-weight:700;min-height:40px;white-space:nowrap}
+.decb .n{min-width:22px;height:22px;border-radius:99px;background:var(--dec);display:grid;place-items:center;font-size:12px;padding:0 6px}
+.decb.zero .n{background:#ffffff33}
+.help{width:38px;height:38px;border-radius:50%;background:var(--soft);font-weight:800;display:grid;place-items:center}
+/* lienzo */
+#root{flex:1;min-height:0;overflow:auto;position:relative;-webkit-overflow-scrolling:touch;background:radial-gradient(#dfe3f3 1.2px,transparent 1.3px) 0 0/26px 26px,var(--bg)}
+.grab{cursor:grab}.grab.drag{cursor:grabbing;user-select:none}
+.m-box{position:relative;width:max-content;min-width:100%;padding:22px 60px 130px 22px}
+svg.rails{position:absolute;left:0;top:0;z-index:1;pointer-events:none;overflow:visible}
+.rail{fill:none;stroke-width:13;stroke-linecap:round;opacity:.2}
+.rail.on{opacity:1;stroke-dasharray:1;animation:draw .7s ease-out both}
+.rail.hold{opacity:.9;stroke-width:6;stroke-dasharray:2 14;animation:none}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+.dep0{fill:none;stroke:#fff;stroke-width:11;stroke-linecap:round}
+.dep{fill:none;stroke-width:5;stroke-linecap:round;stroke-dasharray:1 11;animation:dash 1.2s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-24}}
+.head,.end,.pc,.pjh{position:relative;z-index:2}
+/* cabecera del proyecto */
+.pjh{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 6px;max-width:calc(100vw - 50px)}
+.pjn{display:grid;font-size:26px;font-weight:800;line-height:1.1}.pjn small{font-size:13px;color:var(--muted);font-weight:600;margin-top:3px}
+.ring{width:54px;height:54px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:14px;font-weight:800;
+background:radial-gradient(closest-side,#fff 76%,transparent 78%),conic-gradient(var(--c) calc(var(--p)*1%),var(--soft) 0)}
+.wait{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:14px;background:color-mix(in srgb,var(--dec) 11%,#fff);color:#5b33c9;font-weight:700;font-size:13.5px;border:1.5px solid color-mix(in srgb,var(--dec) 30%,#fff);min-height:42px}
+.wait.none{background:#e6f7ef;color:#12704a;border-color:#bfe8d4}
+/* líneas */
+.row{display:flex;align-items:center;gap:50px;margin:38px 0;width:max-content}
+.head{width:170px;min-height:112px;align-content:center;background:var(--c);color:#fff;border-radius:18px;padding:12px 14px;box-shadow:var(--shadow);display:grid;gap:4px;flex:none}
+.code{justify-self:start;font-size:12px;font-weight:900;letter-spacing:.06em;padding:3px 8px;border-radius:8px;background:#fff;color:var(--c)}
+.head b{font-size:15px;line-height:1.2}.head small{font-size:11.5px;font-weight:600;opacity:.92}
+.bar{height:6px;border-radius:9px;background:rgba(255,255,255,.3);overflow:hidden;margin-top:2px}.bar i{display:block;height:100%;width:calc(var(--p)*1%);background:#fff}
+.end{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;flex:none;background:#fff;border:3px solid color-mix(in oklab,var(--c) 30%,#fff);color:color-mix(in oklab,var(--c) 60%,#fff)}
+.end.ok{background:var(--c);border-color:var(--c);color:#fff}.end svg.i{width:20px;height:20px}
+/* andén = una fase */
+.pc{width:272px;border-radius:22px;background:#fff;border:2.5px solid color-mix(in oklab,var(--c) 30%,#fff);box-shadow:var(--shadow);display:grid;overflow:hidden;transition:box-shadow .3s}
+.pc.st-d{border-color:var(--c)}.pc.st-p{border-style:dashed}
+.pc.st-w{border-color:var(--c);box-shadow:0 0 0 5px color-mix(in oklab,var(--c) 20%,transparent),var(--shadow)}
+.pc.st-r{border-color:var(--dec);box-shadow:0 0 0 5px color-mix(in srgb,var(--dec) 22%,transparent),var(--shadow)}
+.pc.flash{animation:flash 1.2s 2}
+@keyframes flash{50%{box-shadow:0 0 0 12px color-mix(in srgb,var(--dec) 35%,transparent),var(--shadow)}}
+.pch{display:flex;align-items:center;gap:10px;padding:11px 12px;background:color-mix(in oklab,var(--c) 13%,#fff)}
+.pc.st-p .pch{background:var(--soft)}.pc.st-d .pch{background:var(--c);color:#fff}
+.nb{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-weight:900;font-size:16px;flex:none;background:var(--soft);color:var(--muted)}
+.pc.st-w .nb,.pc.st-r .nb{background:var(--c);color:#fff}.pc.st-d .nb{background:#fff;color:var(--c)}
+.nb svg.i{width:20px;height:20px;stroke-width:3}
+.pcn{flex:1;display:grid;font-weight:800;font-size:14.5px;line-height:1.2}.pcn small{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;opacity:.75}
+.ok-tag{font-size:10.5px;font-weight:800;padding:3px 7px;border-radius:7px;background:#ffffff33;white-space:nowrap}
+.lock{display:flex;gap:6px;align-items:center;font-size:11.5px;font-weight:700;padding:5px 9px;border-radius:9px;background:#fff4dc;color:#8a4b00;margin:9px 10px 0}
+.lock svg.i{width:14px;height:14px}
+.pcb{display:grid;gap:2px;padding:8px 6px 4px}
+.sr{display:flex;align-items:center;gap:8px;text-align:left;padding:6px 7px;border-radius:11px;min-height:40px;width:100%;transition:opacity .25s}
+.sr:hover{background:color-mix(in oklab,var(--c) 8%,#fff)}
+.sr .tt{flex:1;font-size:12.5px;font-weight:650;line-height:1.22}
+.ci{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;flex:none;background:color-mix(in srgb,var(--k) 14%,#fff);color:color-mix(in srgb,var(--k) 80%,#000)}
+.ci svg.i{width:14px;height:14px}
+.bx{width:24px;height:24px;border-radius:8px;flex:none;display:grid;place-items:center;border:2.5px solid color-mix(in oklab,var(--c) 35%,#fff);color:#fff}
+.bx svg.i{width:14px;height:14px;stroke-width:3.2}
+.s-d .bx{background:var(--c);border-color:var(--c)}.s-d .tt{color:var(--muted)}
+.s-w .bx{border-color:var(--c)}.s-w .bx::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--c);animation:pulse 1.4s infinite}
+.s-a .bx{background:var(--dec);border-color:var(--dec)}
+@keyframes pulse{50%{box-shadow:0 0 0 6px color-mix(in oklab,var(--c) 25%,transparent)}}
+.pg{display:grid;gap:2px;margin:3px 0 3px 12px;padding:4px 0 4px 2px;border-left:3px dashed color-mix(in oklab,var(--c) 45%,#fff)}
+.parcap{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding-left:8px}
+.dim{opacity:.18!important}
+/* decisión dentro del andén */
+.dec{margin:2px 4px 8px 6px;padding:10px;border-radius:14px;background:color-mix(in srgb,var(--dec) 8%,#fff);border:1.5px solid color-mix(in srgb,var(--dec) 28%,#fff);display:grid;gap:8px}
+.dec .q{font-size:12.5px;font-weight:700;color:#4a2aa8;display:flex;gap:6px;align-items:flex-start}
+.dec .q svg.i{width:15px;height:15px;margin-top:1px}
+.opt{display:flex;align-items:center;gap:9px;text-align:left;padding:8px 10px;border-radius:11px;background:#fff;border:1.5px solid var(--line);font-size:12.5px;font-weight:600;min-height:40px;width:100%}
+.opt .rd{width:18px;height:18px;border-radius:50%;border:2px solid #c4c9dd;flex:none}
+.opt.on{border-color:var(--dec)}.opt.on .rd{border:5px solid var(--dec)}
+.opt small{display:block;color:var(--muted);font-weight:500;font-size:11.5px}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.th{display:grid;gap:4px;padding:4px;border-radius:11px;background:#fff;border:1.5px solid var(--line);text-align:center;font-size:11px;font-weight:700}
+.th svg{width:100%;height:auto;border-radius:7px;display:block;background:#f6f7fb}
+.th:hover{border-color:var(--dec)}.th.on{border-color:var(--dec);box-shadow:0 0 0 3px color-mix(in srgb,var(--dec) 25%,transparent)}
+.drow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:99px;font-weight:700;font-size:13px;min-height:38px;background:#fff;border:1.5px solid var(--line)}
+.btn.pri{background:var(--dec);border-color:var(--dec);color:#fff}.btn.go{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn[disabled]{opacity:.45;cursor:default}
+.hint{font-size:11.5px;color:var(--muted)}
+.picked{font-size:12px;font-weight:700;color:#12704a;display:flex;gap:6px;align-items:center;padding:0 7px 6px 39px}
+.picked svg.i{width:14px;height:14px}
+textarea{width:100%;font:inherit;font-size:13px;border:1.5px solid var(--line);border-radius:11px;padding:8px 10px;resize:vertical;min-height:62px}
+/* parada al cerrar fase */
+.gate{margin:4px 8px 10px;padding:10px;border-radius:14px;background:color-mix(in srgb,var(--dec) 8%,#fff);border:1.5px dashed color-mix(in srgb,var(--dec) 45%,#fff);display:grid;gap:8px}
+.gate p{margin:0;font-size:12.5px;font-weight:600;color:#4a2aa8}
+.pcf{display:flex;align-items:center;gap:10px;padding:8px 12px 11px;font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+.mix{flex:1;display:flex;height:8px;border-radius:9px;overflow:hidden;background:var(--soft)}.mix i{background:var(--k)}
+/* terminadas */
+.donebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;position:relative;z-index:2}
+.donebar .code{background:var(--c);color:#fff;font-size:11px}
+.donebar button.t{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--muted);padding:6px 10px;border-radius:99px;background:#fff;border:1.5px solid var(--line);min-height:36px}
+/* zoom */
+.m-zoom{position:fixed;right:16px;bottom:16px;display:flex;background:var(--panel);border-radius:14px;box-shadow:var(--up);z-index:6;overflow:hidden}
+.m-zoom button{width:46px;height:46px;font-size:20px;font-weight:700}.m-zoom span{align-self:center;font-size:12px;font-weight:700;width:44px;text-align:center}
+/* bandeja de decisiones */
+#drawer{position:fixed;right:0;top:0;bottom:0;width:min(380px,100%);background:var(--panel);box-shadow:var(--up);z-index:40;transform:translateX(105%);transition:transform .3s cubic-bezier(.2,.9,.3,1);display:flex;flex-direction:column}
+#drawer.on{transform:none}
+.dh{display:flex;align-items:center;gap:10px;padding:16px 16px 10px}.dh b{flex:1;font-size:18px}
+.x{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--soft)}
+.dl{overflow:auto;padding:4px 12px 20px;display:grid;gap:8px;align-content:start}
+.di{display:grid;gap:4px;text-align:left;padding:12px;border-radius:14px;border:1.5px solid var(--line);background:#fff}
+.di:hover{border-color:var(--dec)}
+.di .ty{display:flex;gap:6px;align-items:center;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#5b33c9}
+.di .ty svg.i{width:14px;height:14px}
+.di b{font-size:14px}.di small{color:var(--muted);font-size:12px}
+.dsec{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:10px 4px 0}
+.di.old{opacity:.7}.di.old .ty{color:#12704a}
+/* visor de propuestas */
+#viewer{position:fixed;inset:0;background:rgba(20,24,44,.55);z-index:50;display:none;padding:18px}
+#viewer.on{display:grid;place-items:center}
+.vw{width:min(1000px,100%);max-height:100%;background:var(--panel);border-radius:22px;box-shadow:var(--up);display:flex;flex-direction:column;overflow:hidden}
+.vh{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.vh b{flex:1;font-size:16px;min-width:180px}
+.vtabs{display:flex;gap:6px;padding:10px 16px 0;flex-wrap:wrap}
+.vtabs button{padding:8px 14px;border-radius:99px;background:var(--soft);font-weight:700;font-size:13px;min-height:38px}
+.vtabs button.on{background:var(--ink);color:#fff}
+.vbody{flex:1;min-height:0;overflow:auto;padding:14px 16px}
+.vbody svg{width:100%;height:auto;border-radius:14px;background:#f6f7fb;border:1px solid var(--line)}
+.vbody p{color:var(--muted);font-size:14px;margin:10px 2px 0}
+.vf{display:flex;gap:8px;padding:12px 16px 16px;border-top:1px solid var(--line);flex-wrap:wrap;align-items:center}
+.vf textarea{flex:1 1 260px;min-height:42px}
+/* ayuda y aviso */
+#gloss{position:fixed;right:12px;top:64px;width:min(340px,calc(100% - 24px));background:var(--panel);border-radius:16px;box-shadow:var(--up);padding:14px 16px;z-index:35;display:none;font-size:13.5px}
+#gloss.on{display:block}#gloss b{display:block;margin-top:8px}#gloss span{color:var(--muted)}
+#toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,160%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:14px;font-weight:600;font-size:14px;z-index:60;transition:transform .3s;max-width:calc(100% - 32px)}
+#toast.on{transform:translate(-50%,0)}
+@media(max-width:760px){#legend{margin-left:0;order:5;width:100%;overflow-x:auto;flex-wrap:nowrap}.logo span{display:none}.top{padding:8px 12px}.pjn{font-size:21px}}
+</style></head><body>
+<header class="top">
+  <b class="logo"><svg viewBox="0 0 28 28"><rect width="28" height="28" rx="8" fill="#1f2338"/><path d="M6 8c6 0 6 6 12 6M6 20c6 0 6-6 12-6h4" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="6" cy="8" r="2.4" fill="#e0559a"/><circle cx="6" cy="20" r="2.4" fill="#4f6bed"/></svg><span>Unificador</span></b>
+  <div class="pick"><button class="pickb" id="pickb"></button><div class="menu" id="menu"></div></div>
+  <div id="legend"></div>
+  <button class="decb" id="decb"></button>
+  <button class="help" id="help" title="¿Qué es cada cosa?">?</button>
+</header>
+<main id="root"></main>
+<aside id="drawer"></aside>
+<div id="viewer"></div>
+<div id="gloss"><b>Línea</b><span>Una rama del plan. Lleva su código (PM, IN2…) y un tono del color del proyecto.</span>
+<b>Andén</b><span>Una fase entera, con sus pasos dentro como casillas.</span>
+<b>Decisión</b><span>Un paso morado. La pregunta o las propuestas de diseño se contestan ahí mismo, en el andén.</span>
+<b>Parada</b><span>Al terminar una fase el agente se para. La vía se queda punteada hasta que la apruebas o pides cambios.</span>
+<b>A la vez</b><span>Pasos unidos por una raya discontinua: se hacen al mismo tiempo.</span>
+<b>Enlace punteado</b><span>Una fase que no empieza hasta que acabe otra de otra línea.</span></div>
+<div id="toast"></div>
+<script>
+/* ---- iconos SVG (nada de emojis) ---- */
+const IC = {
+  codigo: '<path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/>',
+  interfaz: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M9 9v11"/>',
+  pruebas: '<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/><path d="M7.5 15h9"/>',
+  investigar: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+  decidir: '<path d="M12 21v-8M12 13L6 7M12 13l6-6M3 7h6M15 7h6M3 7l3-3M21 7l-3-3"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', lock: '<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>', down: '<path d="M6 9l6 6 6-6"/>',
+  ask: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17.3v.2"/>',
+  eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  pause: '<path d="M9 5v14M15 5v14"/>', inbox: '<path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 3h6l1-3h5"/>',
+};
+const ic = (k) => { const t = document.createElement("template"); t.innerHTML = `<svg class="i" viewBox="0 0 24 24">${IC[k]}</svg>`; return t.content.firstChild; };
+const CATS = { codigo: { n: "Código", c: "#4f6bed" }, interfaz: { n: "Interfaz", c: "#e0559a" }, pruebas: { n: "Pruebas", c: "#1fa971" },
+  investigar: { n: "Investigar", c: "#e8930c" }, decidir: { n: "Decidir", c: "#8b5cf6" } };
+
+/* ---- miniaturas de propuesta: dibujos SVG de cada distribución ---- */
+const TH = {
+  est: `<path d="M20 50H300" stroke="#8b5cf6" stroke-width="7" stroke-linecap="round"/>${[60, 140, 220].map((x) => `<circle cx="${x}" cy="50" r="12" fill="#fff" stroke="#8b5cf6" stroke-width="6"/><rect x="${x - 34}" y="74" width="68" height="70" rx="9" fill="#fff" stroke="#d7dbea" stroke-width="2"/><rect x="${x - 26}" y="84" width="40" height="7" rx="3" fill="#c9cdea"/><rect x="${x - 26}" y="98" width="52" height="6" rx="3" fill="#e4e7f1"/><rect x="${x - 26}" y="110" width="46" height="6" rx="3" fill="#e4e7f1"/>`).join("")}<path d="M20 160H300" stroke="#e0559a" stroke-width="7" stroke-linecap="round" opacity=".35"/>`,
+  and: `<path d="M20 80H300" stroke="#8b5cf6" stroke-width="10" stroke-linecap="round"/>${[30, 128, 226].map((x, i) => `<rect x="${x}" y="28" width="76" height="104" rx="13" fill="#fff" stroke="${i < 2 ? "#8b5cf6" : "#c9cdea"}" stroke-width="3" ${i == 2 ? 'stroke-dasharray="6 5"' : ""}/><rect x="${x}" y="28" width="76" height="24" rx="12" fill="${i == 0 ? "#8b5cf6" : "#ece6fd"}"/>${[64, 82, 100].map((y) => `<rect x="${x + 9}" y="${y}" width="10" height="10" rx="3" fill="${i == 0 || (i == 1 && y == 64) ? "#8b5cf6" : "#e4e7f1"}"/><rect x="${x + 24}" y="${y + 2}" width="42" height="6" rx="3" fill="#e4e7f1"/>`).join("")}`).join("")}`,
+  cas: `<path d="M40 20V170" stroke="#8b5cf6" stroke-width="10" stroke-linecap="round"/>${[22, 76, 130].map((y, i) => `<rect x="${64 + i * 30}" y="${y}" width="170" height="40" rx="11" fill="#fff" stroke="${i < 2 ? "#8b5cf6" : "#c9cdea"}" stroke-width="3"/><circle cx="40" cy="${y + 20}" r="9" fill="#fff" stroke="#8b5cf6" stroke-width="5"/><rect x="${78 + i * 30}" y="${y + 11}" width="70" height="7" rx="3" fill="#c9cdea"/><rect x="${78 + i * 30}" y="${y + 23}" width="110" height="6" rx="3" fill="#e4e7f1"/>`).join("")}`,
+};
+const thumb = (k) => { const t = document.createElement("template"); t.innerHTML = `<svg viewBox="0 0 320 180">${TH[k]}</svg>`; return t.content.firstChild; };
+
+/* ---- datos: un proyecto se ve solo; los demás se cambian arriba ---- */
+const S = (id, t, cat, st = "p", ask) => ({ id, t, cat, st, ask });
+const DATA = [
+  { id: "uni", n: "Unificador", hue: 295, br: [
+    { id: "IN2", n: "Interfaz nueva", ph: [
+      { n: "Propuestas de distribución", ok: false, steps: [S("IN2-1", "Seis diseños distintos para comparar", "interfaz", "d"),
+        S("IN2-2", "Elegir la forma de las paradas", "decidir", "a", { kind: "p", id: "P-2", title: "Metro con tarjetas: qué forma tienen las paradas",
+          opts: [{ n: "A. Estaciones", k: "est", d: "Círculos en la vía y la tarjeta de la fase colgando debajo. Ligero, pero la vía y los pasos quedan separados." },
+                 { n: "B. Andenes", k: "and", d: "Cada parada es la fase entera, con sus pasos dentro como casillas. Se lee todo de un vistazo." },
+                 { n: "C. Cascada", k: "cas", d: "La línea baja en vertical y cada fase se desplaza un poco a la derecha. Bueno para móvil." }] })] },
+      { n: "Categorías y reglas del plan", steps: [S("IN2-9", "Qué categorías lleva cada paso", "decidir", "a", { kind: "q", id: "P-3", title: "¿Con qué categorías etiquetamos los pasos?",
+          opts: [{ n: "Cinco fijas", d: "Código, interfaz, pruebas, investigar y decidir" }, { n: "Tres fijas", d: "Hacer, probar y decidir" }, { n: "Libres", d: "El agente pone la que quiera" }] }),
+        [S("IN2-3", "Categoría obligatoria en cada paso", "codigo"), S("IN2-4", "Pedir nombres de fase descriptivos", "codigo")], S("IN2-5", "Pasos en paralelo y dependencias en el plan", "codigo")] },
+      { n: "Montar el diseño elegido", needs: "PM/0", steps: [S("IN2-7", "Proyecto con arrastre y paralelo", "interfaz"), S("IN2-6", "Cambiar de proyecto desde arriba", "interfaz"), S("IN2-8", "Probar en ordenador y tablet", "pruebas")] }] },
+    { id: "PM", n: "Prompts maestros", ph: [
+      { n: "Biblioteca", ok: false, steps: [S("PM-1", "Carpeta de prompts con unos de serie", "codigo", "d"), S("PM-2", "Verlos y copiarlos desde la web", "interfaz", "d")] },
+      { n: "Cola", steps: [S("PM-3", "Poner un prompt en cola sobre una rama o fase", "codigo"), S("PM-4", "Que el agente lo recoja con el aviso automático", "pruebas")] }] },
+    { id: "PYD", n: "Propuestas y decisiones", ph: [
+      { n: "Modelo", ok: true, steps: [S("PYD-1", "Preguntas con opciones", "codigo", "d"), S("PYD-2", "Propuestas con un HTML por opción", "codigo", "d"), S("PYD-3", "Respuesta desde el chat o la web", "codigo", "d")] },
+      { n: "Verlas y elegir", ok: true, steps: [[S("PYD-4", "Miniaturas de las propuestas", "interfaz", "d"), S("PYD-5", "Visor a pantalla completa", "interfaz", "d")]] },
+      { n: "Reglas", ok: true, steps: [S("PYD-6", "Cómo deben preparar las propuestas los agentes", "codigo", "d")] }] },
+    { id: "TA", n: "Tablero", ph: [
+      { n: "Proyecto", ok: true, steps: [S("TA-1", "Registro de proyectos", "codigo", "d"), S("TA-2", "Abrir un proyecto por su ruta", "codigo", "d"), S("TA-3", "Probar con tres proyectos", "pruebas", "d")] },
+      { n: "Portada", ok: true, steps: [S("TA-4", "Tarjeta por proyecto", "interfaz", "d"), S("TA-5", "Avance en vivo", "codigo", "d")] }] },
+    { id: "FCP", n: "Fases con parada suave", ph: [
+      { n: "Modelo", ok: true, steps: [S("FCP-1", "Estado de revisión en cada fase", "codigo", "d"), S("FCP-2", "Ramas sin paradas", "codigo", "d")] },
+      { n: "Reglas y web", ok: true, steps: [S("FCP-3", "Aprobar o pedir cambios desde la web", "interfaz", "d"), S("FCP-4", "El agente para al cerrar fase", "codigo", "d")] }] }] },
+  { id: "lola", n: "Tienda Lola", hue: 22, br: [
+    { id: "CA", n: "Carrito de compra", ph: [
+      { n: "Cimientos del carrito", ok: true, steps: [S("CA-1", "Modelo del carrito", "codigo", "d"), S("CA-2", "Guardar y recuperar", "codigo", "d")] },
+      { n: "Pagos", steps: [S("CA-3", "Comparar pasarelas de pago", "investigar", "d"), [S("CA-4", "Conectar la pasarela", "codigo", "w"), S("CA-5", "Pantalla de pago", "interfaz", "w")], S("CA-6", "Pago fallido y reintentos", "pruebas")] },
+      { n: "Recibos", steps: [S("CA-7", "Recibo por correo", "codigo")] }] },
+    { id: "CT", n: "Catálogo", ph: [
+      { n: "Fichas de producto", steps: [S("CT-1", "Plantilla de ficha", "interfaz", "d"), S("CT-2", "Fotos cuadradas o verticales", "decidir", "a", { kind: "q", id: "P-1", title: "¿Cómo van las fotos en la ficha?",
+          opts: [{ n: "Cuadradas", d: "Todas iguales, la rejilla queda ordenada" }, { n: "Verticales", d: "Se ve la prenda entera" }] })] },
+      { n: "Buscador", needs: "CA/1", steps: [S("CT-3", "Buscar por nombre y talla", "codigo"), S("CT-4", "Probar búsquedas con erratas", "pruebas")] }] }] },
+  { id: "visor", n: "Visor de capturas", hue: 240, br: [
+    { id: "EN", n: "Emparejamiento nuevo", ph: [
+      { n: "Estudio previo", ok: true, steps: [S("EN-1", "Estudiar cómo empareja Apollo", "investigar", "d"), S("EN-2", "Maquetas del emparejamiento", "interfaz", "d")] },
+      { n: "Protocolo", steps: [S("EN-3", "Solicitudes, billetes y tokens", "codigo", "w"), S("EN-4", "Pruebas del emparejamiento", "pruebas")] }] }] },
+  { id: "kan", n: "Kanvas", hue: 155, br: [
+    { id: "EX", n: "Exportar tablero", ph: [
+      { n: "Formato de salida", ok: true, steps: [S("EX-1", "Mirar qué exportan otros tableros", "investigar", "d"), S("EX-2", "Exportar a Markdown", "codigo", "d")] },
+      { n: "Comprobación", steps: [S("EX-3", "Probar con un tablero de 200 tareas", "pruebas")] }] }] },
+];
+const tone = (hue, t) => `oklch(${(0.5 + 0.2 * t).toFixed(3)} ${(0.19 - 0.05 * t).toFixed(3)} ${(hue + (t - 0.5) * 20).toFixed(1)})`;
+for (const p of DATA) { p.c = tone(p.hue, 0.3); p.br.forEach((b, i) => { b.c = tone(p.hue, p.br.length === 1 ? 0.3 : i / (p.br.length - 1)); });
+  for (const b of p.br) b.ph.forEach((ph, k) => { ph.key = b.id + "/" + k; ph.b = b; ph.k = k; for (const s of ph.steps.flat()) Object.assign(s, { _b: b, _ph: ph }); }); }
+const HIST = [{ ty: "Propuesta", t: "Distribución de la interfaz", a: "Metro", w: "IN2-1" }, { ty: "Fase aprobada", t: "Verlas y elegir", a: "Aprobada", w: "PYD" }];
+
+/* ---- utilidades ---- */
+function h(t, a, ...k) {
+  const e = document.createElement(t);
+  for (const x in a || {}) {
+    if (x === "on") for (const ev in a.on) e.addEventListener(ev, a.on[ev]);
+    else if (x === "css") for (const v in a.css) e.style.setProperty(v, a.css[v]);
+    else if (a[x] != null && a[x] !== false) e.setAttribute(x, a[x]);
+  }
+  for (const c of k.flat(9)) if (c != null && c !== false) e.append(c.nodeType ? c : String(c));
+  return e;
+}
+const flat = (ph) => ph.steps.flat(), bsteps = (b) => b.ph.flatMap(flat), psteps = (p) => p.br.flatMap(bsteps);
+const done = (l) => l.filter((s) => s.st === "d").length, pct = (l) => Math.round(100 * done(l) / l.length);
+const phSt = (ph) => { const l = flat(ph); if (l.every((s) => s.st === "d")) return ph.ok || ph.k === ph.b.ph.length - 1 && ph.ok !== false ? "d" : "r";
+  return l.some((s) => s.st !== "p") ? "w" : "p"; };
+const brDone = (b) => b.ph.every((ph) => phSt(ph) === "d");
+let CUR = DATA[0], FILTER = null, Z = 1, BOX = null, SHOW_DONE = false;
+const toast = (t) => { const e = document.getElementById("toast"); e.textContent = t; e.classList.add("on"); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove("on"), 2600); };
+const SAVED = "Guardado. Tu agente lo recibirá solo.";
+// Todo lo que espera a la persona en el proyecto: preguntas, propuestas y fases paradas.
+function pending(p) {
+  const out = [];
+  for (const b of p.br) for (const ph of b.ph) {
+    for (const s of flat(ph)) if (s.st === "a" && s.ask) out.push({ ty: s.ask.kind === "p" ? "Propuesta de diseño" : "Pregunta", icon: s.ask.kind === "p" ? "eye" : "ask", t: s.ask.title, b, ph, s });
+    if (phSt(ph) === "r") out.push({ ty: "Fase terminada · revisar", icon: "pause", t: `«${ph.n}» está lista`, b, ph });
+  }
+  return out;
+}
+
+/* ---- un paso, y su decisión debajo si la tiene ---- */
+const SEL = {};
+function srow(s) {
+  const r = h("button", { class: "sr s-" + s.st, "data-cat": s.cat, css: { "--k": CATS[s.cat].c }, title: CATS[s.cat].n },
+    h("span", { class: "bx" }, s.st === "d" && ic("check"), s.st === "a" && ic("ask")), h("span", { class: "tt" }, s.t), h("span", { class: "ci" }, ic(s.cat)));
+  if (!s.ask) return r;
+  if (s.st === "d") return [r, h("div", { class: "picked" }, ic("check"), `Elegiste «${s.ask.opts[s.ask.pick].n}»`)];
+  return [r, decBlock(s)];
+}
+function decBlock(s) {
+  const a = s.ask, sel = SEL[a.id];
+  const send = h("button", { class: "btn pri", disabled: sel == null ? "" : null, on: { click: () => answer(s, SEL[a.id]) } }, ic("check"), "Enviar");
+  const body = a.kind === "p"
+    ? [h("div", { class: "thumbs" }, a.opts.map((o, i) => h("button", { class: "th" + (sel === i ? " on" : ""), title: "Ver " + o.n, on: { click: () => viewer(s, i) } }, thumb(o.k), o.n))),
+       h("div", { class: "drow" }, h("button", { class: "btn", on: { click: () => viewer(s, sel ?? 0) } }, ic("eye"), "Verlas en grande"), sel != null && send),
+       h("span", { class: "hint" }, sel != null ? `Marcada: ${a.opts[sel].n}` : "Toca una para verla y elegirla")]
+    : [a.opts.map((o, i) => h("button", { class: "opt" + (sel === i ? " on" : ""), on: { click: () => { SEL[a.id] = i; render(); } } }, h("span", { class: "rd" }), h("span", {}, o.n, h("small", {}, o.d)))),
+       h("div", { class: "drow" }, send)];
+  return h("div", { class: "dec", "data-dec": s.id }, h("div", { class: "q" }, ic(a.kind === "p" ? "eye" : "ask"), a.title), body);
+}
+function answer(s, i) { s.ask.pick = i; s.st = "d"; delete SEL[s.ask.id]; document.getElementById("viewer").classList.remove("on");
+  toast(`Elegiste «${s.ask.opts[i].n}». ${SAVED}`); render(); }
+
+/* ---- la parada al cerrar una fase ---- */
+function gate(ph) {
+  const g = h("div", { class: "gate" }, h("p", {}, "Fase terminada. El agente se ha parado a esperarte."));
+  const row = h("div", { class: "drow" },
+    h("button", { class: "btn go", on: { click: () => { ph.ok = true; toast(`Fase «${ph.n}» aprobada. ${SAVED}`); render(); } } }, ic("check"), "Aprobar"),
+    h("button", { class: "btn", on: { click: () => { row.replaceWith(form); ta.focus(); } } }, "Pedir cambios"));
+  const ta = h("textarea", { placeholder: "¿Qué quieres que cambie antes de seguir?" });
+  const form = h("div", { class: "drow" }, ta, h("button", { class: "btn pri", on: { click: () => { if (!ta.value.trim()) return ta.focus(); ph.ok = true;
+    flat(ph).at(-1).st = "w"; ph.ok = undefined; toast(`Cambios pedidos en «${ph.n}». ${SAVED}`); render(); } } }, "Enviar"));
+  g.append(row); return g;
+}
+
+/* ---- andén, línea, proyecto ---- */
+const grp = (x) => Array.isArray(x) ? h("div", { class: "pg" }, h("span", { class: "parcap" }, "a la vez"), x.map(srow)) : srow(x);
+function lock(ph) {
+  if (!ph.needs) return null; const [bid, k] = ph.needs.split("/"), t = CUR.br.find((b) => b.id === bid).ph[+k];
+  return phSt(t) === "d" ? null : h("span", { class: "lock" }, ic("lock"), `Espera a «${t.n}» de ${bid}`);
+}
+function card(ph) {
+  const st = phSt(ph), l = flat(ph);
+  return h("div", { class: "pc st-" + st, "data-node": st, "data-ph": ph.key, "data-needs": ph.needs },
+    h("div", { class: "pch" }, h("span", { class: "nb" }, st === "d" ? ic("check") : ph.k + 1), h("span", { class: "pcn" }, h("small", {}, "Fase " + (ph.k + 1)), ph.n),
+      st === "d" && h("span", { class: "ok-tag" }, "Aprobada")),
+    lock(ph), h("div", { class: "pcb" }, ph.steps.map(grp)), st === "r" && gate(ph),
+    h("div", { class: "pcf" }, mix(l), h("span", {}, `${done(l)} de ${l.length}`)));
+}
+function mix(l) { const m = h("div", { class: "mix" }); for (const c in CATS) { const n = l.filter((s) => s.cat === c).length; if (n) m.append(h("i", { css: { "--k": CATS[c].c }, style: `flex:${n}` })); } return m; }
+const head = (b) => h("div", { class: "head", css: { "--p": pct(bsteps(b)) } }, h("span", { class: "code" }, b.id), h("b", {}, b.n),
+  h("small", {}, `${done(bsteps(b))} de ${bsteps(b).length} pasos`), h("span", { class: "bar" }, h("i", {})));
+const row = (b) => h("div", { class: "row", "data-br": b.id, css: { "--c": b.c } }, head(b), b.ph.map(card), h("div", { class: "end" + (brDone(b) ? " ok" : "") }, ic("flag")));
+function project(p) {
+  const all = psteps(p), pend = pending(p), act = p.br.filter((b) => !brDone(b)), fin = p.br.filter(brDone);
+  return h("div", {},
+    h("div", { class: "pjh", css: { "--c": p.c } }, h("span", { class: "ring", css: { "--p": pct(all) } }, pct(all) + "%"),
+      h("span", { class: "pjn" }, p.n, h("small", {}, `${done(all)} de ${all.length} pasos · ${act.length} ${act.length === 1 ? "rama en marcha" : "ramas en marcha"}`)),
+      h("button", { class: "wait" + (pend.length ? "" : " none"), on: { click: drawer } }, ic(pend.length ? "inbox" : "check"),
+        pend.length ? `${pend.length} ${pend.length === 1 ? "cosa espera" : "cosas esperan"} tu decisión` : "Nada te espera")),
+    act.map(row),
+    fin.length > 0 && h("div", { class: "donebar" }, h("button", { class: "t", on: { click: () => { SHOW_DONE = !SHOW_DONE; render(); } } }, ic("down"),
+      SHOW_DONE ? "Ocultar terminadas" : `${fin.length} ${fin.length === 1 ? "rama terminada" : "ramas terminadas"}`), !SHOW_DONE && fin.map((b) => h("span", { class: "code", css: { "--c": b.c } }, b.id))),
+    SHOW_DONE && fin.map(row));
+}
+
+/* ---- vías pintadas detrás, midiendo dónde cae cada andén ---- */
+const R = (e) => { const w = BOX.getBoundingClientRect(), r = e.getBoundingClientRect(), l = (r.left - w.left) / Z, t = (r.top - w.top) / Z, W = r.width / Z, H = r.height / Z;
+  return { l, t, r: l + W, b: t + H, cx: l + W / 2, cy: t + H / 2 }; };
+const hlink = (a, b) => { const m = (a.r + b.l) / 2; return `M${a.r - 3},${a.cy}C${m},${a.cy} ${m},${b.cy} ${b.l + 3},${b.cy}`; };
+function rails() {
+  let out = "", n = 0;
+  for (const rw of BOX.querySelectorAll("[data-br]")) {
+    const c = rw.style.getPropertyValue("--c"), nodes = [rw.querySelector(".head"), ...rw.querySelectorAll(".pc"), rw.querySelector(".end")];
+    for (let i = 1; i < nodes.length; i++) { const a = nodes[i - 1], b = nodes[i], st = b.dataset.node ?? (b.classList.contains("ok") ? "d" : "p");
+      const hold = a.dataset.node === "r", on = !hold && st !== "p";
+      out += `<path class="rail${on ? " on" : ""}${hold ? " hold" : ""}" pathLength="${hold ? "" : 1}" style="animation-delay:${n++ * 40}ms" stroke="${hold ? "#8b5cf6" : c}" d="${hlink(R(a), R(b))}"/>`; }
+  }
+  for (const to of BOX.querySelectorAll("[data-needs]")) {
+    const from = BOX.querySelector(`[data-ph="${to.dataset.needs}"]`); if (!from) continue;
+    const a = R(from), b = R(to), c = from.closest("[data-br]").style.getPropertyValue("--c"), dn = b.t > a.t;
+    const x1 = a.r - 36, y1 = dn ? a.b : a.t, x2 = b.l + 36, y2 = dn ? b.t : b.b, m = (y1 + y2) / 2, d = `M${x1},${y1}C${x1},${m} ${x2},${m} ${x2},${y2}`;
+    const sq = (x, y) => `<rect x="${x - 8}" y="${y - 8}" width="16" height="16" rx="5" fill="#fff" stroke="${c}" stroke-width="4"/>`;
+    out = `<path class="dep0" d="${d}"/><path class="dep" stroke="${c}" d="${d}"/>${sq(x1, y1)}${sq(x2, y2)}` + out;
+  }
+  return out;
+}
+function alignDeps() {
+  for (const to of BOX.querySelectorAll("[data-needs]")) { to.style.marginLeft = "";
+    const from = BOX.querySelector(`[data-ph="${to.dataset.needs}"]`); if (!from) continue;
+    const gap = R(from).r + 54 - R(to).l; if (gap > 0) to.style.marginLeft = gap + "px"; }
+}
+function paint() { if (!BOX?.isConnected) return; const z = Z; Z = 1; BOX.style.zoom = 1; BOX.querySelector("svg.rails")?.remove(); alignDeps();
+  BOX.insertAdjacentHTML("afterbegin", `<svg class="rails" width="${BOX.scrollWidth}" height="${BOX.scrollHeight}">${rails()}</svg>`); Z = z; BOX.style.zoom = Z; }
+function pan(el) {
+  if (el._pan) return; el._pan = 1; let d = null, moved = false; el.classList.add("grab");
+  el.addEventListener("pointerdown", (e) => { if (e.pointerType === "mouse" && !e.target.closest("button,textarea")) { d = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop }; moved = false; } });
+  window.addEventListener("pointermove", (e) => { if (!d) return; const dx = e.clientX - d.x, dy = e.clientY - d.y;
+    if (!moved && Math.hypot(dx, dy) < 5) return; moved = true; el.classList.add("drag"); el.scrollLeft = d.l - dx; el.scrollTop = d.t - dy; });
+  window.addEventListener("pointerup", () => { d = null; el.classList.remove("drag"); });
+}
+
+/* ---- bandeja de decisiones ---- */
+function drawer() {
+  const el = document.getElementById("drawer"), pend = pending(CUR);
+  el.replaceChildren(h("div", { class: "dh" }, h("b", {}, "Tus decisiones"), h("button", { class: "x", title: "Cerrar", on: { click: () => el.classList.remove("on") } }, ic("x"))),
+    h("div", { class: "dl" }, h("div", { class: "dsec" }, pend.length ? "Esperándote" : "Nada pendiente"),
+      pend.map((d) => h("button", { class: "di", on: { click: () => { el.classList.remove("on"); goTo(d); } } },
+        h("span", { class: "ty" }, ic(d.icon), d.ty), h("b", {}, d.t), h("small", {}, `${d.b.id} · ${d.b.n} › ${d.ph.n}`))),
+      CUR === DATA[0] && [h("div", { class: "dsec" }, "Ya decidido"), HIST.map((x) => h("div", { class: "di old" }, h("span", { class: "ty" }, ic("check"), x.ty), h("b", {}, x.t), h("small", {}, `${x.a} · ${x.w}`)))]));
+  el.classList.add("on");
+}
+function goTo(d) {
+  const pc = BOX.querySelector(`[data-ph="${d.ph.key}"]`); if (!pc) return;
+  const root = document.getElementById("root"), r = R(pc);
+  root.scrollTo({ left: r.l * Z - 40, top: r.t * Z - 40, behavior: "smooth" });
+  pc.classList.remove("flash"); void pc.offsetWidth; pc.classList.add("flash");
+  if (d.s?.ask.kind === "p") setTimeout(() => viewer(d.s, 0), 500);
+}
+
+/* ---- visor de propuestas a pantalla completa ---- */
+function viewer(s, i) {
+  const a = s.ask, el = document.getElementById("viewer"), o = a.opts[i]; SEL[a.id] = i;
+  const ta = h("textarea", { placeholder: "Algo que cambiarías de esta (opcional)" });
+  el.replaceChildren(h("div", { class: "vw" },
+    h("div", { class: "vh" }, h("b", {}, a.title), h("span", { class: "hint" }, `${s._b.id} · ${s.id}`), h("button", { class: "x", title: "Cerrar", on: { click: () => { el.classList.remove("on"); render(); } } }, ic("x"))),
+    h("div", { class: "vtabs" }, a.opts.map((x, k) => h("button", { class: k === i ? "on" : "", on: { click: () => viewer(s, k) } }, x.n))),
+    h("div", { class: "vbody" }, thumb(o.k), h("p", {}, o.d)),
+    h("div", { class: "vf" }, ta, h("button", { class: "btn pri", on: { click: () => answer(s, i) } }, ic("check"), `Elegir «${o.n}»`))));
+  el.classList.add("on");
+}
+
+/* ---- arriba: selector de proyecto y leyenda ---- */
+function topBar() {
+  const pend = pending(CUR).length;
+  document.getElementById("pickb").replaceChildren(h("span", { class: "sw", css: { "--c": CUR.c } }), h("span", {}, h("small", {}, "Proyecto"), CUR.n), ic("down"));
+  document.getElementById("menu").replaceChildren(...DATA.map((p) => h("button", { class: p === CUR ? "on" : "", on: { click: () => { CUR = p; SHOW_DONE = false; menu(false); render(); } } },
+    h("span", { class: "sw", css: { "--c": p.c } }), h("b", {}, p.n), h("small", {}, pending(p).length ? `${pending(p).length} te esperan · ` : "", pct(psteps(p)) + "%"))),
+    h("hr"), h("button", { class: "all", on: { click: () => { menu(false); toast("La vista de todos juntos queda como opción secundaria."); } } }, "Ver todos los proyectos juntos"));
+  const db = document.getElementById("decb"); db.className = "decb" + (pend ? "" : " zero");
+  db.replaceChildren(ic("inbox"), "Decisiones", h("span", { class: "n" }, pend));
+}
+const menu = (on) => document.getElementById("menu").classList.toggle("on", on);
+function applyFilter() {
+  document.querySelectorAll("[data-cat]").forEach((e) => e.classList.toggle("dim", !!FILTER && e.dataset.cat !== FILTER));
+  document.querySelectorAll("#legend .chip").forEach((e) => e.classList.toggle("on", e.dataset.c === FILTER));
+}
+function render() {
+  const root = document.getElementById("root"), sx = root.scrollLeft, sy = root.scrollTop;
+  topBar(); root.replaceChildren();
+  BOX = h("div", { class: "m-box" }, project(CUR));
+  const zl = h("span", {}), setZ = () => { BOX.style.zoom = Z; zl.textContent = Math.round(Z * 100) + "%"; };
+  const zoom = (f) => { Z = Math.min(1.6, Math.max(0.3, Z * f)); setZ(); };
+  root.append(BOX, h("div", { class: "m-zoom" }, h("button", { on: { click: () => zoom(1 / 1.2) } }, "−"), zl, h("button", { on: { click: () => zoom(1.2) } }, "+")));
+  root.onwheel = (e) => { if (e.ctrlKey) { e.preventDefault(); zoom(e.deltaY < 0 ? 1.1 : 1 / 1.1); } };
+  paint(); setZ(); applyFilter(); root.scrollTo(sx, sy); pan(root);
+}
+window.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("legend").replaceChildren(...Object.keys(CATS).map((c) => {
+    const e = h("button", { class: "chip", "data-c": c, css: { "--k": CATS[c].c } }, ic(c), CATS[c].n);
+    e.addEventListener("click", () => { FILTER = FILTER === c ? null : c; applyFilter(); }); return e; }));
+  document.getElementById("pickb").addEventListener("click", (e) => { e.stopPropagation(); menu(!document.getElementById("menu").classList.contains("on")); });
+  document.addEventListener("click", (e) => { if (!e.target.closest(".pick")) menu(false); });
+  document.getElementById("decb").addEventListener("click", drawer);
+  document.getElementById("help").addEventListener("click", () => document.getElementById("gloss").classList.toggle("on"));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { document.getElementById("viewer").classList.remove("on"); document.getElementById("drawer").classList.remove("on"); } });
+  if (window.innerWidth < 700) Z = 0.8;
+  render(); document.fonts?.ready.then(paint); window.addEventListener("resize", paint);
+});
+</script></body></html>

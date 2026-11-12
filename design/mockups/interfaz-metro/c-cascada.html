@@ -1,0 +1,370 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Unificador · c-cascada</title>
+<style>:root{--bg:#f6f7fb;--panel:#fff;--ink:#1f2338;--muted:#6a7088;--line:#e4e7f1;--soft:#eff1f8;
+--shadow:0 2px 14px rgba(40,50,110,.08);--up:0 10px 30px rgba(40,50,110,.16);--ok:#1fa971;--warn:#f59e0b;--ai:#6c5ce7}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+.top{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);z-index:5}
+.logo{font-weight:800;font-size:17px;white-space:nowrap}
+#nav{display:flex;gap:6px;flex-wrap:wrap}
+#nav button{padding:8px 13px;border-radius:99px;background:var(--soft);font-weight:600;min-height:38px;white-space:nowrap}
+#nav button.on{background:var(--ink);color:#fff}
+#legend{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap;
+background:color-mix(in srgb,var(--k) 14%,#fff);color:color-mix(in srgb,var(--k) 75%,#000);border:1.5px solid transparent}
+#legend .chip{min-height:32px;cursor:pointer}#legend .chip.on{border-color:var(--k)}
+.help{width:34px;height:34px;border-radius:50%;background:var(--soft);font-weight:800}
+.tag{font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap}
+#root{flex:1;min-height:0;overflow:auto;position:relative;-webkit-overflow-scrolling:touch}
+.grab{cursor:grab}.grab.drag{cursor:grabbing;user-select:none}
+/* paso */
+.s{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border-radius:12px;background:var(--panel);
+border:1.5px solid var(--line);border-left:5px solid var(--k);min-height:44px;width:100%;box-shadow:var(--shadow);transition:opacity .25s,transform .15s}
+.s:hover{transform:translateY(-1px)}.s .si{font-size:15px}.s .stt{flex:1;font-weight:600;font-size:13.5px;line-height:1.25}
+.s .sid{font-size:10.5px;color:var(--muted);font-weight:700;display:block;margin-top:1px}
+.s .sst{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;flex:none;background:var(--soft);color:var(--muted)}
+.s.st-d{background:color-mix(in srgb,var(--k) 7%,#fff)}.s.st-d .stt{color:var(--muted)}.s.st-d .sst{background:var(--ok);color:#fff}
+.s.st-w{border-color:var(--k);box-shadow:0 0 0 3px color-mix(in srgb,var(--k) 22%,transparent)}
+.s.st-w .sst{background:var(--k);color:#fff;animation:pulse 1.4s infinite}
+.s.st-a{border-color:var(--warn);background:#fff8e8}.s.st-a .sst{background:var(--warn);color:#fff}
+.dim{opacity:.18!important}
+@keyframes pulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--k) 25%,transparent)}}
+.par{position:relative;display:grid;gap:6px;padding:8px 8px 8px 12px;border-radius:14px;background:repeating-linear-gradient(135deg,#eef0fa 0 8px,#f6f7fd 8px 16px);border:1.5px dashed #c9cfe6}
+.par::before{content:"⇉ a la vez";font-size:10.5px;font-weight:800;color:#6a7088;letter-spacing:.04em;text-transform:uppercase}
+.lock{display:inline-flex;gap:5px;align-items:center;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:8px;background:#fff4dc;color:#8a4b00}
+.lock.ok{background:#e6f7ef;color:#12704a}
+.ring{--p:0;--c:var(--ai);width:var(--z,44px);height:var(--z,44px);border-radius:50%;flex:none;display:grid;place-items:center;font-size:calc(var(--z,44px)*.27);font-weight:800;
+background:radial-gradient(closest-side,#fff 76%,transparent 78%),conic-gradient(var(--c) calc(var(--p)*1%),var(--soft) 0)}
+.mix{display:flex;height:8px;border-radius:9px;overflow:hidden;background:var(--soft)}.mix i{background:var(--k)}
+.seg{display:flex;gap:3px}.seg i{flex:var(--w,1);height:8px;border-radius:9px;background:var(--soft);overflow:hidden;position:relative}
+.seg i::after{content:"";position:absolute;inset:0;width:calc(var(--p)*1%);background:var(--c)}
+.eyebrow{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+svg.deps{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-index:2}
+svg.deps path{fill:none;stroke-width:2.2;stroke-dasharray:6 5;animation:dash 1.2s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-22}}
+#sheet{position:fixed;left:50%;bottom:16px;transform:translate(-50%,140%);width:min(460px,calc(100% - 24px));background:var(--panel);border-radius:18px;
+box-shadow:var(--up);padding:16px 18px;z-index:20;transition:transform .3s cubic-bezier(.2,.9,.3,1.2);border-top:5px solid var(--k,var(--ai))}
+#sheet.on{transform:translate(-50%,0)}#sheet h3{margin:8px 0 4px;font-size:17px}#sheet p{margin:4px 0;color:var(--muted);font-size:13.5px}
+#sheet .x{position:absolute;right:10px;top:8px;width:36px;height:36px;font-size:18px}
+#gloss{position:fixed;right:12px;top:60px;width:min(340px,calc(100% - 24px));background:var(--panel);border-radius:16px;box-shadow:var(--up);padding:14px 16px;z-index:21;display:none;font-size:13.5px}
+#gloss.on{display:block}#gloss b{display:block;margin-top:8px}#gloss span{color:var(--muted)}
+@media(max-width:700px){#legend{margin-left:0}.tag{display:none}}
+/* ---- mapa de metro con tarjetas (se suma a base.css) ---- */
+#root{background:radial-gradient(#dfe3f3 1.2px,transparent 1.3px) 0 0/26px 26px,var(--bg)}
+#nav button{display:inline-flex;align-items:center;gap:7px}#nav .dot{width:12px;height:12px;border-radius:4px;background:var(--c)}
+#nav button.on .dot{box-shadow:0 0 0 2px #fff}
+.m-box{position:relative;width:max-content;min-width:100%;padding:22px 60px 130px 22px}
+svg.rails{position:absolute;left:0;top:0;z-index:1;pointer-events:none;overflow:visible}
+.head,.end,[data-node],.lock,.pht,.rb{position:relative;z-index:2}
+.rail{fill:none;stroke-width:var(--rw,9);stroke-linecap:round;opacity:.2}
+.rail.on{opacity:1;stroke-dasharray:1;animation:draw .7s ease-out both}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+.dep0{fill:none;stroke:#fff;stroke-width:11;stroke-linecap:round}
+.dep{fill:none;stroke-width:5;stroke-linecap:round;stroke-dasharray:1 11;animation:dash 1.2s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-24}}
+.m-zoom{position:fixed;right:16px;bottom:16px;display:flex;background:var(--panel);border-radius:14px;box-shadow:var(--up);z-index:6;overflow:hidden}
+.m-zoom button{width:46px;height:46px;font-size:20px;font-weight:700}.m-zoom span{align-self:center;font-size:12px;font-weight:700;width:44px;text-align:center}
+/* tira arcoíris */
+.rb{display:flex;gap:8px;margin-bottom:22px;width:max-content}
+.rbp{display:grid;gap:2px;text-align:left;padding:10px 14px 0;border-radius:16px;background:var(--c);color:#fff;min-width:150px;overflow:hidden;box-shadow:var(--shadow)}
+.rbp.on{outline:3px solid var(--ink);outline-offset:2px}
+.rbn{font-weight:800;font-size:14.5px;white-space:nowrap}.rbs{font-size:11.5px;font-weight:600;opacity:.9}
+.rbt{display:flex;height:10px;margin:8px -14px 0}.rbt i{flex:1;background:var(--c);border-top:2px solid #fff}.rbt i+i{border-left:2px solid #fff}
+/* proyecto */
+.pj{border-radius:30px;padding:16px 20px 20px;margin-bottom:26px;width:max-content;min-width:100%;
+background:color-mix(in oklab,var(--c) 6%,#fff);border:1.5px solid color-mix(in oklab,var(--c) 22%,#fff);border-left:10px solid var(--c)}
+.pjh{display:flex;align-items:center;gap:12px;text-align:left;margin-bottom:6px}
+.pji{width:50px;height:50px;border-radius:15px;background:var(--c);display:grid;place-items:center;font-size:25px}
+.pjn{font-size:23px;font-weight:800;display:grid}.pjn small{font-size:12.5px;color:var(--muted);font-weight:600}
+.pjgo{font-size:13px;font-weight:700;color:var(--muted);padding:6px 12px;border-radius:99px;background:#fff}
+/* cabecera de línea y final */
+.head{background:var(--c);color:#fff;border-radius:18px;padding:12px 14px;box-shadow:var(--shadow);display:grid;gap:3px;flex:none}
+.head .hi{font-size:22px;line-height:1}.head b{font-size:14.5px;line-height:1.2}.head small{font-size:11.5px;font-weight:600;opacity:.92}
+.head .bar{height:6px;border-radius:9px;background:rgba(255,255,255,.3);overflow:hidden;margin-top:4px}.head .bar i{display:block;height:100%;width:calc(var(--p)*1%);background:#fff}
+.end{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:18px;flex:none;background:#fff;border:3px solid color-mix(in oklab,var(--c) 30%,#fff)}
+.end.ok{background:var(--c);border-color:var(--c)}
+/* insignia de estado, cuadrada */
+.bd{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-size:15px;font-weight:900;flex:none;background:var(--soft);color:var(--muted);border:2.5px solid #fff}
+.st-d .bd{background:var(--c);color:#fff}.st-w .bd{background:#fff;color:var(--c);border-color:var(--c);animation:pulse 1.4s infinite}
+.st-a .bd{background:var(--warn);color:#fff}
+@keyframes pulse{50%{box-shadow:0 0 0 7px color-mix(in oklab,var(--c) 25%,transparent)}}
+.ci{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-size:15px;flex:none;background:color-mix(in srgb,var(--k) 15%,#fff)}
+.cl{font-size:10.5px;font-weight:800;color:color-mix(in srgb,var(--k) 75%,#000);background:color-mix(in srgb,var(--k) 13%,#fff);padding:2px 7px;border-radius:7px;white-space:nowrap}
+.sid{font-size:10.5px;font-weight:700;color:var(--muted)}
+.parcap{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.pht{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:color-mix(in oklab,var(--c) 70%,#000)}
+.pht .n{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:var(--c);color:#fff;font-size:12px;letter-spacing:0}
+.par::before{content:none}
+</style></head><body>
+<header class="top"><b class="logo">🧩 Unificador</b><nav id="nav"></nav><div id="legend"></div>
+<button class="help" title="¿Qué es cada cosa?">?</button><span class="tag"></span></header>
+<main id="root"></main><div id="sheet"></div>
+<div id="gloss"><span class="eyebrow">Cómo se lee</span>
+<b>🌈 Proyecto</b><span>Cada proyecto tiene un color. Juntos van ordenados como un arcoíris.</span>
+<b>🚇 Rama</b><span>Una línea. Cada rama es un tono del color de su proyecto.</span>
+<b>🧱 Fase</b><span>Un tramo de la línea con nombre propio. Al cerrarla, el agente para y te pregunta.</span>
+<b>✅ Paso</b><span>Una tarjeta. Lleva su etiqueta (código, interfaz, pruebas, investigar o decidir) y una marca cuando está hecho.</span>
+<b>⇉ A la vez</b><span>La línea se abre en dos: pasos que se hacen al mismo tiempo.</span>
+<b>🔒 Enlace punteado</b><span>Una fase que no empieza hasta que acabe otra de otra línea.</span></div>
+<script>const CATS = {
+  codigo: { n: "Código", i: "⌨️", c: "#4f6bed" }, interfaz: { n: "Interfaz", i: "🎨", c: "#e0559a" },
+  pruebas: { n: "Pruebas", i: "🧪", c: "#1fa971" }, investigar: { n: "Investigar", i: "🔎", c: "#e8930c" },
+  decidir: { n: "Decidir", i: "🤔", c: "#8b5cf6" },
+};
+const S = (id, t, cat, st = "p") => ({ id, t, cat, st });
+// hue: el color del proyecto (ángulo oklch). Las ramas sacan de ahí sus tonos.
+// steps: un array dentro del array = pasos que se hacen a la vez. needs: "RAMA/índice de fase" que tiene que acabar antes.
+const DATA = [
+  { id: "uni", n: "Unificador", i: "🧩", hue: 295, br: [
+    { id: "PM", n: "Prompts maestros", i: "📜", ph: [
+      { n: "Biblioteca de prompts", steps: [[S("PM-1", "Carpeta de prompts con unos de serie", "codigo", "w"), S("PM-2", "Verlos y copiarlos desde la web", "interfaz", "w")]] },
+      { n: "Cola para los agentes", steps: [S("PM-3", "Encolar un prompt para un agente", "codigo"), S("PM-4", "Probar la cola con dos agentes a la vez", "pruebas")] }] },
+    { id: "CAT", n: "Categorías de pasos", i: "🏷️", ph: [
+      { n: "Qué categorías hacen falta", steps: [S("CAT-1", "Comparar cómo etiquetan otros tableros", "investigar", "d"), S("CAT-2", "Elegir la lista final de categorías", "decidir", "a")] },
+      { n: "Guardarlas en el plan", steps: [[S("CAT-3", "Categoría obligatoria en cada paso", "codigo"), S("CAT-4", "Rechazar nombres de fase vagos", "codigo")], S("CAT-5", "Probar planes antiguos sin categoría", "pruebas")] },
+      { n: "Enseñarlas en la web", steps: [[S("CAT-6", "Chip de color en cada paso", "interfaz"), S("CAT-7", "Mezcla de categorías por fase", "interfaz")]] }] },
+    { id: "IN", n: "Interfaz nueva", i: "🎨", ph: [
+      { n: "Propuestas de distribución", steps: [S("IN-1", "Seis diseños distintos para comparar", "interfaz", "d"), S("IN-2", "Elegir distribución y animaciones", "decidir", "w")] },
+      { n: "Lienzo que se arrastra", needs: "CAT/1", steps: [S("IN-3", "Arrastrar y hacer zoom", "codigo"), [S("IN-4", "Pasos en paralelo sin lío", "interfaz"), S("IN-5", "Flechas de dependencia", "interfaz")]] },
+      { n: "Pulido y tablet", steps: [S("IN-6", "Animaciones de entrada y cambio", "interfaz"), S("IN-7", "Probar en ordenador y tablet", "pruebas")] }] },
+    { id: "TA", n: "Tablero", i: "🗂️", ph: [
+      { n: "Varios proyectos", steps: [S("TA-1", "Registro de proyectos", "codigo", "d"), S("TA-2", "Abrir un proyecto por su ruta", "codigo", "d"), S("TA-3", "Probar con tres proyectos", "pruebas", "d")] },
+      { n: "Portada", steps: [S("TA-4", "Tarjeta por proyecto", "interfaz", "d"), S("TA-5", "Avance en vivo", "codigo", "d")] }] }] },
+  { id: "lola", n: "Tienda Lola", i: "🛍️", hue: 22, br: [
+    { id: "CA", n: "Carrito de compra", i: "🛒", ph: [
+      { n: "Cimientos del carrito", steps: [S("CA-1", "Modelo del carrito", "codigo", "d"), S("CA-2", "Guardar y recuperar", "codigo", "d")] },
+      { n: "Pagos", steps: [S("CA-3", "Comparar pasarelas de pago", "investigar", "d"), [S("CA-4", "Conectar la pasarela", "codigo", "w"), S("CA-5", "Pantalla de pago", "interfaz", "w")], S("CA-6", "Pago fallido y reintentos", "pruebas")] },
+      { n: "Recibos", steps: [S("CA-7", "Recibo por correo", "codigo")] }] },
+    { id: "CT", n: "Catálogo", i: "📦", ph: [
+      { n: "Fichas de producto", steps: [S("CT-1", "Plantilla de ficha", "interfaz", "d"), S("CT-2", "Elegir fotos cuadradas o verticales", "decidir", "a")] },
+      { n: "Buscador", needs: "CA/0", steps: [S("CT-3", "Buscar por nombre y talla", "codigo"), S("CT-4", "Probar búsquedas con erratas", "pruebas")] }] }] },
+  { id: "visor", n: "Visor de capturas", i: "🖼️", hue: 240, br: [
+    { id: "EN", n: "Emparejamiento nuevo", i: "🔄", ph: [
+      { n: "Estudio previo", steps: [S("EN-1", "Estudiar cómo empareja Apollo", "investigar", "d"), S("EN-2", "Maquetas del emparejamiento", "interfaz", "d")] },
+      { n: "Protocolo", steps: [S("EN-3", "Solicitudes, billetes y tokens", "codigo", "w"), S("EN-4", "Pruebas del emparejamiento", "pruebas")] },
+      { n: "PC principal", steps: [S("EN-5", "Pantalla de dispositivos", "interfaz"), S("EN-6", "Aviso y notificación arcoíris", "interfaz")] }] },
+    { id: "MYT", n: "Magpie y tablet", i: "📱", ph: [
+      { n: "Perfil y destino", steps: [S("MYT-1", "Escalado por juego y pantalla", "codigo"), S("MYT-2", "Recalcular al reconectar", "codigo")] },
+      { n: "Pruebas en la tablet", needs: "EN/1", steps: [[S("MYT-3", "Probar con tres juegos", "pruebas"), S("MYT-4", "Elegir el modo por defecto", "decidir")]] }] },
+    { id: "IYE", n: "Interfaz y estadísticas", i: "📊", ph: [
+      { n: "Semana y Terminados", steps: [S("IYE-1", "Pestaña Semana", "interfaz"), S("IYE-2", "Pestaña Terminados", "interfaz")] },
+      { n: "Colecciones", steps: [S("IYE-3", "Elegir estilo de Colecciones", "decidir", "a"), S("IYE-4", "Montar la vista elegida", "codigo")] }] }] },
+  { id: "kan", n: "Kanvas", i: "📋", hue: 155, br: [
+    { id: "EX", n: "Exportar tablero", i: "📤", ph: [
+      { n: "Formato de salida", steps: [S("EX-1", "Mirar qué exportan Trello y Linear", "investigar", "d"), S("EX-2", "Exportar a Markdown", "codigo", "w")] },
+      { n: "Comprobación", steps: [S("EX-3", "Probar con un tablero de 200 tareas", "pruebas")] }] },
+    { id: "AT", n: "Atajos de teclado", i: "⌨️", ph: [
+      { n: "Qué atajos", steps: [S("AT-1", "Lista de atajos que usan otros", "investigar", "d"), S("AT-2", "Elegir los diez primeros", "decidir", "d")] },
+      { n: "Ponerlos", steps: [S("AT-3", "Atajos en el tablero", "codigo", "d"), S("AT-4", "Chuleta de atajos", "interfaz", "w")] }] }] },
+  { id: "rec", n: "Recetario", i: "🍳", hue: 68, br: [
+    { id: "LC", n: "Lista de la compra", i: "🧺", ph: [
+      { n: "Ingredientes", steps: [S("LC-1", "Juntar ingredientes repetidos", "codigo", "d"), S("LC-2", "Probar con diez recetas", "pruebas", "d")] },
+      { n: "Compartir la lista", steps: [S("LC-3", "Enviar la lista por enlace", "codigo"), S("LC-4", "Vista para el móvil", "interfaz")] }] }] },
+  { id: "blog", n: "Blog de viajes", i: "🧭", hue: 348, br: [
+    { id: "MP", n: "Mapa de rutas", i: "🗺️", ph: [
+      { n: "Elegir el mapa", steps: [S("MP-1", "Comparar tres mapas gratuitos", "investigar", "d"), S("MP-2", "Elegir uno", "decidir", "d")] },
+      { n: "Pintar las rutas", steps: [S("MP-3", "Ruta de cada viaje", "codigo", "w"), S("MP-4", "Fotos en cada parada", "interfaz")] }] }] },
+];
+// Plan arcoíris: los proyectos van ordenados por color y cada rama es un tono del color de su proyecto.
+DATA.sort((a, b) => a.hue - b.hue);
+const tone = (hue, t) => `oklch(${(0.5 + 0.2 * t).toFixed(3)} ${(0.19 - 0.05 * t).toFixed(3)} ${(hue + (t - 0.5) * 20).toFixed(1)})`;
+for (const p of DATA) { p.c = tone(p.hue, 0.3); p.br.forEach((b, i) => { b.c = tone(p.hue, p.br.length === 1 ? 0.3 : i / (p.br.length - 1)); }); }
+
+const STT = { d: ["✓", "Hecho"], w: ["●", "En marcha"], p: ["", "Pendiente"], a: ["?", "Espera tu decisión"] };
+for (const p of DATA) for (const b of p.br) b.ph.forEach((ph, k) => { ph.key = b.id + "/" + k; ph.b = b; ph.k = k; for (const s of ph.steps.flat()) Object.assign(s, { _p: p, _b: b, _ph: ph }); });
+
+function h(t, a, ...k) {
+  const e = document.createElement(t);
+  for (const x in a || {}) {
+    if (x === "on") for (const ev in a.on) e.addEventListener(ev, a.on[ev]);
+    else if (x === "style") Object.assign(e.style, a[x]);
+    else if (x === "css") for (const v in a.css) e.style.setProperty(v, a.css[v]);
+    else if (x === "html") e.innerHTML = a[x];
+    else if (a[x] != null && a[x] !== false) e.setAttribute(x, a[x]);
+  }
+  for (const c of k.flat(9)) if (c != null && c !== false) e.append(c.nodeType ? c : String(c));
+  return e;
+}
+const flat = (ph) => ph.steps.flat();
+const bsteps = (b) => b.ph.flatMap(flat);
+const psteps = (p) => p.br.flatMap(bsteps);
+const pct = (l) => Math.round(100 * l.filter((s) => s.st === "d").length / l.length);
+const phSt = (ph) => { const l = flat(ph); return l.every((s) => s.st === "d") ? "d" : l.some((s) => s.st !== "p") ? "w" : "p"; };
+const findPh = (key) => DATA.flatMap((p) => p.br).flatMap((b) => b.ph).find((x) => x.key === key);
+const need = (ph) => { if (!ph.needs) return null; const t = findPh(ph.needs); return { t, ok: phSt(t) === "d" }; };
+const proj = (id) => DATA.find((p) => p.id === id);
+const done = (l) => l.filter((s) => s.st === "d").length;
+
+const chip = (cat, txt) => h("span", { class: "chip", css: { "--k": CATS[cat].c } }, CATS[cat].i, " ", txt ?? CATS[cat].n);
+const ring = (p, c, z = 44, label) => h("div", { class: "ring", css: { "--p": p, "--c": c, "--z": z + "px" } }, label ?? p + "%");
+function mix(l) {
+  const m = h("div", { class: "mix", title: "Mezcla de categorías" });
+  for (const c in CATS) { const n = l.filter((s) => s.cat === c).length; if (n) m.append(h("i", { css: { "--k": CATS[c].c }, style: { flex: n } })); }
+  return m;
+}
+function lock(ph) {
+  const n = need(ph); if (!n) return null;
+  return h("span", { class: "lock" + (n.ok ? " ok" : "") }, n.ok ? "✓" : "🔒", ` ${n.ok ? "Ya puede empezar: acabó" : "Espera a"} «${n.t.n}» de ${n.t.b.i} ${n.t.b.n}`);
+}
+// La tira arcoíris: todos los proyectos por orden de color, con los tonos de sus ramas debajo.
+function rainbow(cur) {
+  return h("div", { class: "rb" }, DATA.map((p) => h("button", { class: "rbp" + (p === cur ? " on" : ""), css: { "--c": p.c }, on: { click: () => go(p.id) } },
+    h("span", { class: "rbn" }, p.i, " ", p.n), h("span", { class: "rbs" }, pct(psteps(p)) + "% · " + p.br.length + (p.br.length === 1 ? " rama" : " ramas")),
+    h("span", { class: "rbt" }, p.br.map((b) => h("i", { title: b.n, css: { "--c": b.c } }))))));
+}
+const pjHead = (p, single) => h(single ? "div" : "button", { class: "pjh", on: single ? {} : { click: () => go(p.id) } },
+  h("span", { class: "pji" }, p.i), h("span", { class: "pjn" }, p.n, h("small", {}, `${done(psteps(p))} de ${psteps(p).length} pasos · ${p.br.length} ${p.br.length === 1 ? "rama" : "ramas"}`)),
+  ring(pct(psteps(p)), p.c, 46), !single && h("span", { class: "pjgo" }, "abrir ›"));
+
+function sheet(s) {
+  const el = document.getElementById("sheet");
+  el.style.setProperty("--k", s._b.c);
+  el.replaceChildren(h("button", { class: "x", on: { click: () => el.classList.remove("on") } }, "✕"),
+    chip(s.cat), " ", h("span", { class: "tag" }, STT[s.st][1]), h("h3", {}, s.t),
+    h("p", {}, `${s._p.i} ${s._p.n} › ${s._b.i} ${s._b.n} › fase «${s._ph.n}»`), h("p", {}, `Paso ${s.id}`));
+  el.classList.add("on");
+}
+// Arrastrar con el ratón para moverse (con el dedo ya se desliza solo).
+function pan(el) {
+  if (el._pan) return; el._pan = 1;
+  let d = null, moved = false; el.classList.add("grab");
+  el.addEventListener("pointerdown", (e) => { if (e.pointerType === "mouse") { d = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop }; moved = false; } });
+  window.addEventListener("pointermove", (e) => {
+    if (!d) return; const dx = e.clientX - d.x, dy = e.clientY - d.y;
+    if (!moved && Math.hypot(dx, dy) < 5) return; moved = true; el.classList.add("drag"); el.scrollLeft = d.l - dx; el.scrollTop = d.t - dy;
+  });
+  window.addEventListener("pointerup", () => { d = null; el.classList.remove("drag"); });
+  el.addEventListener("click", (e) => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+}
+
+/* ---- El mapa: tarjetas en el DOM y las vías pintadas detrás, midiendo dónde ha caído cada tarjeta ---- */
+let Z = 1, BOX = null;
+const R = (e) => { const w = BOX.getBoundingClientRect(), r = e.getBoundingClientRect(), l = r.left - w.left, t = r.top - w.top;
+  return { l, t, r: l + r.width, b: t + r.height, cx: l + r.width / 2, cy: t + r.height / 2 }; };
+const hlink = (a, b) => { const m = (a.r + b.l) / 2; return `M${a.r - 3},${a.cy}C${m},${a.cy} ${m},${b.cy} ${b.l + 3},${b.cy}`; };
+const vlink = (a, b) => { const m = (a.b + b.t) / 2; return `M${a.cx},${a.b - 3}C${a.cx},${m} ${b.cx},${m} ${b.cx},${b.t + 3}`; };
+const colorOf = (e) => e.closest("[data-br]").style.getPropertyValue("--c");
+// Una fase que espera a otra se empuja hasta quedar después de ella, para que el enlace se lea en orden.
+function alignDeps(dir) {
+  const all = [...BOX.querySelectorAll("[data-needs]")]; all.forEach((e) => { e.style.marginLeft = e.style.marginTop = ""; });
+  for (const to of all) {
+    const from = BOX.querySelector(`[data-ph="${to.dataset.needs}"]`); if (!from) continue;
+    const a = R(from), b = R(to), gap = dir === "h" ? a.r + 54 - b.l : a.b + 10 - b.t;
+    if (gap > 0) to.style[dir === "h" ? "marginLeft" : "marginTop"] = gap + "px";
+  }
+}
+// Vías de una rama: cabecera -> huecos (.slot con uno o dos [data-node]) -> final. Encendida hasta donde se ha llegado.
+function rails(dir) {
+  const link = dir === "h" ? hlink : vlink; let out = "", n = 0;
+  for (const row of BOX.querySelectorAll("[data-br]")) {
+    const c = colorOf(row); let prev = [row.querySelector(".head")];
+    const seg = (a, b, on) => { out += `<path class="rail${on ? " on" : ""}" pathLength="1" style="animation-delay:${(n++ * 35)}ms" stroke="${c}" d="${link(R(a), R(b))}"/>`; };
+    for (const sl of row.querySelectorAll(".slot")) {
+      const cur = [...sl.querySelectorAll("[data-node]")];
+      if (prev.length === cur.length) cur.forEach((e, i) => seg(prev[i], e, e.dataset.node !== "p"));
+      else for (const a of prev) for (const e of cur) seg(a, e, (cur.length > 1 ? e : a).dataset.node !== "p" && e.dataset.node !== "p");
+      prev = cur;
+    }
+    const end = row.querySelector(".end"); if (end) for (const a of prev) seg(a, end, end.classList.contains("ok"));
+  }
+  return out;
+}
+// Enlaces entre líneas: de la fase que hay que acabar a la fase que la espera.
+function depLines(dir) {
+  let out = "";
+  for (const to of BOX.querySelectorAll("[data-needs]")) {
+    const from = BOX.querySelector(`[data-ph="${to.dataset.needs}"]`); if (!from) continue;
+    const a = R(from), b = R(to), c = colorOf(from); let x1, y1, x2, y2, d;
+    if (dir === "h") { const dn = b.t > a.t; x1 = a.r - 36; y1 = dn ? a.b : a.t; x2 = b.l + 36; y2 = dn ? b.t : b.b; const m = (y1 + y2) / 2; d = `M${x1},${y1}C${x1},${m} ${x2},${m} ${x2},${y2}`; }
+    else { const rt = b.l > a.l; x1 = rt ? a.r : a.l; y1 = a.b - 26; x2 = rt ? b.l : b.r; y2 = b.t + 26; const m = (x1 + x2) / 2; d = `M${x1},${y1}C${m},${y1} ${m},${y2} ${x2},${y2}`; }
+    const sq = (x, y) => `<rect x="${x - 8}" y="${y - 8}" width="16" height="16" rx="5" fill="#fff" stroke="${c}" stroke-width="4"/>`;
+    out += `<path class="dep0" d="${d}"/><path class="dep" stroke="${c}" d="${d}"/>${sq(x1, y1)}${sq(x2, y2)}`;
+  }
+  return out;
+}
+function stage(root, box, dir, fit) {
+  BOX = box; box.classList.add("m-box");
+  const zl = h("span", {}), setZ = () => { box.style.zoom = Z; zl.textContent = Math.round(Z * 100) + "%"; };
+  const paint = () => {
+    if (!box.isConnected) return; box.style.zoom = 1; box.querySelector("svg.rails")?.remove(); alignDeps(dir);
+    box.insertAdjacentHTML("afterbegin", `<svg class="rails" width="${box.scrollWidth}" height="${box.scrollHeight}">${depLines(dir)}${rails(dir)}</svg>`); setZ();
+  };
+  const zoom = (f) => { Z = Math.min(1.6, Math.max(0.3, Z * f)); setZ(); };
+  root.append(box, h("div", { class: "m-zoom" }, h("button", { on: { click: () => zoom(1 / 1.2) } }, "−"), zl, h("button", { on: { click: () => zoom(1.2) } }, "+")));
+  box.addEventListener("click", (e) => { const g = e.target.closest("[data-id]"); if (g) sheet(IDX[g.dataset.id]); });
+  root.onwheel = (e) => { if (e.ctrlKey) { e.preventDefault(); zoom(e.deltaY < 0 ? 1.1 : 1 / 1.1); } };
+  Z = 1; paint(); if (fit) { Z = Math.min(1, Math.max(fit, (root.clientWidth - 8) / box.scrollWidth)); setZ(); }
+  document.fonts?.ready.then(paint); window.onresize = paint; pan(root);
+}
+const IDX = {}; for (const p of DATA) for (const s of psteps(p)) IDX[s.id] = s;
+
+const cut = (t, n) => t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : t;
+let FILTER = null;
+function applyFilter() {
+  document.querySelectorAll("[data-cat]").forEach((e) => e.classList.toggle("dim", !!FILTER && e.dataset.cat !== FILTER));
+  document.querySelectorAll("#legend .chip").forEach((e) => e.classList.toggle("on", e.dataset.c === FILTER));
+}
+function render() {
+  const id = location.hash.slice(2), p = proj(id), root = document.getElementById("root");
+  document.getElementById("sheet").classList.remove("on");
+  root.replaceChildren(); root.scrollTo(0, 0); root.className = p ? "v-project" : "v-all";
+  document.getElementById("nav").replaceChildren(
+    h("button", { class: p ? "" : "on", on: { click: () => go("") } }, "Todos los proyectos"),
+    ...DATA.map((x) => h("button", { class: x === p ? "on" : "", css: { "--c": x.c }, on: { click: () => go(x.id) } }, h("i", { class: "dot" }), x.i + " " + x.n)));
+  p ? DESIGN.project(root, p) : DESIGN.all(root);
+  applyFilter();
+}
+function go(id) { location.hash = "/" + id; }
+window.addEventListener("hashchange", render);
+window.addEventListener("DOMContentLoaded", () => {
+  document.querySelector(".tag").textContent = DESIGN.name;
+  document.getElementById("legend").replaceChildren(...Object.keys(CATS).map((c) => {
+    const e = chip(c); e.dataset.c = c; e.addEventListener("click", () => { FILTER = FILTER === c ? null : c; applyFilter(); }); return e;
+  }));
+  document.querySelector(".help").addEventListener("click", () => document.getElementById("gloss").classList.toggle("on"));
+  render();
+});
+</script>
+<style>
+/* C · Cascada: las líneas bajan. Cada rama es una columna y los proyectos, uno al lado del otro, hacen el arcoíris. */
+.all{display:flex;gap:26px;align-items:flex-start;width:max-content}
+.pj{min-width:0;margin:0;border-left-width:1.5px;border-top:10px solid var(--c)}
+.cols{display:flex;gap:46px;align-items:flex-start;margin-top:12px}
+.col{width:280px;display:flex;flex-direction:column;align-items:center;gap:28px}
+.col .head{width:100%}
+.ph{width:100%;display:flex;flex-direction:column;align-items:center;gap:26px;padding:12px 12px 18px;border-radius:26px;
+background:color-mix(in oklab,var(--c) 9%,transparent);border:1.5px solid color-mix(in oklab,var(--c) 20%,transparent)}
+.ph .pht{background:#fff;padding:6px 11px;border-radius:11px;white-space:normal;box-shadow:var(--shadow)}
+.ph .lock{white-space:normal}
+.slot{width:100%}
+.slot.par{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.slot.par .parcap{grid-column:1/-1;text-align:center;margin-bottom:-4px}
+.st{width:100%;min-height:92px;display:grid;grid-template-columns:28px 1fr;align-content:start;gap:8px 9px;text-align:left;padding:11px 12px;border-radius:18px;background:#fff;
+border:2.5px solid color-mix(in oklab,var(--c) 28%,#fff);box-shadow:var(--shadow);transition:opacity .25s}
+.st .bd{position:absolute;right:-9px;top:-9px}
+.st .tt{font-size:13px;font-weight:700;line-height:1.24;padding-right:10px}
+.st .ft{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:4px;align-self:end}
+.par .st{grid-template-columns:1fr;min-height:150px;padding:10px}.par .st .tt{font-size:12.5px;padding:0}.par .st .ft{flex-direction:column;align-items:flex-start}
+.st.st-d{background:color-mix(in oklab,var(--c) 14%,#fff);border-color:var(--c)}
+.st.st-w{border-color:var(--c);box-shadow:0 0 0 4px color-mix(in oklab,var(--c) 22%,transparent),var(--shadow)}
+.st.st-a{border-color:var(--warn);background:#fff8e8}
+.st.st-p{border-style:dashed}.st.st-p .tt{color:var(--muted)}
+</style>
+<script>
+const card = (s) => h("button", { class: "st st-" + s.st, "data-id": s.id, "data-node": s.st, "data-cat": s.cat, css: { "--k": CATS[s.cat].c }, title: s.t },
+  h("span", { class: "bd" }, STT[s.st][0]), h("span", { class: "ci" }, CATS[s.cat].i), h("span", { class: "tt" }, s.t),
+  h("span", { class: "ft" }, h("span", { class: "cl" }, CATS[s.cat].n), h("span", { class: "sid" }, s.id)));
+const slot = (x) => Array.isArray(x) ? h("div", { class: "slot par" }, h("span", { class: "parcap" }, "⇉ a la vez"), x.map(card)) : h("div", { class: "slot" }, card(x));
+const phase = (ph) => h("div", { class: "ph", "data-ph": ph.key, "data-needs": ph.needs },
+  h("div", { class: "pht" }, h("span", { class: "n" }, phSt(ph) === "d" ? "✓" : ph.k + 1), ph.n), lock(ph), ph.steps.map(slot));
+const head = (b) => h("div", { class: "head", css: { "--p": pct(bsteps(b)) } }, h("span", { class: "hi" }, b.i), h("b", {}, b.n),
+  h("small", {}, `${done(bsteps(b))} de ${bsteps(b).length} pasos`), h("span", { class: "bar" }, h("i", {})));
+const col = (b) => h("div", { class: "col", "data-br": b.id, css: { "--c": b.c } }, head(b), b.ph.map(phase), h("div", { class: "end" + (pct(bsteps(b)) === 100 ? " ok" : "") }, "🏁"));
+const pj = (p, single) => h("section", { class: "pj", css: { "--c": p.c } }, pjHead(p, single), h("div", { class: "cols" }, p.br.map(col)));
+const DESIGN = { name: "C · Cascada",
+  all(root) { stage(root, h("div", {}, rainbow(), h("div", { class: "all" }, DATA.map((p) => pj(p)))), "v", 0.55); },
+  project(root, p) { stage(root, h("div", {}, rainbow(p), pj(p, true)), "v"); } };
+</script>
+
+</body></html>

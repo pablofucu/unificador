@@ -1,0 +1,57 @@
+<style>
+/* 4 · Baraja: una rama por carta. Se desliza de lado (dedo o arrastre) y la carta del centro crece. */
+.b-now{display:flex;gap:8px;align-items:center;padding:12px 18px;overflow-x:auto;background:linear-gradient(90deg,#efeaff,#ffeaf4)}
+.b-now .eyebrow{white-space:nowrap}.b-now .chip{background:#fff;min-height:32px}
+.b-car{display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;padding:26px max(18px,calc(50% - 215px)) 16px;scrollbar-width:none}
+.b-car.drag{scroll-snap-type:none}.b-car::-webkit-scrollbar{display:none}
+.b-card{flex:none;width:min(430px,86vw);scroll-snap-align:center;background:var(--panel);border-radius:24px;box-shadow:var(--up);overflow:hidden;
+transition:scale .25s,opacity .25s;animation:deal .6s cubic-bezier(.2,.9,.3,1.2) both;animation-delay:calc(var(--n)*90ms);align-self:flex-start}
+@keyframes deal{from{opacity:0;translate:0 80px;rotate:6deg}}
+.b-head{padding:16px 18px;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 60%,#fff));color:#fff;display:flex;gap:12px;align-items:center}
+.b-head h2{margin:0;font-size:19px}.b-head .ring{color:var(--ink)}.b-head small{opacity:.9}
+.b-body{padding:14px 18px 18px;display:grid;gap:14px}
+.b-ph{display:grid;grid-template-columns:30px 1fr;gap:4px 10px}
+.b-ph .num{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;background:var(--soft);color:var(--muted);grid-row:1}
+.b-ph.st-d .num{background:var(--ok);color:#fff}.b-ph.st-w .num{background:var(--c);color:#fff}
+.b-ph h4{margin:0;font-size:15px;align-self:center}.b-ph .in{grid-column:2;display:grid;gap:7px}
+.b-ph .rail{grid-column:1;justify-self:center;width:3px;background:var(--line);border-radius:3px;min-height:12px}
+.b-ph.st-d .rail{background:var(--ok)}
+.b-ph details summary{cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;min-height:32px;display:flex;align-items:center}
+.b-ph details[open] summary{margin-bottom:6px}.b-ph details>div{display:grid;gap:7px}
+.b-dots{display:flex;gap:8px;justify-content:center;padding:4px 0 26px}
+.b-dots button{width:38px;height:38px;border-radius:50%;background:var(--panel);box-shadow:var(--shadow);font-size:17px;border:3px solid transparent;transition:.2s}
+.b-dots button.on{border-color:var(--c);scale:1.15}
+.b-all{display:flex;flex-wrap:wrap;gap:60px 70px;justify-content:center;padding:56px 24px}
+.b-deck{position:relative;width:250px;height:330px;cursor:pointer;animation:deal .6s both;animation-delay:calc(var(--n)*110ms)}
+.b-deck .cd{position:absolute;inset:0;border-radius:22px;background:var(--panel);box-shadow:var(--up);transform-origin:50% 120%;rotate:calc(var(--i)*5deg);
+transition:rotate .35s cubic-bezier(.2,.9,.3,1.3);border-top:8px solid var(--bc);padding:10px 14px;font-size:22px;text-align:right}
+.b-deck:hover .cd{rotate:calc(var(--i)*13deg)}
+.b-deck .cd.front{rotate:0deg!important;text-align:left;padding:18px;font-size:15px;display:flex;flex-direction:column;gap:10px;border-top-color:var(--c)}
+.b-deck h2{margin:0;font-size:20px}.b-deck .list{display:grid;gap:6px;margin-top:auto}
+</style>
+<script>
+const DESIGN = { name: "4 · Baraja",
+  all(root) {
+    root.append(h("div", { class: "b-all" }, DATA.map((p, n) => { const a = active(psteps(p)); return h("div", { class: "b-deck", css: { "--c": p.c, "--n": n }, on: { click: () => go(p.id) } },
+      p.br.slice().reverse().map((b, i, l) => h("div", { class: "cd", css: { "--i": l.length - i, "--bc": b.c } }, b.i)),
+      h("div", { class: "cd front" }, h("div", { style: { display: "flex", gap: "12px", alignItems: "center" } }, ring(pct(psteps(p)), p.c, 58), h("div", {}, h("h2", {}, p.i + " " + p.n), h("span", { class: "tag" }, p.br.length + " ramas"))),
+        mix(psteps(p)), h("span", { class: "eyebrow" }, a.length ? "Ahora mismo" : "Sin nada en marcha"), h("div", { class: "list" }, a.slice(0, 3).map((s) => stepCard(s, true))))); })));
+  },
+  project(root, p) {
+    const a = active(psteps(p));
+    const car = h("div", { class: "b-car" }, p.br.map((b, n) => h("article", { class: "b-card", css: { "--c": b.c, "--n": n } },
+      h("div", { class: "b-head" }, ring(pct(bsteps(b)), b.c, 52), h("div", {}, h("small", {}, "RAMA"), h("h2", {}, b.i + " " + b.n), h("small", {}, `${b.ph.length} fases · ${bsteps(b).length} pasos`))),
+      h("div", { class: "b-body" }, mix(bsteps(b)), b.ph.map((ph, k) => { const st = phSt(ph), steps = ph.steps.map((x) => slot(x));
+        return h("section", { class: "b-ph st-" + st }, h("span", { class: "num" }, st === "d" ? "✔" : k + 1), h("h4", {}, ph.n), h("i", { class: "rail" }),
+          h("div", { class: "in" }, lock(p, ph), st === "d" ? h("details", {}, h("summary", {}, `Fase cerrada · ${flat(ph).length} pasos hechos`), h("div", {}, steps)) : steps)); })))));
+    const dots = h("div", { class: "b-dots" }, p.br.map((b, i) => h("button", { css: { "--c": b.c }, title: b.n, on: { click: () => car.children[i].scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" }) } }, b.i)));
+    const focus = () => { const mid = car.scrollLeft + car.clientWidth / 2; let best = 0, bd = 1e9;
+      [...car.children].forEach((c, i) => { const d = Math.abs(c.offsetLeft + c.offsetWidth / 2 - mid); if (d < bd) { bd = d; best = i; } c.style.scale = Math.max(.9, 1 - d / 4000); c.style.opacity = Math.max(.55, 1 - d / 900); });
+      [...dots.children].forEach((d, i) => d.classList.toggle("on", i === best)); };
+    car.addEventListener("scroll", focus, { passive: true });
+    root.append(h("div", { class: "b-now" }, h("span", { class: "eyebrow" }, "⚡ Ahora mismo, a la vez"), a.map((s) => { const c = chip(s.cat, s._b.i + " " + cut(s.t, 30)); c.onclick = () => sheet(s); return c; })), car, dots);
+    pan(car);
+    const first = p.br.findIndex((b) => active(bsteps(b)).length);
+    requestAnimationFrame(() => { if (first > 0) car.scrollLeft = car.children[first].offsetLeft - (car.clientWidth - car.children[first].offsetWidth) / 2; focus(); });
+  } };
+</script>

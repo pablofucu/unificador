@@ -1,0 +1,44 @@
+<style>
+/* B · Andenes: cada parada de la línea es una fase entera; dentro, sus pasos como lista de casillas. */
+.row{display:flex;align-items:center;gap:50px;margin:38px 0;width:max-content}
+.row .head{width:156px;min-height:112px;align-content:center}
+.pc{width:250px;border-radius:22px;background:#fff;border:2.5px solid color-mix(in oklab,var(--c) 30%,#fff);box-shadow:var(--shadow);display:grid;overflow:hidden}
+.pc.st-d{border-color:var(--c)}.pc.st-p{border-style:dashed}
+.pc.st-w{border-color:var(--c);box-shadow:0 0 0 5px color-mix(in oklab,var(--c) 20%,transparent),var(--shadow)}
+.pch{display:flex;align-items:center;gap:10px;padding:11px 12px;background:color-mix(in oklab,var(--c) 13%,#fff)}
+.pch .bd{width:36px;height:36px;border-radius:11px;font-size:18px;animation:none;border:0}
+.pc.st-p .pch{background:var(--soft)}
+.pc.st-d .pch{background:var(--c);color:#fff}.pc.st-d .pch .bd{background:#fff;color:var(--c)}
+.pc.st-w .pch .bd{background:var(--c);color:#fff}
+.pcn{display:grid;font-weight:800;font-size:14.5px;line-height:1.2}.pcn small{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;opacity:.75}
+.pc .lock{margin:9px 10px 0;white-space:normal}
+.pcb{display:grid;gap:2px;padding:8px 6px 4px}
+.sr{display:flex;align-items:center;gap:8px;text-align:left;padding:6px 7px;border-radius:11px;min-height:40px;transition:opacity .25s}
+.sr:hover{background:color-mix(in oklab,var(--c) 8%,#fff)}
+.sr .tt{flex:1;font-size:12.5px;font-weight:650;line-height:1.22}
+.sr .ci{width:24px;height:24px;border-radius:8px;font-size:13px}
+.bx{width:24px;height:24px;border-radius:8px;flex:none;display:grid;place-items:center;font-size:14px;font-weight:900;border:2.5px solid color-mix(in oklab,var(--c) 35%,#fff);color:#fff}
+.s-d .bx{background:var(--c);border-color:var(--c)}.s-d .tt{color:var(--muted)}
+.s-w .bx{border-color:var(--c);color:var(--c);font-size:11px;animation:pulse 1.4s infinite}
+.s-a .bx{background:var(--warn);border-color:var(--warn)}
+.pg{display:grid;gap:2px;margin:3px 0 3px 12px;padding:4px 0 4px 2px;border-left:3px dashed color-mix(in oklab,var(--c) 45%,#fff)}
+.pg .parcap{padding-left:8px}
+.pcf{display:flex;align-items:center;gap:10px;padding:8px 12px 11px;font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+.pcf .mix{flex:1}
+</style>
+<script>
+const srow = (s) => h("button", { class: "sr s-" + s.st, "data-id": s.id, "data-cat": s.cat, css: { "--k": CATS[s.cat].c }, title: CATS[s.cat].n + " · " + STT[s.st][1] },
+  h("span", { class: "bx" }, STT[s.st][0]), h("span", { class: "tt" }, s.t), h("span", { class: "ci" }, CATS[s.cat].i));
+const grp = (x) => Array.isArray(x) ? h("div", { class: "pg" }, h("span", { class: "parcap" }, "⇉ a la vez"), x.map(srow)) : srow(x);
+const phase = (ph) => { const st = phSt(ph), l = flat(ph);
+  return h("div", { class: "slot" }, h("div", { class: "pc st-" + st, "data-node": st, "data-ph": ph.key, "data-needs": ph.needs },
+    h("div", { class: "pch" }, h("span", { class: "bd" }, st === "d" ? "✓" : ph.k + 1), h("span", { class: "pcn" }, h("small", {}, "Fase " + (ph.k + 1)), ph.n)),
+    lock(ph), h("div", { class: "pcb" }, ph.steps.map(grp)), h("div", { class: "pcf" }, mix(l), h("span", {}, `${done(l)} de ${l.length}`)))); };
+const head = (b) => h("div", { class: "head", css: { "--p": pct(bsteps(b)) } }, h("span", { class: "hi" }, b.i), h("b", {}, b.n),
+  h("small", {}, `${done(bsteps(b))} de ${bsteps(b).length} pasos`), h("span", { class: "bar" }, h("i", {})));
+const row = (b) => h("div", { class: "row", "data-br": b.id, css: { "--c": b.c } }, head(b), b.ph.map(phase), h("div", { class: "end" + (pct(bsteps(b)) === 100 ? " ok" : "") }, "🏁"));
+const pj = (p, single) => h("section", { class: "pj", css: { "--c": p.c } }, pjHead(p, single), p.br.map(row));
+const DESIGN = { name: "B · Andenes",
+  all(root) { stage(root, h("div", { css: { "--rw": 13 } }, rainbow(), DATA.map((p) => pj(p))), "h", 0.5); },
+  project(root, p) { stage(root, h("div", { css: { "--rw": 13 } }, rainbow(p), pj(p, true)), "h"); } };
+</script>

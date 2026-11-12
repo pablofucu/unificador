@@ -1,0 +1,77 @@
+<style>
+/* 2 · Metro: un mapa que se arrastra y se amplía. Cada rama es una línea, cada paso una estación. */
+#root{background:radial-gradient(#dfe3f3 1.2px,transparent 1.3px) 0 0/26px 26px,var(--bg)}
+.m-svg{display:block}
+.m-svg text{font-family:inherit;fill:var(--ink)}
+.m-line{fill:none;stroke-width:9;stroke-linecap:round;stroke-linejoin:round}
+.m-reveal{animation:grow 1.6s cubic-bezier(.3,.7,.2,1) both}
+@keyframes grow{from{width:0}}
+.m-st{cursor:pointer;transition:opacity .25s}.m-st:hover circle.c{stroke-width:7}
+.m-st circle.halo{animation:halo 1.5s infinite;transform-box:fill-box;transform-origin:center}
+@keyframes halo{from{opacity:.55;scale:1}to{opacity:0;scale:2.3}}
+.m-lbl{font-size:12.5px;font-weight:600}.m-ph{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;fill:var(--muted)!important}
+.m-br{font-size:16px;font-weight:800}.m-pj{font-size:24px;font-weight:800;cursor:pointer}
+.m-dep{fill:none;stroke-width:3;stroke-dasharray:3 7;stroke-linecap:round;animation:dash 1.2s linear infinite}
+.m-zoom{position:fixed;right:16px;bottom:16px;display:flex;background:var(--panel);border-radius:14px;box-shadow:var(--up);z-index:6;overflow:hidden}
+.m-zoom button{width:46px;height:46px;font-size:20px;font-weight:700}.m-zoom span{align-self:center;font-size:12px;font-weight:700;width:44px;text-align:center}
+</style>
+<script>
+let Z = 1;
+const IDX = {}; for (const p of DATA) for (const s of psteps(p)) IDX[s.id] = s;
+function metro(projects, single) {
+  let y = 60, W = 0, out = "", n = 0;
+  for (const p of projects) {
+    if (!single) { out += `<text class="m-pj" data-go="${p.id}" x="40" y="${y}">${p.i} ${p.n} <tspan font-size="13" fill="#6a7088">· abrir ›</tspan></text>`; y += 20; }
+    const endX = {};
+    for (const b of p.br) {
+      y += 210; let x = 250, d = `M${x - 30},${y}`, lobes = "", st = "", zones = "", lastOn = x - 30;
+      out += `<text class="m-br" x="40" y="${y - 6}">${b.i} ${cut(b.n, 20)}</text><text x="40" y="${y + 14}" font-size="12" fill="#6a7088">${pct(bsteps(b))}% · ${bsteps(b).length} pasos</text>`;
+      b.ph.forEach((ph, k) => {
+        if (ph.needs && endX[ph.needs]) { const e = endX[ph.needs]; x = Math.max(x, e.x + 40); }
+        const x0 = x + 30;
+        for (const sl of ph.steps) {
+          x += 135;
+          const put = (s, sy, low) => {
+            const c = CATS[s.cat].c, on = s.st !== "p"; if (on) lastOn = Math.max(lastOn, x);
+            st += `<g class="m-st" data-id="${s.id}" data-cat="${s.cat}">${s.st === "w" ? `<circle class="halo" cx="${x}" cy="${sy}" r="13" fill="${c}"/>` : ""}
+<circle class="c" cx="${x}" cy="${sy}" r="12" fill="${s.st === "d" ? c : "#fff"}" stroke="${s.st === "a" ? "#f59e0b" : c}" stroke-width="5"/>
+<text x="${x}" y="${sy + 4.5}" text-anchor="middle" font-size="12" font-weight="800" style="fill:${s.st === "d" ? "#fff" : s.st === "a" ? "#b45309" : c}">${s.st === "d" ? "✓" : s.st === "a" ? "?" : s.st === "w" ? "●" : ""}</text>
+${low ? `<text class="m-lbl" x="${x}" y="${sy + 32}" text-anchor="middle">${CATS[s.cat].i} ${cut(s.t, 19)}</text>`
+      : `<text class="m-lbl" transform="translate(${x + 4},${sy - 22}) rotate(-28)">${CATS[s.cat].i} ${cut(s.t, 24)}</text>`}</g>`;
+          };
+          if (Array.isArray(sl)) {
+            d += `L${x - 60},${y}M${x + 60},${y}`;
+            for (const sg of [-1, 1]) lobes += `M${x - 60},${y}C${x - 30},${y} ${x - 34},${y + sg * 30} ${x},${y + sg * 30}S${x + 30},${y} ${x + 60},${y}`;
+            put(sl[0], y - 30); put(sl[1], y + 30, true); x += 20;
+          } else { d += `L${x},${y}`; put(sl, y); }
+        }
+        x = Math.max(x, x0 + (ph.n.length + 9) * 8.2 - 45); const x1 = x + 45; endX[ph.key] = { x: x1, y };
+        zones += `<rect x="${x0}" y="${y - 52}" width="${x1 - x0}" height="110" rx="26" fill="${b.c}" opacity=".08"/>
+<text class="m-ph" x="${x0 + 16}" y="${y + 78}">Fase ${k + 1} · ${ph.n}</text>`;
+        if (ph.needs && endX[ph.needs]) { const e = endX[ph.needs], ok = phSt(findPh(p, ph.needs)) === "d", col = ok ? "#1fa971" : "#f59e0b";
+          zones += `<path class="m-dep" stroke="${col}" d="M${e.x - 20},${e.y + (y > e.y ? 58 : -52)}C${e.x - 20},${(e.y + y) / 2} ${x0 + 30},${(e.y + y) / 2} ${x0 + 30},${y - 52}"/>
+<text x="${x0 + 14}" y="${y - 62}" text-anchor="end" font-size="11.5" font-weight="700" style="fill:${ok ? "#12704a" : "#8a4b00"}">${ok ? "✔ ya puede empezar" : "🔒 espera a «" + findPh(p, ph.needs).n + "»"}</text>`; }
+        x += 55; d += `L${x - 30},${y}`;
+      });
+      W = Math.max(W, x + 60); n++;
+      const lines = `<path class="m-line" d="${d}"/><path class="m-line" d="${lobes}"/>`;
+      out += `${zones}<g stroke="${b.c}" opacity=".25">${lines}</g><clipPath id="cl${n}"><rect class="m-reveal" x="0" y="${y - 60}" width="${lastOn}" height="120" style="animation-delay:${n * 120}ms"/></clipPath><g stroke="${b.c}" clip-path="url(#cl${n})">${lines}</g>${st}`;
+    }
+    y += 130;
+  }
+  return { html: out, W, H: y };
+}
+function draw(root, projects, single) {
+  const m = metro(projects, single), box = h("div", { class: "m-box" });
+  const paint = () => { box.querySelector("svg").setAttribute("width", m.W * Z); box.querySelector("svg").setAttribute("height", m.H * Z); zl.textContent = Math.round(Z * 100) + "%"; };
+  box.innerHTML = `<svg class="m-svg" viewBox="0 0 ${m.W} ${m.H}">${m.html}</svg>`;
+  const zl = h("span", {}), zoom = (f) => { Z = Math.min(1.8, Math.max(.4, Z * f)); paint(); };
+  root.append(box, h("div", { class: "m-zoom" }, h("button", { on: { click: () => zoom(1 / 1.2) } }, "−"), zl, h("button", { on: { click: () => zoom(1.2) } }, "+")));
+  box.addEventListener("click", (e) => { const g = e.target.closest("[data-id]"), pj = e.target.closest("[data-go]"); if (g) sheet(IDX[g.dataset.id]); else if (pj) go(pj.dataset.go); });
+  root.onwheel = (e) => { if (e.ctrlKey) { e.preventDefault(); zoom(e.deltaY < 0 ? 1.1 : 1 / 1.1); } };
+  paint(); pan(root);
+}
+const DESIGN = { name: "2 · Metro",
+  all(root) { Z = Math.min(1, Math.max(.5, innerWidth / 1500)); draw(root, DATA, false); },
+  project(root, p) { Z = 1; draw(root, [p], true); } };
+</script>

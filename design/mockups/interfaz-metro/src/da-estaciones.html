@@ -1,0 +1,34 @@
+<style>
+/* A · Estaciones: el Metro de antes, pero cada paso es una tarjeta cuadrada por la que pasa la línea. */
+.row{display:flex;align-items:center;gap:38px;margin:20px 0;width:max-content}
+.row .head{width:172px}
+.ph{display:grid;gap:10px;justify-items:start;padding:12px 18px 18px;border-radius:26px;
+background:color-mix(in oklab,var(--c) 9%,transparent);border:1.5px solid color-mix(in oklab,var(--c) 20%,transparent)}
+.slots{display:flex;align-items:center;gap:38px}
+.slot.par{display:grid;gap:12px;padding:8px 10px 10px;border-radius:24px;border:2px dashed color-mix(in oklab,var(--c) 40%,transparent);justify-items:center}
+.st{width:138px;height:132px;display:flex;flex-direction:column;gap:6px;text-align:left;padding:10px;border-radius:18px;background:#fff;
+border:2.5px solid color-mix(in oklab,var(--c) 28%,#fff);box-shadow:var(--shadow);transition:opacity .25s,translate .15s}
+.st:hover{translate:0 -2px}
+.st .bd{position:absolute;right:-10px;top:-10px}
+.st .tt{font-size:12.5px;font-weight:700;line-height:1.22;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.st .ft{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.st.st-d{background:color-mix(in oklab,var(--c) 14%,#fff);border-color:var(--c)}
+.st.st-w{border-color:var(--c);box-shadow:0 0 0 4px color-mix(in oklab,var(--c) 22%,transparent),var(--shadow)}
+.st.st-a{border-color:var(--warn);background:#fff8e8}
+.st.st-p{border-style:dashed}.st.st-p .tt{color:var(--muted)}
+</style>
+<script>
+const card = (s) => h("button", { class: "st st-" + s.st, "data-id": s.id, "data-node": s.st, "data-cat": s.cat, css: { "--k": CATS[s.cat].c }, title: s.t },
+  h("span", { class: "bd" }, STT[s.st][0]), h("span", { class: "ci" }, CATS[s.cat].i), h("span", { class: "tt" }, s.t),
+  h("span", { class: "ft" }, h("span", { class: "cl" }, CATS[s.cat].n), h("span", { class: "sid" }, s.id)));
+const slot = (x) => Array.isArray(x) ? h("div", { class: "slot par" }, h("span", { class: "parcap" }, "⇉ a la vez"), x.map(card)) : h("div", { class: "slot" }, card(x));
+const phase = (ph) => h("div", { class: "ph", "data-ph": ph.key, "data-needs": ph.needs }, lock(ph),
+  h("div", { class: "pht" }, h("span", { class: "n" }, phSt(ph) === "d" ? "✓" : ph.k + 1), ph.n), h("div", { class: "slots" }, ph.steps.map(slot)));
+const head = (b) => h("div", { class: "head", css: { "--p": pct(bsteps(b)) } }, h("span", { class: "hi" }, b.i), h("b", {}, b.n),
+  h("small", {}, `${done(bsteps(b))} de ${bsteps(b).length} pasos`), h("span", { class: "bar" }, h("i", {})));
+const row = (b) => h("div", { class: "row", "data-br": b.id, css: { "--c": b.c } }, head(b), b.ph.map(phase), h("div", { class: "end" + (pct(bsteps(b)) === 100 ? " ok" : "") }, "🏁"));
+const pj = (p, single) => h("section", { class: "pj", css: { "--c": p.c } }, pjHead(p, single), p.br.map(row));
+const DESIGN = { name: "A · Estaciones",
+  all(root) { stage(root, h("div", {}, rainbow(), DATA.map((p) => pj(p))), "h", 0.45); },
+  project(root, p) { stage(root, h("div", {}, rainbow(p), pj(p, true)), "h"); } };
+</script>

@@ -1,0 +1,40 @@
+<style>
+/* C · Cascada: las líneas bajan. Cada rama es una columna y los proyectos, uno al lado del otro, hacen el arcoíris. */
+.all{display:flex;gap:26px;align-items:flex-start;width:max-content}
+.pj{min-width:0;margin:0;border-left-width:1.5px;border-top:10px solid var(--c)}
+.cols{display:flex;gap:46px;align-items:flex-start;margin-top:12px}
+.col{width:280px;display:flex;flex-direction:column;align-items:center;gap:28px}
+.col .head{width:100%}
+.ph{width:100%;display:flex;flex-direction:column;align-items:center;gap:26px;padding:12px 12px 18px;border-radius:26px;
+background:color-mix(in oklab,var(--c) 9%,transparent);border:1.5px solid color-mix(in oklab,var(--c) 20%,transparent)}
+.ph .pht{background:#fff;padding:6px 11px;border-radius:11px;white-space:normal;box-shadow:var(--shadow)}
+.ph .lock{white-space:normal}
+.slot{width:100%}
+.slot.par{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.slot.par .parcap{grid-column:1/-1;text-align:center;margin-bottom:-4px}
+.st{width:100%;min-height:92px;display:grid;grid-template-columns:28px 1fr;align-content:start;gap:8px 9px;text-align:left;padding:11px 12px;border-radius:18px;background:#fff;
+border:2.5px solid color-mix(in oklab,var(--c) 28%,#fff);box-shadow:var(--shadow);transition:opacity .25s}
+.st .bd{position:absolute;right:-9px;top:-9px}
+.st .tt{font-size:13px;font-weight:700;line-height:1.24;padding-right:10px}
+.st .ft{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:4px;align-self:end}
+.par .st{grid-template-columns:1fr;min-height:150px;padding:10px}.par .st .tt{font-size:12.5px;padding:0}.par .st .ft{flex-direction:column;align-items:flex-start}
+.st.st-d{background:color-mix(in oklab,var(--c) 14%,#fff);border-color:var(--c)}
+.st.st-w{border-color:var(--c);box-shadow:0 0 0 4px color-mix(in oklab,var(--c) 22%,transparent),var(--shadow)}
+.st.st-a{border-color:var(--warn);background:#fff8e8}
+.st.st-p{border-style:dashed}.st.st-p .tt{color:var(--muted)}
+</style>
+<script>
+const card = (s) => h("button", { class: "st st-" + s.st, "data-id": s.id, "data-node": s.st, "data-cat": s.cat, css: { "--k": CATS[s.cat].c }, title: s.t },
+  h("span", { class: "bd" }, STT[s.st][0]), h("span", { class: "ci" }, CATS[s.cat].i), h("span", { class: "tt" }, s.t),
+  h("span", { class: "ft" }, h("span", { class: "cl" }, CATS[s.cat].n), h("span", { class: "sid" }, s.id)));
+const slot = (x) => Array.isArray(x) ? h("div", { class: "slot par" }, h("span", { class: "parcap" }, "⇉ a la vez"), x.map(card)) : h("div", { class: "slot" }, card(x));
+const phase = (ph) => h("div", { class: "ph", "data-ph": ph.key, "data-needs": ph.needs },
+  h("div", { class: "pht" }, h("span", { class: "n" }, phSt(ph) === "d" ? "✓" : ph.k + 1), ph.n), lock(ph), ph.steps.map(slot));
+const head = (b) => h("div", { class: "head", css: { "--p": pct(bsteps(b)) } }, h("span", { class: "hi" }, b.i), h("b", {}, b.n),
+  h("small", {}, `${done(bsteps(b))} de ${bsteps(b).length} pasos`), h("span", { class: "bar" }, h("i", {})));
+const col = (b) => h("div", { class: "col", "data-br": b.id, css: { "--c": b.c } }, head(b), b.ph.map(phase), h("div", { class: "end" + (pct(bsteps(b)) === 100 ? " ok" : "") }, "🏁"));
+const pj = (p, single) => h("section", { class: "pj", css: { "--c": p.c } }, pjHead(p, single), h("div", { class: "cols" }, p.br.map(col)));
+const DESIGN = { name: "C · Cascada",
+  all(root) { stage(root, h("div", {}, rainbow(), h("div", { class: "all" }, DATA.map((p) => pj(p)))), "v", 0.55); },
+  project(root, p) { stage(root, h("div", {}, rainbow(p), pj(p, true)), "v"); } };
+</script>
