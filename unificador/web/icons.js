@@ -34,6 +34,7 @@ const SHAPES = {
   sprout: [P("M12 21v-9"), P("M12 12c0-4 3-7 8-7 0 5-3 7-8 7z"), P("M12 14c0-3-2.5-5.5-7-5.5 0 4 2.5 5.5 7 5.5z")],
   grid: [["rect", { x: 3.5, y: 3.5, width: 7, height: 7, rx: 1.5 }], ["rect", { x: 13.5, y: 3.5, width: 7, height: 7, rx: 1.5 }],
     ["rect", { x: 3.5, y: 13.5, width: 7, height: 7, rx: 1.5 }], ["rect", { x: 13.5, y: 13.5, width: 7, height: 7, rx: 1.5 }]],
+  logout: [P("M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9")],
 };
 
 export const ICONS = Object.keys(SHAPES);

@@ -11,10 +11,12 @@ import hashlib
 import json
 import os
 import tempfile
+import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
 FILE_NAME = "proyectos.json"
+ACTIVE_FILE = "active.json"
 
 
 def _home() -> Path:
@@ -26,12 +28,32 @@ def _file() -> Path:
     return _home() / FILE_NAME
 
 
+def _active_file() -> Path:
+    return _home() / ACTIVE_FILE
+
+
 def _norm(path) -> str:
     return os.path.normcase(os.path.abspath(str(path)))
 
 
 def _id(path: str) -> str:
     return hashlib.sha1(_norm(path).encode("utf-8")).hexdigest()[:10]
+
+
+def _write_json(target: Path, payload: dict) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(target.parent), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        os.replace(tmp, target)
+    except OSError:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def _load() -> List[str]:
@@ -44,20 +66,7 @@ def _load() -> List[str]:
 
 
 def _save(paths: List[str]) -> None:
-    target = _file()
-    target.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=str(target.parent), suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
-            json.dump({"projects": paths}, f, indent=2, ensure_ascii=False)
-            f.write("\n")
-        os.replace(tmp, target)
-    except OSError:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
+    _write_json(_file(), {"projects": paths})
 
 
 def register(path) -> None:
@@ -75,6 +84,24 @@ def forget(path) -> None:
     kept = [p for p in paths if _norm(p) != _norm(path)]
     if len(kept) != len(paths):
         _save(kept)
+
+
+def set_active(path) -> str:
+    """Marca ``path`` como el proyecto en el que se está trabajando ahora."""
+    absolute = os.path.abspath(str(path))
+    pid = _id(absolute)
+    _write_json(_active_file(), {"id": pid, "path": absolute, "updated": int(time.time())})
+    return pid
+
+
+def active_id() -> str:
+    """El id del último proyecto activo registrado, o ``""`` si no hay ninguno."""
+    try:
+        data = json.loads(_active_file().read_text(encoding="utf-8"))
+        pid = data.get("id", "")
+    except (OSError, ValueError, TypeError, AttributeError):
+        return ""
+    return pid if isinstance(pid, str) else ""
 
 
 def listing() -> List[Dict]:

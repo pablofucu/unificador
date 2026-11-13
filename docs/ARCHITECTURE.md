@@ -36,14 +36,15 @@ branches[]   rama: key, name, goal, icon, color, archived?
 
 | Módulo | Qué hace |
 | --- | --- |
-| `cli.py` | Orden `unificador`: abrir la web, `install`, `doctor`, `import-kanvas`. |
-| `app.py` | Servidor HTTP: ficheros de `web/`, API JSON y eventos en vivo. |
-| `plan.py` | Formato del plan, operaciones y la orden `uni` (se copia al proyecto como `.unificador/uni.py`). |
+| `cli.py` | Orden `unificador`: abrir la web, `install`, `doctor`, `import-kanvas`, `funnel`. |
+| `app.py` | Servidor HTTP: ficheros de `web/`, puerta remota (`LOGIN_HTML` y `/auth/*`), API JSON y eventos en vivo. |
+| `funnel.py` | Clave cifrada (`PBKDF2-HMAC-SHA256`), cookies firmadas (`HMAC-SHA256`), límite de intentos, CLI de Tailscale Funnel y arranque en segundo plano. |
+| `plan.py` | Formato del plan, operaciones y la orden `uni` (se copia al proyecto como `.unificador/uni.py`, incluida la activación automática del proyecto y del servidor). |
 | `rules.py` | Prepara un proyecto: `uni.py`, bloque de reglas en `AGENTS.md`/`CLAUDE.md` y aviso de inicio de sesión. Se puede repetir sin duplicar nada. |
 | `agents.py` | Localiza el ejecutable de `claude`, `agy` y `codex` (PATH y carpetas habituales); lo usa `doctor`. |
 | `kanvas_import.py` | Convierte un `kanvas.json` antiguo en plan. |
-| `projects.py` | Registro de proyectos de la máquina (`~/.unificador/proyectos.json`, o `UNIFICADOR_HOME`). |
-| `web/` | La página, JavaScript sin librerías en módulos ES: `index.html`, `app.css`, `app.js` (portada con todos los proyectos o tablero de uno, `#p=<id>`, y eventos en vivo), `util.js` (nodos, peticiones, borradores), `plan.js` (carriles por rama con fases en tarjetas y sus pasos), `decide.js` (bandeja «Te toca», revisar fases, preguntas, propuestas en miniatura y visor a pantalla completa). |
+| `projects.py` | Registro de proyectos (`~/.unificador/proyectos.json`) y proyecto activo (`active.json`, o `UNIFICADOR_HOME`). |
+| `web/` | La página, JavaScript sin librerías en módulos ES: `index.html`, `app.css`, `app.js` (portada con todos los proyectos o tablero de uno, `#p=<id>`, y eventos en vivo), `util.js` (nodos, peticiones, borradores, modo sin conexión y cierre de sesión), `plan.js` (carriles por rama con fases en tarjetas y sus pasos), `decide.js` (bandeja «Te toca», revisar fases, preguntas, propuestas en miniatura y visor a pantalla completa), `sw.js`, `manifest.webmanifest` e `icon.svg` (PWA y caché de solo lectura en remoto). |
 
 ## API
 
@@ -52,7 +53,7 @@ arrancó el servidor. Un id que no esté en el registro da 404: nunca se sirve u
 
 | Ruta | Para qué |
 | --- | --- |
-| `GET /api/projects` | El de arranque (`current`) y los registrados: `id, name, path, exists, done, total, waiting`. |
+| `GET /api/projects` | El de arranque (`current`), el último trabajado (`active`), indicador `remote` y los registrados: `id, name, path, exists, done, total, waiting`. |
 | `GET /api/project` | Id, nombre y ruta del proyecto. |
 | `GET /api/plan` | El plan tal cual (ramas, fases con `review`, `asks`). |
 | `POST /api/plan/steps/<id>/state` | Marcar un paso a mano: `{state, text?}`. |
@@ -62,6 +63,8 @@ arrancó el servidor. Un id que no esté en el registro da 404: nunca se sirve u
 | `POST /api/plan/branches/<key>/nonstop` | Rama sin paradas: `{on: true\|false}`. |
 | `GET /propuestas/<P-n>/<n>.html` | Un mockup de `.unificador/propuestas/` (solo esa forma de ruta), con CSP `sandbox`. |
 | `GET /api/events` | Eventos en vivo (SSE) del proyecto que se ve: `plan` cuando cambia su fichero. |
+| `POST /auth/login` | Inicia sesión remota por Funnel con `{key}` y emite la cookie firmada `uni_session`. |
+| `POST /auth/logout` | Cierra la sesión remota borrando la cookie (`Max-Age=0`). |
 
 Lo que la persona decide en la web se guarda con `seen: false`: el agente lo recibe solo con `inbox`/`wait`.
 
@@ -82,16 +85,36 @@ Unificador no puede despertar a un agente; le llega así, sin que la persona ten
 `unificador doctor` repasa por igual Claude Code (`claude`), Antigravity (`agy`) y Codex (`codex`): si se
 encuentra el ejecutable y si el proyecto tiene sus reglas (`AGENTS.md` lo leen Antigravity y Codex;
 `CLAUDE.md` y el aviso de inicio de `.claude/settings.json` son de Claude Code). Que falte un cliente solo
-se informa; que falten las reglas o el plan no responda sí es un error.
+se informa; que falten las reglas o el plan no responda sí es un error. También muestra el estado del Funnel.
 
 ## Seguridad
 
 - Escucha solo en `127.0.0.1` y no envía cabeceras CORS.
-- Rechaza peticiones que no vengan de la propia página (`Host`, `Origin`, `Sec-Fetch-Site`).
+- Rechaza peticiones que no vengan de la propia página (`Host`, `Origin`, `Sec-Fetch-Site`). En acceso por Funnel
+  solo admite tráfico procedente del loopback hacia el host `.ts.net` configurado y el puerto HTTPS exacto.
 - Política de contenido estricta: sin scripts en línea ni recursos de fuera; solo marcos del propio servidor.
 - Los mockups del agente van en `<iframe sandbox="allow-scripts">` y se sirven con `sandbox allow-scripts;
   default-src 'none'…`: sin origen propio, sin red y sin poder llamar a la API ni tocar la página.
 - No se lanza ningún proceso de agente ni se leen conversaciones.
+
+## Acceso remoto (Tailscale Funnel) y caché sin conexión
+
+- **Puerta cerrada (opción A)**: si la petición entra por proxy/Tailscale y no trae una cookie `uni_session` válida
+  (o si Funnel está desactivado / sin clave), `/` sirve solo `LOGIN_HTML` (con `X-Unificador-Auth: login` y sin
+  ningún dato de proyectos ni referencia a `app.js` o `sw.js`), y cualquier ruta de `/api/*`, `/propuestas/*` o
+  estáticos devuelve `401` (o `403` si Funnel no está activo). El navegador local en `127.0.0.1` sigue abierto sin clave.
+- **Clave y límite de intentos**: `funnel.json` (permisos `0600`) guarda solo el hash `PBKDF2-HMAC-SHA256` (200.000
+  iteraciones) y `cookie_secret`. Tras 5 fallos desde la misma IP (`RateLimiter`) bloquea temporalmente con `429`.
+- **Sin rutas del disco**: las respuestas remotas de `/api/projects` y `/api/project` vacían `path` (`""`).
+- **Autoarranque y proyecto activo**: `unificador funnel enable` configura Tailscale Funnel en `443` (con respaldo en
+  `8443` o `10000`) y guarda en `server.json` el puerto local y `autostart: true`. Cada vez que un agente ejecuta
+  `.unificador/uni.py`, registra la carpeta, la marca en `active.json` y levanta un único servidor compartido si no
+  estaba vivo (`UNI_NO_AUTOSTART=1` lo desactiva).
+- **PWA y caché de solo lectura**: cuando `app.remote` es `true` (nunca en `127.0.0.1`), `app.js` registra `sw.js`.
+  Usa estrategia *network-first* sobre GET del mismo origen (excluyendo `/auth/` y `/api/events`) y si el ordenador
+  se desconecta sirve la última copia con `X-Unificador-Offline: 1`, bloqueando escrituras en la interfaz. Al pulsar
+  **Salir** o recibir `401`/`403`/`X-Unificador-Auth: login`, `sw.js` y `LOGIN_HTML` borran todas las caches y
+  desregistran el Service Worker.
 
 ## Pruebas
 

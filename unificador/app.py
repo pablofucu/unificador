@@ -13,6 +13,7 @@ Servidor local de Unificador: una web con todos tus proyectos, solo para esta m�
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import mimetypes
 import os
@@ -23,21 +24,108 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 from urllib.parse import parse_qs, unquote, urlsplit
 
+from unificador import funnel
 from unificador import plan as P
 from unificador import projects as R
 
 WEB_DIR = Path(__file__).parent / "web"
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "[::1]"}
+LOOPBACK_IPS = {"127.0.0.1", "::1", "::ffff:127.0.0.1"}
+PROXY_HEADERS = ("Tailscale-Funnel-Request", "Tailscale-User-Login", "X-Forwarded-For",
+                 "X-Forwarded-Host", "X-Forwarded-Proto", "Forwarded")
 DEFAULT_PORT = 8766
 WATCH_EVERY = 1.0
 MAX_BODY = 1_000_000
 PERSON = "persona"
 CSP = ("default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src 'self'; "
-       "frame-ancestors 'none'")
+       "worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'")
+LOGIN_CSP = ("default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
+             "connect-src 'self'; img-src data:; frame-ancestors 'none'")
 # Los mockups los escribe el agente: van aislados (sin origen propio, sin red, sin tocar la aplicación).
 PROPOSAL_CSP = ("sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
                 "img-src data:; font-src data:; media-src data:; frame-ancestors 'self'")
 PROPOSAL_PATH = re.compile(r"^/propuestas/(P-\d{1,6})/(\d{1,3})\.html$")
+RATE_LIMITER = funnel.RateLimiter()
+
+LOGIN_HTML = """<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acceso · Unificador</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root { color-scheme: light; --bg: #f6f7fb; --card: #fff; --ink: #1f2338; --muted: #6a7088;
+      --line: #e4e7f1; --soft: #eff1f8; --ai: #6c5ce7; --bad: #e0445e; font-family: system-ui, "Segoe UI", Roboto, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 20px; color: var(--ink);
+      background: var(--bg) radial-gradient(circle, #d3d7e8 1.2px, transparent 1.4px) 0 0 / 22px 22px; }
+    .gate { width: min(100%, 390px); background: var(--card); border-radius: 22px; padding: 26px 24px 22px;
+      border: 1.5px solid var(--line); box-shadow: 0 10px 30px rgba(40, 50, 110, .12); display: grid; gap: 14px; }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .badge { width: 38px; height: 38px; border-radius: 12px; background: #f1eeff; color: var(--ai);
+      display: grid; place-items: center; flex: none; }
+    .badge svg { width: 20px; height: 20px; }
+    h1 { margin: 0; font-size: 1.38rem; letter-spacing: -.01em; }
+    p { margin: 0; color: var(--muted); font-size: .92rem; line-height: 1.45; }
+    form { display: grid; gap: 12px; }
+    input { width: 100%; min-height: 44px; padding: 10px 14px; border-radius: 12px; border: 1.5px solid var(--line);
+      font: inherit; color: inherit; background: #fff; transition: border-color .15s; }
+    input:focus { outline: none; border-color: var(--ai); box-shadow: 0 0 0 3px rgba(108, 92, 231, .16); }
+    button { min-height: 44px; border: 0; border-radius: 99px; background: var(--ai); color: #fff; font: inherit;
+      font-weight: 700; cursor: pointer; transition: background .15s; }
+    button:hover:not(:disabled) { background: #5b4bd6; }
+    button:disabled { opacity: .65; cursor: not-allowed; }
+    .err { color: var(--bad); font-size: .86rem; min-height: 1.2em; font-weight: 600; }
+    .hint { font-size: .78rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+  </style>
+</head>
+<body>
+  <main class="gate">
+    <div class="brand">
+      <span class="badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5" y="11" width="14" height="10" rx="2.5"></rect>
+          <path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
+        </svg>
+      </span>
+      <h1>Unificador</h1>
+    </div>
+    <p>Acceso remoto privado. Introduce tu clave para ver tus proyectos.</p>
+    <form id="f">
+      <input id="k" type="password" autocomplete="current-password" placeholder="Clave de acceso" aria-label="Clave de acceso" required autofocus>
+      <button id="b" type="submit">Entrar</button>
+      <p id="e" class="err" role="status" aria-live="polite"></p>
+    </form>
+    <p class="hint">Si cambiaste la clave desde tu equipo con <code>reset-key</code>, usa la nueva.</p>
+  </main>
+  <script>
+    try {
+      navigator.serviceWorker?.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()));
+      caches?.keys().then((ks) => ks.forEach((n) => caches.delete(n)));
+    } catch {}
+    const f = document.getElementById("f"), k = document.getElementById("k"), b = document.getElementById("b"), e = document.getElementById("e");
+    f.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      e.textContent = "";
+      b.disabled = true;
+      b.textContent = "Comprobando…";
+      try {
+        const r = await fetch("/auth/login", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: k.value }) });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok) { location.reload(); return; }
+        e.textContent = d.error || "No se pudo entrar.";
+      } catch { e.textContent = "Sin conexión con el servidor."; }
+      b.disabled = false;
+      b.textContent = "Entrar";
+      k.select();
+      k.focus();
+    });
+  </script>
+</body>
+</html>
+"""
 
 
 class ApiError(Exception):
@@ -98,24 +186,90 @@ def _host_name(value: str) -> str:
     return value.rsplit(":", 1)[0] if ":" in value else value
 
 
-def refusal(method: str, headers: Any, port: int, host: str = "127.0.0.1") -> Optional[str]:
+def _host_port(value: str) -> Optional[int]:
+    value = (value or "").strip()
+    if value.startswith("["):
+        _, _, rest = value.partition("]")
+        raw = rest[1:] if rest.startswith(":") else ""
+    elif ":" in value:
+        raw = value.rsplit(":", 1)[1]
+    else:
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        return None
+
+
+def _public_host(cfg: Dict[str, Any]) -> str:
+    url = (cfg.get("public_url") or "").strip()
+    return _host_name(urlsplit(url).netloc) if url else ""
+
+
+def _is_tailscale_host(host_name: str, cfg: Dict[str, Any]) -> bool:
+    pub = _public_host(cfg)
+    return funnel.is_ts_host(host_name) or bool(pub and host_name == pub)
+
+
+def _is_proxied(headers: Any) -> bool:
+    return any(headers.get(h) for h in PROXY_HEADERS)
+
+
+def _is_funnel_traffic(headers: Any, client_ip: str, cfg: Dict[str, Any]) -> bool:
+    """Distingue el acceso remoto por Tailscale/Funnel del navegador local en 127.0.0.1."""
+    h_name = _host_name(headers.get("Host", ""))
+    if headers.get("Tailscale-Funnel-Request"):
+        return True
+    if _is_tailscale_host(h_name, cfg):
+        return True
+    if cfg.get("enabled") and (_is_proxied(headers) or client_ip not in LOOPBACK_IPS or h_name not in LOCAL_HOSTS):
+        return True
+    return False
+
+
+def _peer_ip(headers: Any, client_ip: str) -> str:
+    if client_ip in LOOPBACK_IPS:
+        xff = (headers.get("X-Forwarded-For") or "").strip()
+        if xff:
+            last = xff.split(",")[-1].strip()
+            if last:
+                return last
+        return "funnel"
+    return client_ip or "unknown"
+
+
+def refusal(method: str, headers: Any, port: int, host: str = "127.0.0.1",
+            allow_tailscale: bool = False, client_ip: str = "127.0.0.1",
+            funnel_cfg: Optional[Dict[str, Any]] = None) -> Optional[str]:
     """Por qué se rechaza la petición, o None si viene de la propia página."""
+    cfg = funnel_cfg or {}
     h_host = headers.get("Host", "")
+    h_name = _host_name(h_host)
     is_lan = host not in ("127.0.0.1", "localhost", "::1")
-    if not is_lan and _host_name(h_host) not in LOCAL_HOSTS:
+    ts_allowed = bool(allow_tailscale and client_ip in LOOPBACK_IPS and _is_tailscale_host(h_name, cfg))
+    if not is_lan and h_name not in LOCAL_HOSTS and not ts_allowed:
         return "Unificador solo atiende a esta máquina."
     if (headers.get("Sec-Fetch-Site") or "").lower() == "cross-site":
         return "Petición de otra web: rechazada."
     origin = headers.get("Origin")
     if origin is not None:
         o = urlsplit(origin)
-        if o.scheme != "http":
-            return "Petición de otra web: rechazada."
-        if (o.port or 80) != port:
-            return "Petición de otra web: rechazada."
-        if not is_lan and _host_name(o.netloc) not in LOCAL_HOSTS:
-            return "Petición de otra web: rechazada."
-        if is_lan and _host_name(o.netloc) != _host_name(h_host):
+        if o.scheme == "http":
+            if (o.port or 80) != port:
+                return "Petición de otra web: rechazada."
+            if not is_lan and _host_name(o.netloc) not in LOCAL_HOSTS:
+                return "Petición de otra web: rechazada."
+            if is_lan and _host_name(o.netloc) != h_name:
+                return "Petición de otra web: rechazada."
+        elif o.scheme == "https" and ts_allowed:
+            if _host_name(o.netloc) != h_name:
+                return "Petición de otra web: rechazada."
+            o_port = o.port or 443
+            h_port = _host_port(h_host)
+            expected_ports = {h_port} if h_port else {443, int(cfg.get("funnel_port") or 443)}
+            if o_port not in expected_ports or o_port not in funnel.ALLOWED_FUNNEL_PORTS:
+                return "Petición de otra web: rechazada."
+        else:
             return "Petición de otra web: rechazada."
     if method == "POST" and "application/json" not in (headers.get("Content-Type") or "").lower():
         return "Los cambios se envían como JSON."
@@ -167,16 +321,22 @@ def summary(project: "Project") -> Dict[str, Any]:
     return out
 
 
+@route("GET", "/api/health")
+def get_health(project, args, query, body):
+    return {"ok": True}
+
+
 @route("GET", "/api/projects")
 def get_projects(project, args, query, body):
-    """El de arranque (``current``) y los del registro, con su progreso resumido."""
+    """El de arranque (``current``), el último trabajado (``active``) y los del registro."""
     start = project
+    active = R.active_id()
     items = [{"id": start.id, "name": start.name, "path": str(start.path), "exists": start.path.is_dir()}]
     items += [i for i in R.listing() if i["id"] != start.id]
     out = []
     for item in items:
         p = start if item["id"] == start.id else Project(item["path"], item["id"])
-        out.append({**item, "current": item["id"] == start.id, **summary(p)})
+        out.append({**item, "current": item["id"] == start.id, "active": item["id"] == active, **summary(p)})
     return {"projects": out}
 
 
@@ -265,6 +425,20 @@ def get_events(project, args, query, body):
     return Stream(watch(project, WATCH_EVERY), "text/event-stream")
 
 
+def _sanitize_remote(path: str, result: Any, via_funnel: bool, cfg: Dict[str, Any]) -> Any:
+    """En tráfico público de Funnel oculta las rutas del disco y señala sesión remota."""
+    if not via_funnel or not isinstance(result, dict):
+        return result
+    hide = bool(cfg.get("hide_paths", True))
+    if path == "/api/projects":
+        if hide:
+            result = {**result, "projects": [{**item, "path": ""} for item in result.get("projects", [])]}
+        result["remote"] = True
+    elif path == "/api/project" and hide:
+        result = {**result, "path": ""}
+    return result
+
+
 # ----------------------------------------------------------------------------- servidor
 
 class Handler(BaseHTTPRequestHandler):
@@ -275,13 +449,16 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):  # silencio: la terminal es para la persona
         pass
 
-    def _send(self, status: int, body: bytes, content_type: str, csp: str = CSP) -> None:
+    def _send(self, status: int, body: bytes, content_type: str, csp: str = CSP,
+              extra_headers: Optional[List[Tuple[str, str]]] = None) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Security-Policy", csp)
+        for k, v in (extra_headers or ()):
+            self.send_header(k, v)
         if self.command == "POST" and not getattr(self, "_read_body", False):
             self.send_header("Connection", "close")  # no se ha leído el cuerpo: no reutilizar
             self.close_connection = True
@@ -292,15 +469,17 @@ class Handler(BaseHTTPRequestHandler):
         except (ConnectionError, OSError):
             self.close_connection = True  # la página se ha ido
 
-    def _json(self, data: Any, status: int = 200) -> None:
+    def _json(self, data: Any, status: int = 200,
+              extra_headers: Optional[List[Tuple[str, str]]] = None) -> None:
         self._send(status, json.dumps(data, ensure_ascii=False).encode("utf-8"),
-                   "application/json; charset=utf-8")
+                   "application/json; charset=utf-8", extra_headers=extra_headers)
 
     def _stream(self, stream: Stream) -> None:
         self.send_response(200)
         self.send_header("Content-Type", f"{stream.content_type}; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Accel-Buffering", "no")
         self.send_header("Connection", "close")
         self.end_headers()
         self.close_connection = True
@@ -321,7 +500,11 @@ class Handler(BaseHTTPRequestHandler):
         if WEB_DIR.resolve() not in target.parents or not target.is_file():
             return self._json({"error": "No existe."}, 404)
         kind = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
-        if kind.startswith("text/") or kind in ("application/javascript", "application/json"):
+        if target.suffix == ".webmanifest":
+            kind = "application/manifest+json"
+        elif target.suffix == ".js" and kind == "application/octet-stream":
+            kind = "text/javascript"
+        if kind.startswith("text/") or kind in ("application/javascript", "application/json", "application/manifest+json"):
             kind += "; charset=utf-8"
         self._send(200, target.read_bytes(), kind)
 
@@ -357,13 +540,76 @@ class Handler(BaseHTTPRequestHandler):
             raise ApiError("El cuerpo tiene que ser un objeto JSON.")
         return data
 
+    def _is_https(self, cfg: Dict[str, Any]) -> bool:
+        h_name = _host_name(self.headers.get("Host", ""))
+        return bool(self.headers.get("Tailscale-Funnel-Request")
+                    or (self.headers.get("X-Forwarded-Proto") or "").lower() == "https"
+                    or _is_tailscale_host(h_name, cfg))
+
+    def _cookie_header(self, value: str, max_age: int, cfg: Dict[str, Any]) -> str:
+        parts = [f"{funnel.SESSION_COOKIE}={value}", "HttpOnly", "SameSite=Strict", "Path=/", f"Max-Age={max_age}"]
+        if self._is_https(cfg):
+            parts.append("Secure")
+        return "; ".join(parts)
+
+    def _auth_login(self, cfg: Dict[str, Any], client_ip: str) -> None:
+        if not cfg.get("enabled") or not funnel.has_key(cfg):
+            return self._json({"error": "El acceso remoto no está activado."}, 403)
+        peer = _peer_ip(self.headers, client_ip)
+        wait = RATE_LIMITER.retry_after(peer)
+        if wait > 0:
+            return self._json({"error": f"Demasiados intentos. Espera {wait} s."}, 429,
+                              [("Retry-After", str(wait))])
+        try:
+            data = self._body()
+        except ApiError as e:
+            return self._json({"error": str(e)}, e.status)
+        raw_key = data.get("key", "")
+        if not isinstance(raw_key, str) or not funnel.verify_key(raw_key, cfg):
+            lock_sec = RATE_LIMITER.record_failure(peer)
+            if lock_sec > 0:
+                return self._json({"error": f"Demasiados intentos. Espera {lock_sec} s."}, 429,
+                                  [("Retry-After", str(lock_sec))])
+            return self._json({"error": "Clave incorrecta."}, 401)
+        RATE_LIMITER.record_success(peer)
+        token = funnel.sign_session(cfg["cookie_secret"])
+        self._json({"ok": True}, 200, [("Set-Cookie", self._cookie_header(token, funnel.SESSION_TTL, cfg))])
+
+    def _auth_logout(self, cfg: Dict[str, Any]) -> None:
+        self._json({"ok": True}, 200, [("Set-Cookie", self._cookie_header("", 0, cfg))])
+
     def _handle(self) -> None:
         self._read_body = False
         method = "GET" if self.command == "HEAD" else self.command
-        why = refusal(method, self.headers, self.server.server_address[1], getattr(self.server, "host", "127.0.0.1"))
+        client_ip = self.client_address[0] if self.client_address else ""
+        cfg = funnel.load_config()
+        allow_ts = bool(getattr(self.server, "tailscale", False) or cfg.get("enabled"))
+        why = refusal(method, self.headers, self.server.server_address[1],
+                      getattr(self.server, "host", "127.0.0.1"),
+                      allow_tailscale=allow_ts, client_ip=client_ip, funnel_cfg=cfg)
         if why:
             return self._json({"error": why}, 403)
         url = urlsplit(self.path)
+        via_funnel = _is_funnel_traffic(self.headers, client_ip, cfg)
+        if url.path == "/auth/login":
+            if method != "POST":
+                return self._json({"error": "Método no permitido."}, 405)
+            return self._auth_login(cfg, client_ip)
+        if url.path == "/auth/logout":
+            if method != "POST":
+                return self._json({"error": "Método no permitido."}, 405)
+            return self._auth_logout(cfg)
+        if via_funnel:
+            if not cfg.get("enabled") or not funnel.has_key(cfg):
+                return self._json({"error": "El acceso remoto por Funnel no está activado."}, 403)
+            token = funnel.parse_cookie(self.headers.get("Cookie"))
+            if not funnel.verify_session(token, cfg["cookie_secret"]):
+                if method == "GET" and url.path in ("/", "/index.html"):
+                    return self._send(200, LOGIN_HTML.encode("utf-8"), "text/html; charset=utf-8", LOGIN_CSP,
+                                      [("X-Unificador-Auth", "login")])
+                if method == "GET" and url.path == "/favicon.ico":
+                    return self._send(204, b"", "image/x-icon", LOGIN_CSP)
+                return self._json({"error": "Necesitas iniciar sesión."}, 401)
         query = {k: v[-1] for k, v in parse_qs(url.query).items()}
         if not url.path.startswith("/api/"):
             if method != "GET":
@@ -383,6 +629,7 @@ class Handler(BaseHTTPRequestHandler):
                 args = tuple(unquote(a) for a in m.groups())
                 project = self.project if fn is get_projects else resolve(self.project, query)
                 result = fn(project, args, query, self._body() if method == "POST" else {})
+                result = _sanitize_remote(url.path, result, via_funnel, cfg)
             except ApiError as e:
                 return self._json({"error": str(e)}, e.status)
             except P.PlanError as e:
@@ -408,7 +655,8 @@ class Server(ThreadingHTTPServer):
             super().handle_error(request, client_address)  # que una pestaña se cierre no es un error
 
 
-def make_server(project_path: str | Path, port: int = DEFAULT_PORT, host: str = "127.0.0.1", tries: int = 20) -> Server:
+def make_server(project_path: str | Path, port: int = DEFAULT_PORT, host: str = "127.0.0.1",
+                tries: int = 20, tailscale: bool = False) -> Server:
     """Abre el servidor en ``host``, en ``port`` o en el siguiente que esté libre."""
     project = Project(project_path)
     handler = type("ProjectHandler", (Handler,), {"project": project})
@@ -418,6 +666,7 @@ def make_server(project_path: str | Path, port: int = DEFAULT_PORT, host: str = 
             server = Server((host, candidate), handler)
             server.project = project  # type: ignore[attr-defined]
             server.host = host  # type: ignore[attr-defined]
+            server.tailscale = tailscale  # type: ignore[attr-defined]
             return server
         except OSError as e:
             last = e

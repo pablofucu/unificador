@@ -40,10 +40,14 @@ Abre tu agente (Claude Code, Antigravity o Codex) en esa carpeta y trabajad como
 ## Órdenes
 
 ```text
-unificador [RUTA] [--port N] [--no-open]    abre la web del proyecto (por defecto, la carpeta actual)
-unificador install [RUTA]                   solo prepara el proyecto, sin abrir la web
-unificador doctor [RUTA]                    comprueba clientes (claude, agy, codex) y reglas, y dice qué falta
-unificador import-kanvas [RUTA] [--force]   convierte un tablero Kanvas (kanvas.json) en plan
+unificador [RUTA] [--port N] [--no-open]        abre la web del proyecto (por defecto, la carpeta actual)
+unificador install [RUTA]                       solo prepara el proyecto, sin abrir la web
+unificador doctor [RUTA]                        comprueba clientes (claude, agy, codex), reglas y Funnel
+unificador import-kanvas [RUTA] [--force]       convierte un tablero Kanvas (kanvas.json) en plan
+unificador funnel enable [RUTA] [--port 443]    activa URL pública con Tailscale Funnel, clave y autoarranque
+unificador funnel status                        muestra URL pública, servidor activo y último proyecto
+unificador funnel reset-key [--generate]        cambia la clave y cierra todas las sesiones abiertas
+unificador funnel off                           desactiva el acceso público por Funnel
 ```
 
 La IA (y tú, si quieres) maneja el plan con `python .unificador/uni.py`:
@@ -63,6 +67,19 @@ python .unificador/uni.py branch "Carrito" --icon 🛒 --goal "Comprar desde la 
 1. Le pides algo a tu agente, en su terminal o aplicación.
 2. El agente lo convierte en una rama con fases y pasos, y los va haciendo: empieza, apunta, termina.
 3. Tú lo ves moverse en directo en la web. Si algo no te convence, abre el paso y pulsa **Pedir un cambio**.
+
+## Acceso remoto (Tailscale Funnel)
+
+Si tienes Tailscale instalado en tu ordenador y quieres ver o aprobar tus planes desde el móvil o desde cualquier sitio:
+
+```bash
+unificador funnel enable
+```
+
+- **Puerta cerrada aunque se filtre la URL**: sin la clave correcta nadie ve nombres de proyectos, rutas, pasos ni propuestas; solo aparece una pantalla de acceso y todo lo demás responde `401`.
+- **Puerto e inicio automático**: usa el puerto público `443` (o `8443` / `10000` si está ocupado, configurable con `--port`) apuntando al servidor local (`127.0.0.1:8766`). Cada vez que tú o un agente trabajáis en un proyecto con `uni.py`, se levanta el servidor en segundo plano si estaba parado y se marca ese proyecto como el activo.
+- **Copia de caché sin conexión**: una vez dentro desde fuera, Unificador registra un Service Worker (`sw.js`) y se puede instalar en el móvil. Si apagas o suspendes el ordenador, sigues viendo el último tablero cargado en modo **solo lectura** (con aviso arriba). Al cerrar sesión o caducar la clave, la caché se borra automáticamente.
+- **Revocar sesiones**: si sospechas que alguien tiene tu clave o tu móvil, ejecuta `unificador funnel reset-key` para cambiar la clave e invalidar todas las cookies al instante.
 
 ## Clientes
 

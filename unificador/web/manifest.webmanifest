@@ -1,0 +1,19 @@
+{
+  "name": "Unificador",
+  "short_name": "Unificador",
+  "description": "El plan de tus proyectos, accesible desde cualquier sitio.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f7fb",
+  "theme_color": "#6c5ce7",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

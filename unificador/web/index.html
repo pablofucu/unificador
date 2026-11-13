@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#6c5ce7">
   <title>Unificador</title>
   <link rel="icon" href="data:,">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="app.css">
   <link rel="stylesheet" href="decide.css">
 </head>
@@ -12,6 +14,11 @@
   <a class="skip" href="#main">Saltar al contenido</a>
   <div class="layout">
     <main id="main" tabindex="-1">
+      <div id="offline-banner" class="offline-bar" role="status" aria-live="polite" hidden>
+        <span id="offline-text">Sin conexión con tu ordenador · Mostrando la última copia guardada (solo lectura).</span>
+        <button type="button" id="offline-retry" class="pill">Reintentar</button>
+      </div>
+
       <!-- Portada: todos los proyectos -->
       <section id="home" aria-labelledby="home-title" hidden>
         <header class="top">
@@ -19,6 +26,7 @@
             <h1 id="home-title">Tus proyectos</h1>
             <p class="muted">Tu agente trabaja en su propio programa; aquí ves cómo va todo y decides lo que te toca.</p>
           </div>
+          <button type="button" id="logout-home" class="pill logout-btn" hidden>Cerrar sesión</button>
         </header>
         <div id="projects" class="projects"></div>
       </section>
@@ -35,6 +43,7 @@
           </div>
           <div id="legend" class="legend" role="group" aria-label="Filtrar por categoría"></div>
           <button type="button" id="decb" class="decb" aria-controls="drawer" aria-expanded="false"></button>
+          <button type="button" id="logout-board" class="pill logout-btn" hidden>Cerrar sesión</button>
         </header>
         <p id="project-sub" class="muted sub"></p>
         <div class="canvas-wrap">

@@ -352,7 +352,23 @@ svg.layer { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: non
   .v-tools { width: 100%; }
   .v-widths { order: 5; }
   #v-pick { flex: 1; justify-content: center; }
+  .offline-bar { padding: 10px 12px; font-size: .85rem; }
 }
+
+.offline-bar { max-width: 1480px; margin: 0 auto 14px; display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: space-between; gap: 10px; padding: 10px 16px; border-radius: 16px;
+  background: var(--warn-soft); color: var(--warn-ink); border: 1.5px solid color-mix(in srgb, var(--warn) 45%, white);
+  font-size: .9rem; font-weight: 650; box-shadow: var(--shadow); }
+.offline-bar .pill { background: #fff; color: var(--warn-ink); font-weight: 700; }
+.logout-btn { background: var(--card); border: 1.5px solid var(--line); min-height: var(--tap); }
+body.is-offline .actions,
+body.is-offline .review,
+body.is-offline .nonstop .switch,
+body.is-offline .inbox .choice,
+body.is-offline .inbox .choose,
+body.is-offline .inbox textarea,
+body.is-offline .inbox .act-row,
+body.is-offline #v-pick { opacity: .5; pointer-events: none; cursor: not-allowed; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

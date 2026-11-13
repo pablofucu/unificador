@@ -1,14 +1,32 @@
 // Arranque: portada con todos los proyectos o tablero de uno (#p=<id>). Se repinta en vivo.
-import { app, el, getJSON, q, pctOf } from "./util.js";
+import { app, el, getJSON, q, pctOf, setOffline, logout } from "./util.js";
 import { renderPlan, resetBoard, initBoard } from "./plan.js";
 import { icon } from "./icons.js";
 import { setupViewer } from "./decide.js";
 
 const $ = (id) => document.getElementById(id);
-let events = null, homeTimer = null, pending = null, last = null;
+let events = null, homeTimer = null, pending = null, last = null, swRegistered = false;
+
+function syncChrome() {
+  for (const id of ["logout-home", "logout-board"]) {
+    const btn = $(id);
+    if (btn) btn.hidden = !app.remote;
+  }
+  if (app.remote && !swRegistered && "serviceWorker" in navigator) {
+    swRegistered = true;
+    navigator.serviceWorker.register("./sw.js").catch(() => { swRegistered = false; });
+  }
+}
 
 async function loadProjects() {
-  try { app.projects = (await getJSON("/api/projects")).projects || []; } catch { /* se queda la lista anterior */ }
+  try {
+    const data = await getJSON("/api/projects");
+    app.projects = data.projects || [];
+    app.remote = !!data.remote;
+    syncChrome();
+  } catch {
+    if (app.projects.length) setOffline(true);
+  }
   return app.projects;
 }
 
@@ -20,8 +38,10 @@ function projectCard(p) {
   if (ok) c.href = `#p=${p.id}`;
   const head = el("div", "proj-head");
   head.append(el("h2", null, p.name));
-  if (p.current) head.append(el("span", "chip", "Abierto aquí"));
-  c.append(head, el("p", "proj-path", p.path));
+  if (p.active) head.append(el("span", "chip ok", "Activo"));
+  else if (p.current) head.append(el("span", "chip", "Abierto aquí"));
+  c.append(head);
+  if (p.path) c.append(el("p", "proj-path", p.path));
   if (!p.exists) { c.append(el("p", "muted", "No encuentro la carpeta.")); return c; }
   if (p.error) { c.append(el("p", "muted", p.error)); return c; }
   const pct = pctOf(p.done, p.total);
@@ -76,8 +96,10 @@ async function loadPlan() {
     const plan = await getJSON(q("/api/plan"));
     if (pid === app.pid) paint(plan);
   } catch {
-    $("branches").textContent = "No consigo leer el plan. Reintento en un momento…";
-    setTimeout(() => { if (pid === app.pid) loadPlan(); }, 3000);
+    if (pid !== app.pid) return;
+    if (last) setOffline(true);
+    else $("branches").textContent = "Sin conexión con tu ordenador o cargando el plan. Reintento en un momento…";
+    setTimeout(() => { if (pid === app.pid) loadPlan(); }, 4000);
   }
 }
 
@@ -129,13 +151,22 @@ async function route() {
   const found = m && app.projects.find((p) => p.id === m[1]);
   if (found) return showBoard(found);
   if (!app.projects.length) return showBoard({ id: null, name: "Mi proyecto" });
-  // Sin proyecto en la ruta: el de aquí, o el primero que se pueda abrir; la portada sigue en #todos.
+  // Sin proyecto en la ruta: el último trabajado (active), el de aquí, o el primero que se pueda abrir.
   const usable = app.projects.filter((p) => p.exists && !p.error);
-  const first = usable.find((p) => p.current) || usable[0];
+  const first = usable.find((p) => p.active) || usable.find((p) => p.current) || usable[0];
   if (first) return showBoard(first);
   showHome();
 }
 
+for (const id of ["logout-home", "logout-board"]) {
+  const btn = $(id);
+  if (btn) {
+    btn.prepend(icon("logout"));
+    btn.addEventListener("click", logout);
+  }
+}
+$("offline-retry")?.addEventListener("click", route);
+window.addEventListener("online", route);
 window.addEventListener("hashchange", route);
 setupViewer();
 initBoard();

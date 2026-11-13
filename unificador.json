@@ -2283,6 +2283,267 @@
           ]
         }
       ]
+    },
+    {
+      "key": "AR",
+      "name": "Acceso remoto",
+      "goal": "URL pública con Tailscale Funnel protegida por clave, autoarranque al trabajar y caché sin conexión",
+      "icon": "🔐",
+      "color": 2,
+      "created": "2026-11-13T02:33:03+00:00",
+      "by": "antigravity",
+      "next_id": 10,
+      "phases": [
+        {
+          "name": "Seguridad y puerta",
+          "icon": "",
+          "steps": [
+            {
+              "id": "AR-1",
+              "title": "Clave cifrada y sesiones firmadas en funnel.py",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-13T02:33:08+00:00",
+                  "by": "antigravity",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-13T02:33:35+00:00",
+                  "by": "antigravity",
+                  "kind": "done",
+                  "text": "Creado unificador/funnel.py con hash PBKDF2-HMAC-SHA256, cookies firmadas HMAC y RateLimiter; verificado importando el módulo y generando clave"
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-13T02:33:35+00:00",
+              "result": "Creado unificador/funnel.py con hash PBKDF2-HMAC-SHA256, cookies firmadas HMAC y RateLimiter; verificado importando el módulo y generando clave"
+            },
+            {
+              "id": "AR-2",
+              "title": "Puerta cerrada, ocultación de rutas y bloqueo en app.py",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-13T02:33:35+00:00",
+                  "by": "antigravity",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-13T02:35:44+00:00",
+                  "by": "antigravity",
+                  "kind": "done",
+                  "text": "Añadida puerta cerrada, cookies HttpOnly/SameSite=Strict, rate limit, ocultación de paths y soporte proxy HTTPS en app.py; comprobado pasando test_app.py"
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-13T02:35:44+00:00",
+              "result": "Añadida puerta cerrada, cookies HttpOnly/SameSite=Strict, rate limit, ocultación de paths y soporte proxy HTTPS en app.py; comprobado pasando test_app.py"
+            },
+            {
+              "id": "AR-3",
+              "title": "Pruebas de clave, sesiones y rechazo sin autenticar",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-13T02:35:44+00:00",
+                  "by": "antigravity",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-13T02:36:35+00:00",
+                  "by": "antigravity",
+                  "kind": "done",
+                  "text": "Añadidas pruebas en tests/test_funnel.py y ejecutado python3 -m unittest discover -s tests: pasan los 89 tests sin fallos"
+                }
+              ],
+              "cat": "pruebas",
+              "together": true,
+              "updated": "2026-11-13T02:36:35+00:00",
+              "result": "Añadidas pruebas en tests/test_funnel.py y ejecutado python3 -m unittest discover -s tests: pasan los 89 tests sin fallos"
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-13T02:38:23+00:00",
+            "seen": true
+          }
+        },
+        {
+          "name": "Arranque y Tailscale",
+          "icon": "",
+          "steps": [
+            {
+              "id": "AR-4",
+              "title": "Órdenes de Funnel y detección de Tailscale en la CLI",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-13T02:38:23+00:00",
+                  "by": "antigravity",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-13T02:42:58+00:00",
+                  "by": "antigravity",
+                  "kind": "done",
+                  "text": "Órdenes unificador funnel (enable, status, off, reset-key), flags --tailscale/--daemon en serve, active_id en projects y detección de Tailscale CLI; comprobado pasando 89 tests y ejecutando --help, doctor y funnel status."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-13T02:42:58+00:00",
+              "result": "Órdenes unificador funnel (enable, status, off, reset-key), flags --tailscale/--daemon en serve, active_id en projects y detección de Tailscale CLI; comprobado pasando 89 tests y ejecutando --help, doctor y funnel status."
+            },
+            {
+              "id": "AR-5",
+              "title": "Autoarranque y proyecto activo desde uni.py",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-13T02:42:58+00:00",
+                  "by": "antigravity",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-13T02:46:22+00:00",
+                  "by": "antigravity",
+                  "kind": "done",
+                  "text": "Autoarranque del servidor y actualización de proyecto activo desde plan.py/.unificador/uni.py, propagación de package_dir en server.json y selección del proyecto activo con recarga ante 401 en web/app.js y web/util.js; comprobado sincronizando .unificador/uni.py y pasando 89 tests."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-13T02:46:22+00:00",
+              "result": "Autoarranque del servidor y actualización de proyecto activo desde plan.py/.unificador/uni.py, propagación de package_dir en server.json y selección del proyecto activo con recarga ante 401 en web/app.js y web/util.js; comprobado sincronizando .unificador/uni.py y pasando 89 tests."
+            },
+            {
+              "id": "AR-6",
+              "title": "Pruebas de autoarranque, proyecto activo y órdenes CLI",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-13T02:46:22+00:00",
+                  "by": "antigravity",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-13T02:47:43+00:00",
+                  "by": "antigravity",
+                  "kind": "done",
+                  "text": "Pruebas añadidas en tests/test_funnel.py para proyecto activo en API local/Funnel, selección de puerto y mock de tailscale CLI, ciclo de vida de unificador funnel y autoarranque real desde .unificador/uni.py con cambio de proyecto activo; comprobado pasando 93 tests."
+                }
+              ],
+              "cat": "pruebas",
+              "together": true,
+              "updated": "2026-11-13T02:47:43+00:00",
+              "result": "Pruebas añadidas en tests/test_funnel.py para proyecto activo en API local/Funnel, selección de puerto y mock de tailscale CLI, ciclo de vida de unificador funnel y autoarranque real desde .unificador/uni.py con cambio de proyecto activo; comprobado pasando 93 tests."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "Fase aprobada en el chat",
+            "by": "persona",
+            "at": "2026-11-13T02:49:32+00:00",
+            "seen": true
+          }
+        },
+        {
+          "name": "Caché y pulido",
+          "icon": "",
+          "steps": [
+            {
+              "id": "AR-7",
+              "title": "Pantalla de acceso, cierre de sesión y aviso sin conexión",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-13T02:49:32+00:00",
+                  "by": "antigravity",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-13T02:51:23+00:00",
+                  "by": "antigravity",
+                  "kind": "done",
+                  "text": "Pantalla de acceso mejorada (LOGIN_HTML con icono, aviso reset-key y limpieza de SW/caché), botón Cerrar sesión remoto, aviso sin conexión y bloqueo de solo lectura en web/index.html, web/app.css, web/util.js y web/app.js; comprobado pasando 93 tests."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-13T02:51:23+00:00",
+              "result": "Pantalla de acceso mejorada (LOGIN_HTML con icono, aviso reset-key y limpieza de SW/caché), botón Cerrar sesión remoto, aviso sin conexión y bloqueo de solo lectura en web/index.html, web/app.css, web/util.js y web/app.js; comprobado pasando 93 tests."
+            },
+            {
+              "id": "AR-8",
+              "title": "Service Worker con caché de lectura tras autenticarse",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-13T02:51:23+00:00",
+                  "by": "antigravity",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-13T02:52:59+00:00",
+                  "by": "antigravity",
+                  "kind": "done",
+                  "text": "Creados sw.js, manifest.webmanifest e icon.svg, registrado el Service Worker solo en sesión Funnel autenticada y comprobado con node --check y 93/93 tests."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-13T02:52:59+00:00",
+              "result": "Creados sw.js, manifest.webmanifest e icon.svg, registrado el Service Worker solo en sesión Funnel autenticada y comprobado con node --check y 93/93 tests."
+            },
+            {
+              "id": "AR-9",
+              "title": "Pruebas de caché sin conexión, limpieza al salir y documentación",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-13T02:52:59+00:00",
+                  "by": "antigravity",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-13T02:54:24+00:00",
+                  "by": "antigravity",
+                  "kind": "done",
+                  "text": "Añadidas pruebas de puerta cerrada y caché sin conexión en test_funnel.py, documentado el acceso remoto en README.md y docs/ARCHITECTURE.md, y comprobado con 100/100 tests."
+                }
+              ],
+              "cat": "pruebas",
+              "together": true,
+              "updated": "2026-11-13T02:54:24+00:00",
+              "result": "Añadidas pruebas de puerta cerrada y caché sin conexión en test_funnel.py, documentado el acceso remoto en README.md y docs/ARCHITECTURE.md, y comprobado con 100/100 tests."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-13T09:27:30+00:00",
+            "seen": true
+          }
+        }
+      ]
     }
   ],
   "asks": [
