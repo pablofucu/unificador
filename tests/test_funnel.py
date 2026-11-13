@@ -189,6 +189,25 @@ class FunnelServerTest(unittest.TestCase):
                                    headers=self.funnel_headers({"Origin": f"https://{self.TS_HOST}"}))[0], 401)
         self.assertEqual(P.load(self.root / P.PLAN_FILE)["branches"][0]["phases"][0]["steps"][0]["state"], P.PENDING)
 
+        # Navegaci?n de primer nivel al abrir enlace desde otra app/web (Sec-Fetch-Site: cross-site) ense?a login
+        st_nav, _, r_nav = self.call("GET", "/", headers=self.funnel_headers({
+            "Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "document",
+        }))
+        self.assertEqual((st_nav, r_nav.getheader("X-Unificador-Auth")), (200, "login"))
+        # Pero cross-site en subrecursos o rutas API/propuestas sigue rechazado (403)
+        self.assertEqual(self.call("GET", "/", headers=self.funnel_headers({"Sec-Fetch-Site": "cross-site"}))[0], 403)
+        self.assertEqual(self.call("GET", "/api/plan", headers=self.funnel_headers({
+            "Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "document",
+        }))[0], 403)
+
+        # Proxy Tailscale reescribiendo Host a loopback con X-Forwarded-Host p?blico
+        proxy_h = {"Host": f"127.0.0.1:{self.port}", "X-Forwarded-Host": self.TS_HOST,
+                   "Origin": f"https://{self.TS_HOST}", "Sec-Fetch-Site": "same-origin",
+                   "Tailscale-Funnel-Request": "?1", "X-Forwarded-Proto": "https"}
+        self.assertEqual(self.call("POST", "/auth/login", {"key": "mal"}, headers=proxy_h)[0], 401)
+        self.assertEqual(self.call("POST", "/auth/login", {"key": "mal"},
+                                   headers={**proxy_h, "Origin": "https://evil.example"})[0], 403)
+
     def test_login_rate_limit_session_path_hiding_and_reset(self):
         self.enable_funnel("mi-clave-123", port=8443)
         origin = f"https://{self.TS_HOST}:8443"

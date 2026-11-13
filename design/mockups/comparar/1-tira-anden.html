@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tira en el andén</title>
+<style>
+:root { --bg:#f6f7fb; --card:#fff; --ink:#1f2338; --muted:#6a7088; --line:#e4e7f1; --soft:#eff1f8;
+  --ok:#1fa971; --warn:#f59e0b; --warn-soft:#fff4dc; --warn-ink:#8a4b00; --ai:#6c5ce7;
+  --shadow:0 2px 14px rgba(40,50,110,.08); font-family:system-ui,"Segoe UI",Roboto,sans-serif; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); line-height:1.45;
+  background-image:radial-gradient(circle,#d3d7e8 1.2px,transparent 1.4px); background-size:22px 22px; }
+header { display:flex; align-items:center; gap:12px; padding:14px 20px; background:#fff; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+header b { font-size:1.05rem; }
+.chip { font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:99px; background:var(--soft); color:var(--muted); white-space:nowrap; }
+.chip.prop { background:#efeaff; color:#5240c9; }
+.chip.run { background:#e6f0ff; color:#1d5fb8; }
+.chip.ok { background:#dcf3e9; color:#0d6b45; }
+.note { max-width:1200px; margin:16px auto 0; padding:0 20px; color:var(--muted); font-size:.85rem; }
+.canvas { display:flex; gap:18px; padding:16px 20px 40px; overflow-x:auto; align-items:flex-start; max-width:1200px; margin:0 auto; }
+.lane { flex:0 0 300px; background:rgba(255,255,255,.7); border:1.5px solid var(--line); border-radius:18px; padding:12px; display:grid; gap:10px; }
+.lane h3 { margin:0; font-size:.9rem; display:flex; align-items:center; gap:8px; }
+.lane h3 small { color:var(--muted); font-weight:500; }
+.step { background:var(--card); border-radius:14px; padding:10px 12px; box-shadow:var(--shadow); display:grid; gap:6px; border-left:4px solid var(--line); }
+.step.done { border-left-color:var(--ok); opacity:.75; }
+.step.run { border-left-color:var(--ai); }
+.step .t { font-size:.88rem; font-weight:600; }
+.step .meta { display:flex; gap:6px; align-items:center; font-size:.75rem; color:var(--muted); }
+/* La ficha compacta de la propuesta */
+.ask { margin-top:4px; border:1.5px solid #ddd5ff; background:#faf8ff; border-radius:12px; padding:9px 10px; display:grid; gap:8px; }
+.ask-head { display:flex; gap:6px; align-items:center; font-size:.72rem; color:var(--muted); }
+.ask-title { margin:0; font-size:.88rem; }
+.strip { display:flex; gap:6px; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:2px; }
+.mini { flex:0 0 auto; scroll-snap-align:start; display:grid; gap:3px; justify-items:center; border:0; background:none; padding:0; cursor:pointer; }
+.mini .pic { position:relative; width:84px; height:52px; border-radius:7px; border:2px solid var(--line); overflow:hidden; background:#fff; }
+.mini:hover .pic { border-color:var(--ai); }
+.mini.rec .pic { border-color:color-mix(in srgb,var(--warn) 65%,white); }
+.mini .star { position:absolute; top:2px; right:3px; font-size:.7rem; color:var(--warn); text-shadow:0 0 2px #fff; }
+.mini span { font-size:.7rem; color:var(--muted); max-width:84px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mini span b { color:var(--ink); }
+.row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.pill { font-size:.8rem; min-height:32px; padding:4px 12px; border-radius:99px; background:var(--soft); border:1.5px solid transparent; display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+.pill:hover { border-color:var(--ai); }
+.pill.primary { background:var(--ai); color:#fff; font-weight:600; }
+.rec-line { font-size:.72rem; color:var(--warn-ink); background:var(--warn-soft); padding:2px 8px; border-radius:99px; }
+/* Mini-dibujos de las tres propuestas (portada de proyectos) */
+.p1 { background:#fff; } .p2 { background:#1b1e2e; } .p3 { background:#f3f4f9; }
+.pic i { position:absolute; display:block; border-radius:2px; }
+.p1 i.h { left:0; right:0; top:0; height:9px; background:#e9ebf5; }
+.p1 i.c { top:14px; width:22px; height:16px; background:#e3defd; } .p1 i.c:nth-child(3){left:5px} .p1 i.c:nth-child(4){left:30px} .p1 i.c:nth-child(5){left:55px}
+.p1 i.c2 { top:34px; width:22px; height:14px; background:#eef0f7; } .p1 i.c2:nth-child(6){left:5px} .p1 i.c2:nth-child(7){left:30px}
+.p2 i.h { left:0; right:0; top:0; height:9px; background:#2a2e45; }
+.p2 i.c { left:5px; right:5px; height:9px; background:#353a59; } .p2 i.c:nth-child(3){top:13px} .p2 i.c:nth-child(4){top:25px} .p2 i.c:nth-child(5){top:37px}
+.p2 i.d { left:8px; width:4px; height:4px; border-radius:50%; background:#8b7dff; top:15.5px }
+.p3 i.s { left:0; top:0; bottom:0; width:18px; background:#dfe2ef; }
+.p3 i.l { left:22px; right:4px; height:5px; background:#fff; border:1px solid #e1e4ef; } .p3 i.l:nth-child(3){top:5px} .p3 i.l:nth-child(4){top:13px} .p3 i.l:nth-child(5){top:21px} .p3 i.l:nth-child(6){top:29px} .p3 i.l:nth-child(7){top:37px}
+@media (max-width:640px) {
+  .canvas { padding:12px 16px 32px; }
+  .lane { flex-basis:min(86vw,300px); }
+}
+</style>
+</head>
+<body>
+<header><b>Unificador</b><span class="chip">Tablero</span><span class="chip">🎨 Interfaz nueva</span></header>
+<p class="note">Maqueta 1 · La propuesta ocupa una fila: miniaturas pequeñas que se desplazan en horizontal y un botón <b>Comparar</b>. El andén mide lo mismo con 2 opciones que con 6.</p>
+<div class="canvas">
+  <section class="lane">
+    <h3>Propuestas de distribución <small>2/2</small></h3>
+    <div class="step done"><span class="t">Tres maquetas de portada</span><span class="meta"><span class="chip ok">Hecho</span> IN2-1</span></div>
+    <div class="step done"><span class="t">Elegir distribución</span><span class="meta"><span class="chip ok">Hecho</span> IN2-2</span></div>
+  </section>
+
+  <section class="lane">
+    <h3>Montar el diseño elegido <small>1/3</small></h3>
+    <div class="step done"><span class="t">Vista de todos los proyectos</span><span class="meta"><span class="chip ok">Hecho</span> IN2-6</span></div>
+    <div class="step run">
+      <span class="t">Portada del proyecto</span>
+      <span class="meta"><span class="chip run">En curso</span> IN2-7</span>
+      <div class="ask">
+        <div class="ask-head"><span class="chip prop">👁 Propuesta</span> P-4 · 5 opciones</div>
+        <h4 class="ask-title">¿Cómo enseñamos la portada?</h4>
+        <div class="strip" role="list">
+          <button class="mini rec" role="listitem" title="Clara (recomendada)"><div class="pic p1"><i class="h"></i><i></i><i class="c"></i><i class="c"></i><i class="c"></i><i class="c2"></i><i class="c2"></i><b class="star">★</b></div><span><b>1</b> Clara</span></button>
+          <button class="mini" role="listitem" title="Oscura"><div class="pic p2"><i class="h"></i><i class="d"></i><i class="c"></i><i class="c"></i><i class="c"></i></div><span><b>2</b> Oscura</span></button>
+          <button class="mini" role="listitem" title="Compacta"><div class="pic p3"><i class="s"></i><i></i><i class="l"></i><i class="l"></i><i class="l"></i><i class="l"></i><i class="l"></i></div><span><b>3</b> Compacta</span></button>
+          <button class="mini" role="listitem" title="Clara con lateral"><div class="pic p1"><i class="h"></i><i></i><i class="c"></i><i class="c"></i><i class="c"></i></div><span><b>4</b> Clara lateral</span></button>
+          <button class="mini" role="listitem" title="Oscura densa"><div class="pic p2"><i class="h"></i><i class="d"></i><i class="c"></i><i class="c"></i><i class="c"></i></div><span><b>5</b> Oscura densa</span></button>
+        </div>
+        <div class="row"><button class="pill primary">⇆ Comparar</button><span class="rec-line">★ Recomienda la 1</span></div>
+      </div>
+    </div>
+    <div class="step"><span class="t">Decisiones dentro del andén</span><span class="meta"><span class="chip">Pendiente</span> IN2-12</span></div>
+  </section>
+
+  <section class="lane">
+    <h3>Pulido <small>0/2</small></h3>
+    <div class="step"><span class="t">Probar en ordenador y tablet</span><span class="meta"><span class="chip">Pendiente</span> IN2-8</span></div>
+    <div class="step"><span class="t">Revisar contraste</span><span class="meta"><span class="chip">Pendiente</span> IN2-9</span></div>
+  </section>
+</div>
+</body>
+</html>

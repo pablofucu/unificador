@@ -70,3 +70,38 @@
   .ficha { padding: 12px 11px; }
   .v-widths .pill { padding: 6px 10px; }
 }
+
+/* Tira compacta del andén */
+.strip-wrap { display: grid; gap: 8px; margin-top: 4px; min-width: 0; }
+.strip { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x proximity; padding: 2px 2px 6px; }
+.strip-item { flex: none; width: 84px; display: grid; gap: 3px; padding: 0; border: 0; background: none; text-align: left; scroll-snap-align: start; font: inherit; }
+.strip-item .thumb { width: 84px; border-radius: 8px; border-width: 2px; }
+.strip-item.rec .thumb { border-color: color-mix(in srgb, var(--warn) 60%, white); }
+.strip-item:hover .thumb, .strip-item:focus-visible .thumb { border-color: var(--ai); }
+.strip-cap { display: flex; align-items: center; gap: 3px; font-size: .7rem; font-weight: 600; min-width: 0; }
+.strip-cap b { flex: none; }
+.strip-cap .i { flex: none; width: 11px; height: 11px; fill: currentColor; color: var(--warn); }
+.strip-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.strip-rec { font-size: .76rem; font-weight: 700; color: var(--warn-ink); }
+
+/* Visor: modos de comparación */
+.viewer [hidden] { display: none !important; }
+.v-cols { flex: 1; align-self: stretch; min-width: 0; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.v-col { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.v-colhead { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+.v-select { flex: 1; min-width: 0; min-height: var(--tap); border-radius: 10px; border: 0; padding: 0 8px; background: #363b57; color: #fff; font: inherit; }
+.v-choose { flex: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-body { flex: 1; min-height: 0; display: flex; justify-content: center; align-items: flex-start; overflow: hidden; }
+.v-cols.slider { grid-template-columns: 1fr; grid-template-rows: auto 1fr; gap: 6px; }
+.v-heads { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.v-slide iframe { pointer-events: none; }
+.v-slide .v-over { clip-path: inset(0 calc(100% - var(--x)) 0 0); }
+.v-slide .v-handle { position: absolute; top: 0; bottom: 0; left: var(--x); width: 4px; margin-left: -2px; background: var(--ai); pointer-events: none; z-index: 2; }
+.v-grip { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--ai); color: #fff; border-radius: 99px; padding: 6px 8px; font-weight: 800; font-size: .8rem; letter-spacing: 2px; box-shadow: 0 2px 8px rgba(0, 0, 0, .4); }
+.v-range { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; z-index: 3; }
+.v-slide:focus-within .v-grip { outline: 3px solid #fff; }
+@media (max-width: 700px) {
+  .v-cols:not(.slider) { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; gap: 6px; }
+  .v-heads { grid-template-columns: 1fr; gap: 4px; }
+  .v-modes .pill { padding: 6px 9px; }
+}

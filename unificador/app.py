@@ -42,6 +42,23 @@ CSP = ("default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' dat
 LOGIN_CSP = ("default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
              "connect-src 'self'; img-src data:; frame-ancestors 'none'")
 # Los mockups los escribe el agente: van aislados (sin origen propio, sin red, sin tocar la aplicación).
+# Script que se inyecta en cada propuesta: avisa del scroll al visor (que no puede leerlo: iframe sin
+# allow-same-origin) y obedece sus órdenes, para que el modo comparar mueva las dos a la vez.
+SYNC_SCRIPT = b"""<script>(function(){var q=false,mute=false,de=document.documentElement;
+function pr(a,b){return a/(b||1)}
+function mx(){return[Math.max(0,de.scrollWidth-innerWidth),Math.max(0,de.scrollHeight-innerHeight)]}
+addEventListener("scroll",function(){if(mute||q)return;q=true;setTimeout(function(){q=false;var m=mx();
+parent.postMessage({uni:"scroll",x:pr(scrollX,m[0]),y:pr(scrollY,m[1])},"*")},30)});
+addEventListener("message",function(e){var d=e.data;if(!d||e.source!==parent)return;
+if(d.uni==="scrollTo"){var m=mx();mute=true;scrollTo(d.x*m[0],d.y*m[1]);setTimeout(function(){mute=false},60)}
+else if(d.uni==="scrollBy"){scrollBy(0,+d.dy||0)}})})();</script>"""
+
+
+def _inject_sync(raw: bytes) -> bytes:
+    i = raw.lower().rfind(b"</body>")
+    return raw + SYNC_SCRIPT if i < 0 else raw[:i] + SYNC_SCRIPT + raw[i:]
+
+
 PROPOSAL_CSP = ("sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
                 "img-src data:; font-src data:; media-src data:; frame-ancestors 'self'")
 PROPOSAL_PATH = re.compile(r"^/propuestas/(P-\d{1,6})/(\d{1,3})\.html$")
@@ -240,16 +257,32 @@ def _peer_ip(headers: Any, client_ip: str) -> str:
 
 def refusal(method: str, headers: Any, port: int, host: str = "127.0.0.1",
             allow_tailscale: bool = False, client_ip: str = "127.0.0.1",
-            funnel_cfg: Optional[Dict[str, Any]] = None) -> Optional[str]:
+            funnel_cfg: Optional[Dict[str, Any]] = None, path: str = "/") -> Optional[str]:
     """Por qué se rechaza la petición, o None si viene de la propia página."""
     cfg = funnel_cfg or {}
     h_host = headers.get("Host", "")
     h_name = _host_name(h_host)
+    xfh = (headers.get("X-Forwarded-Host") or "").split(",")[0].strip()
+    xfh_name = _host_name(xfh)
     is_lan = host not in ("127.0.0.1", "localhost", "::1")
-    ts_allowed = bool(allow_tailscale and client_ip in LOOPBACK_IPS and _is_tailscale_host(h_name, cfg))
+    ts_host_match = _is_tailscale_host(h_name, cfg)
+    ts_proxy_match = bool(
+        h_name in LOCAL_HOSTS
+        and (
+            _is_tailscale_host(xfh_name, cfg)
+            or (cfg.get("enabled") and headers.get("Tailscale-Funnel-Request") and _public_host(cfg))
+        )
+    )
+    ts_allowed = bool(allow_tailscale and client_ip in LOOPBACK_IPS and (ts_host_match or ts_proxy_match))
     if not is_lan and h_name not in LOCAL_HOSTS and not ts_allowed:
         return "Unificador solo atiende a esta máquina."
-    if (headers.get("Sec-Fetch-Site") or "").lower() == "cross-site":
+    is_doc_nav = (
+        method == "GET"
+        and path in ("/", "/index.html")
+        and (headers.get("Sec-Fetch-Mode") or "").lower() == "navigate"
+        and (headers.get("Sec-Fetch-Dest") or "").lower() == "document"
+    )
+    if (headers.get("Sec-Fetch-Site") or "").lower() == "cross-site" and not is_doc_nav:
         return "Petición de otra web: rechazada."
     origin = headers.get("Origin")
     if origin is not None:
@@ -262,10 +295,11 @@ def refusal(method: str, headers: Any, port: int, host: str = "127.0.0.1",
             if is_lan and _host_name(o.netloc) != h_name:
                 return "Petición de otra web: rechazada."
         elif o.scheme == "https" and ts_allowed:
-            if _host_name(o.netloc) != h_name:
+            expected_host = h_name if ts_host_match else (xfh_name if _is_tailscale_host(xfh_name, cfg) else _public_host(cfg))
+            if _host_name(o.netloc) != expected_host:
                 return "Petición de otra web: rechazada."
             o_port = o.port or 443
-            h_port = _host_port(h_host)
+            h_port = _host_port(h_host) if ts_host_match else _host_port(xfh)
             expected_ports = {h_port} if h_port else {443, int(cfg.get("funnel_port") or 443)}
             if o_port not in expected_ports or o_port not in funnel.ALLOWED_FUNNEL_PORTS:
                 return "Petición de otra web: rechazada."
@@ -521,7 +555,7 @@ class Handler(BaseHTTPRequestHandler):
         target = (folder / m.group(1) / f"{int(m.group(2))}.html").resolve()
         if folder not in target.parents or not target.is_file() or target.stat().st_size > P.MAX_PROPOSAL:
             return self._json({"error": "No existe."}, 404)
-        self._send(200, target.read_bytes(), "text/html; charset=utf-8", PROPOSAL_CSP)
+        self._send(200, _inject_sync(target.read_bytes()), "text/html; charset=utf-8", PROPOSAL_CSP)
 
     def _body(self) -> Dict[str, Any]:
         try:
@@ -584,12 +618,12 @@ class Handler(BaseHTTPRequestHandler):
         client_ip = self.client_address[0] if self.client_address else ""
         cfg = funnel.load_config()
         allow_ts = bool(getattr(self.server, "tailscale", False) or cfg.get("enabled"))
+        url = urlsplit(self.path)
         why = refusal(method, self.headers, self.server.server_address[1],
                       getattr(self.server, "host", "127.0.0.1"),
-                      allow_tailscale=allow_ts, client_ip=client_ip, funnel_cfg=cfg)
+                      allow_tailscale=allow_ts, client_ip=client_ip, funnel_cfg=cfg, path=url.path)
         if why:
             return self._json({"error": why}, 403)
-        url = urlsplit(self.path)
         via_funnel = _is_funnel_traffic(self.headers, client_ip, cfg)
         if url.path == "/auth/login":
             if method != "POST":

@@ -170,6 +170,10 @@ class AppTest(ServerCase):
                                     headers={"Sec-Fetch-Site": "same-origin", "Sec-Fetch-Dest": "iframe"})
         self.assertEqual(status, 200)
         self.assertIn("Clara", page)
+        self.assertIn("<script>", page)                      # script de scroll sincronizado inyectado
+        self.assertIn('parent.postMessage({uni:"scroll"', page)
+        self.assertIn('"scrollTo"', page)
+        self.assertLess(page.index("Clara"), page.index("<script>"))
         self.assertIn("text/html", r.getheader("Content-Type"))
         csp = r.getheader("Content-Security-Policy")
         self.assertTrue(csp.startswith("sandbox allow-scripts;"), csp)
@@ -216,7 +220,7 @@ class AppTest(ServerCase):
         status, plan, _ = self.call("POST", f"/api/plan/steps/EN-1/state?project={blog}", {"state": "done"})
         self.assertEqual(status, 200, plan)
         self.assertEqual(P.load(other / P.PLAN_FILE)["branches"][0]["phases"][0]["steps"][0]["state"], "done")
-        self.assertEqual(self.call("GET", f"/propuestas/P-1/1.html?project={blog}")[1], "blog")
+        self.assertTrue(self.call("GET", f"/propuestas/P-1/1.html?project={blog}")[1].startswith("blog"))
         # nada fuera del registro: ids inventados, rutas o carpetas que ya no existen
         for pid in ("abcdef1234", "..", str(other), items["Borrado"]["id"]):
             self.assertEqual(self.call("GET", f"/api/plan?project={pid}")[0], 404, pid)

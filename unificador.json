@@ -2244,17 +2244,24 @@
               "id": "IN2-8",
               "title": "Probar en ordenador y tablet",
               "desc": "",
-              "state": "doing",
+              "state": "done",
               "notes": [
                 {
                   "at": "2026-11-12T17:06:22+01:00",
                   "by": "claude",
                   "kind": "start",
                   "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-13T18:31:09+01:00",
+                  "by": "persona",
+                  "kind": "done",
+                  "text": "Hecho."
                 }
               ],
               "cat": "pruebas",
-              "updated": "2026-11-12T17:06:22+01:00"
+              "updated": "2026-11-13T18:31:09+01:00",
+              "result": ""
             },
             {
               "id": "IN2-12",
@@ -2280,7 +2287,14 @@
               "updated": "2026-11-12T17:06:22+01:00",
               "result": "Fichas de decisión y propuestas dentro del andén con mdLite; pruebas en verde"
             }
-          ]
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-13T18:31:26+01:00",
+            "seen": true
+          }
         }
       ]
     },
@@ -2540,6 +2554,167 @@
             "text": "",
             "by": "persona",
             "at": "2026-11-13T09:27:30+00:00",
+            "seen": true
+          }
+        }
+      ]
+    },
+    {
+      "key": "CP",
+      "name": "Comparar propuestas",
+      "goal": "Comparar diseños sin romper el lienzo",
+      "icon": "🔍",
+      "color": 2,
+      "created": "2026-11-12T23:23:39+01:00",
+      "by": "claude",
+      "next_id": 6,
+      "phases": [
+        {
+          "name": "Maquetas",
+          "icon": "",
+          "steps": [
+            {
+              "id": "CP-1",
+              "title": "Maqueta de la tira en el andén",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T23:23:48+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T23:25:47+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Maqueta design/mockups/comparar/1-tira-anden.html: propuesta en una fila de miniaturas con scroll horizontal y botón Comparar; revisada en el navegador"
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-12T23:25:47+01:00",
+              "result": "Maqueta design/mockups/comparar/1-tira-anden.html: propuesta en una fila de miniaturas con scroll horizontal y botón Comparar; revisada en el navegador"
+            },
+            {
+              "id": "CP-2",
+              "title": "Maqueta del modo comparar",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T23:23:48+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T23:25:47+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Maqueta design/mockups/comparar/2-modo-comparar.html: modos una a una, lado a lado (scroll sincronizado, teclas 1-3) y deslizador; probada en escritorio y móvil 375px"
+                },
+                {
+                  "at": "2026-11-12T23:25:53+01:00",
+                  "by": "claude",
+                  "kind": "note",
+                  "text": "Comprobado en el navegador: los tres modos cambian bien, el scroll va sincronizado y en móvil 375px no hay scroll horizontal"
+                }
+              ],
+              "cat": "interfaz",
+              "together": true,
+              "updated": "2026-11-12T23:25:53+01:00",
+              "result": "Maqueta design/mockups/comparar/2-modo-comparar.html: modos una a una, lado a lado (scroll sincronizado, teclas 1-3) y deslizador; probada en escritorio y móvil 375px"
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-12T23:29:05+01:00",
+            "seen": true
+          }
+        },
+        {
+          "name": "Montaje",
+          "icon": "",
+          "steps": [
+            {
+              "id": "CP-3",
+              "title": "Tira compacta en el andén",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T23:29:22+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T23:39:20+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Tira de una fila con miniaturas 84x52, scroll-snap, estrella y botón Comparar en el andén (decide.js strip). Visto en navegador a escritorio y 375px: la ficha mide ~256px de alto con 3 opciones."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-12T23:39:20+01:00",
+              "result": "Tira de una fila con miniaturas 84x52, scroll-snap, estrella y botón Comparar en el andén (decide.js strip). Visto en navegador a escritorio y 375px: la ficha mide ~256px de alto con 3 opciones."
+            },
+            {
+              "id": "CP-4",
+              "title": "Modo comparar en el visor",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T23:29:22+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T23:39:20+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Visor con modos Una a una / Lado a lado / Deslizador, selects y Elegir por columna, teclas 1-9, modo recordado. Scroll sincronizado con script inyectado por app.py (postMessage, con throttle por setTimeout porque rAF no corre en algunos contextos). 82 tests pasan."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-12T23:39:20+01:00",
+              "result": "Visor con modos Una a una / Lado a lado / Deslizador, selects y Elegir por columna, teclas 1-9, modo recordado. Scroll sincronizado con script inyectado por app.py (postMessage, con throttle por setTimeout porque rAF no corre en algunos contextos). 82 tests pasan."
+            },
+            {
+              "id": "CP-5",
+              "title": "Probar en ordenador y móvil",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-12T23:39:20+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-12T23:39:20+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Probado en el navegador integrado: escritorio (lado a lado 2 columnas, deslizador con asa) y móvil 375px (columnas apiladas, tira sin desbordar). El script de scroll se probó a mano (envía posición, aplica scrollTo, no reenvía el eco). Límite: el panel bloquea los iframes de propuestas (ERR_BLOCKED_BY_CLIENT), así que el contenido real dentro de los marcos no se pudo ver aquí."
+                }
+              ],
+              "cat": "pruebas",
+              "together": true,
+              "updated": "2026-11-12T23:39:20+01:00",
+              "result": "Probado en el navegador integrado: escritorio (lado a lado 2 columnas, deslizador con asa) y móvil 375px (columnas apiladas, tira sin desbordar). El script de scroll se probó a mano (envía posición, aplica scrollTo, no reenvía el eco). Límite: el panel bloquea los iframes de propuestas (ERR_BLOCKED_BY_CLIENT), así que el contenido real dentro de los marcos no se pudo ver aquí."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-13T18:31:52+01:00",
             "seen": true
           }
         }

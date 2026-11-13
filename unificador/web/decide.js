@@ -147,24 +147,155 @@ function thumb(ask, i, plan) {
   return fig;
 }
 
-const viewer = { ask: null, i: 0, width: 0, plan: null };
+const viewer = { ask: null, i: 0, j: 1, width: 0, plan: null, mode: "one", active: 0, sel: [0, 1], pos: { x: 0, y: 0 }, frames: [], setSel: null };
+const MODES = ["one", "side", "slider"];
+const MODE_KEY = "unificador.viewer.mode";
+const savedMode = () => { try { const m = localStorage.getItem(MODE_KEY); return MODES.includes(m) ? m : "one"; } catch { return "one"; } };
+const saveMode = (m) => { try { localStorage.setItem(MODE_KEY, m); } catch { /* sin almacenamiento: se olvida */ } };
 
-function fitViewer() {
-  const stage = document.getElementById("v-stage");
-  const box = stage.firstElementChild;
+// Ajusta el iframe (o los dos, en el deslizador) de `body` a su ancho: ancho lógico = viewer.width, escalado si no cabe.
+function fitBody(body, pad) {
+  const box = body && body.firstElementChild;
   if (!box) return;
-  const w = viewer.width, avail = stage.clientWidth - 16, h = stage.clientHeight - 16;
+  const w = viewer.width, avail = body.clientWidth - pad, h = body.clientHeight - pad;
   const s = Math.min(1, avail / w);
   box.style.width = `${w * s}px`;
   box.style.height = `${h}px`;
-  const f = box.firstElementChild;
-  f.style.width = `${w}px`;
-  f.style.height = `${h / s}px`;
-  f.style.transform = `scale(${s})`;
+  for (const f of box.querySelectorAll("iframe")) {
+    f.style.width = `${w}px`;
+    f.style.height = `${h / s}px`;
+    f.style.transform = `scale(${s})`;
+  }
+}
+
+function fitViewer() {
+  if (viewer.mode === "one") fitBody(document.getElementById("v-stage"), 16);
+  else for (const b of document.querySelectorAll("#v-stage .v-body")) fitBody(b, 0);
+}
+
+// Scroll sincronizado: cada propuesta (script inyectado por el servidor) avisa por postMessage y aquí se reenvía a las demás.
+function post(f, msg) { try { if (f.contentWindow) f.contentWindow.postMessage(msg, "*"); } catch { /* aún sin cargar */ } }
+window.addEventListener("message", (e) => {
+  const d = e.data;
+  if (!d || d.uni !== "scroll" || viewer.frames.length < 2) return;
+  const from = viewer.frames.find((f) => f.contentWindow === e.source);
+  if (!from) return;
+  viewer.pos = { x: Number(d.x) || 0, y: Number(d.y) || 0 };
+  for (const f of viewer.frames) if (f !== from) post(f, { uni: "scrollTo", ...viewer.pos });
+});
+
+// Marco de una opción en comparación: recuerda el scroll y lo repone al cargar.
+function viewFrame(ask, idx) {
+  const f = frame(ask, idx + 1, ask.options[idx].label);
+  viewer.frames.push(f);
+  f.addEventListener("load", () => post(f, { uni: "scrollTo", ...viewer.pos }));
+  return f;
+}
+
+const optText = (ask, k) => `${recommended(ask, k + 1) ? "★ " : ""}${k + 1} · ${ask.options[k].label}`;
+
+function renderCompare() {
+  const { ask } = viewer, stage = document.getElementById("v-stage");
+  const slider = viewer.mode === "slider";
+  viewer.sel = [viewer.i, viewer.j];
+  const bodies = [], selects = [], picks = [];
+
+  const mount = () => {
+    viewer.frames = [];
+    if (slider) {
+      const box = el("div", "v-frame v-slide");
+      box.style.setProperty("--x", "50%");
+      const under = viewFrame(ask, viewer.sel[0]);
+      const over = viewFrame(ask, viewer.sel[1]);
+      over.classList.add("v-over");
+      const handle = el("div", "v-handle");
+      handle.setAttribute("aria-hidden", "true");
+      handle.append(el("span", "v-grip", "‹›"));
+      const range = el("input", "v-range");
+      range.type = "range"; range.min = "0"; range.max = "100"; range.value = "50";
+      range.setAttribute("aria-label", "Deslizador de comparación: cuánto se ve de cada propuesta");
+      range.addEventListener("input", () => box.style.setProperty("--x", `${range.value}%`));
+      box.addEventListener("wheel", (e) => { e.preventDefault(); post(under, { uni: "scrollBy", dy: e.deltaY }); }, { passive: false });
+      box.append(under, over, handle, range);
+      bodies[0].replaceChildren(box);
+    } else {
+      for (const k of [0, 1]) {
+        const box = el("div", "v-frame");
+        box.append(viewFrame(ask, viewer.sel[k]));
+        bodies[k].replaceChildren(box);
+      }
+    }
+    fitViewer();
+  };
+  const refresh = () => {
+    selects.forEach((s, k) => { s.value = String(viewer.sel[k]); });
+    picks.forEach((b, k) => {
+      const done = ask.answer && ask.answer.option === viewer.sel[k] + 1;
+      b.replaceChildren(...(done ? [icon("check"), "Elegida"] : [`Elegir «${ask.options[viewer.sel[k]].label}»`]));
+      b.disabled = !!done;
+    });
+  };
+  const change = (k, idx) => { viewer.sel[k] = idx; viewer.active = k; refresh(); mount(); };
+  viewer.setSel = (n) => { if (n < ask.options.length) change(viewer.active, n); };
+
+  const heads = [];
+  for (const k of [0, 1]) {
+    const sel = el("select", "v-select");
+    sel.setAttribute("aria-label", k === 0 ? "Propuesta de la izquierda" : "Propuesta de la derecha");
+    ask.options.forEach((o, n) => { const op = el("option", "", optText(ask, n)); op.value = String(n); sel.append(op); });
+    sel.addEventListener("change", () => change(k, Number(sel.value)));
+    const pk = button("", "pill primary v-choose", null);
+    pk.addEventListener("click", () => run(pk, toast, async () => {
+      await answer(ask, viewer.sel[k] + 1);
+      document.getElementById("viewer").close();
+    }));
+    selects.push(sel); picks.push(pk);
+    const h = el("div", "v-colhead");
+    h.addEventListener("pointerdown", () => { viewer.active = k; });
+    h.addEventListener("focusin", () => { viewer.active = k; });
+    h.append(sel, pk);
+    heads.push(h);
+  }
+  const wrap = el("div", `v-cols${slider ? " slider" : ""}`);
+  if (slider) {
+    const hd = el("div", "v-heads");
+    hd.append(...heads);
+    const body = el("div", "v-body");
+    bodies.push(body);
+    wrap.append(hd, body);
+  } else {
+    for (const k of [0, 1]) {
+      const col = el("div", "v-col");
+      const body = el("div", "v-body");
+      body.addEventListener("pointerdown", () => { viewer.active = k; });
+      bodies.push(body);
+      col.append(heads[k], body);
+      wrap.append(col);
+    }
+  }
+  stage.replaceChildren(wrap);
+  refresh();
+  mount();
 }
 
 function showViewer() {
   const { ask, i } = viewer, o = ask.options[i];
+  const d = document.getElementById("viewer");
+  for (const b of d.querySelectorAll("[data-mode]")) b.setAttribute("aria-pressed", String(b.dataset.mode === viewer.mode));
+  for (const b of d.querySelectorAll("[data-w]")) b.setAttribute("aria-pressed", String(Number(b.dataset.w) === viewer.width));
+  const one = viewer.mode === "one";
+  for (const id of ["v-prev", "v-next", "v-pick"]) document.getElementById(id).hidden = !one;
+  const extra = document.getElementById("v-extra");
+  extra.replaceChildren();
+  if (!one) {
+    document.getElementById("v-title").textContent = viewer.mode === "side" ? "Comparar lado a lado" : "Comparar con deslizador";
+    document.getElementById("v-count").textContent = ask.title;
+    extra.hidden = true;
+    renderCompare();
+    return;
+  }
+  viewer.frames = [];
+  viewer.setSel = null;
   document.getElementById("v-title").textContent = o.label;
   document.getElementById("v-count").textContent = `${ask.title} · ${i + 1} de ${ask.options.length}`;
   const chosen = ask.answer && ask.answer.option === i + 1;
@@ -172,23 +303,39 @@ function showViewer() {
   if (chosen) pick.replaceChildren(icon("check"), "Elegida");
   else pick.replaceChildren("Elegir esta");
   pick.disabled = !!chosen;
-  const extra = document.getElementById("v-extra");
-  extra.replaceChildren();
   if (recommended(ask, i + 1)) extra.append(recBadge());
   if (o.desc) extra.append(el("span", "v-desc", o.desc));
   extra.hidden = !extra.childElementCount;
-  for (const b of document.querySelectorAll("#viewer [data-w]")) b.setAttribute("aria-pressed", String(Number(b.dataset.w) === viewer.width));
   const box = el("div", "v-frame");
   box.append(frame(ask, i + 1, o.label));
   document.getElementById("v-stage").replaceChildren(box);
   fitViewer();
 }
 
-export function openViewer(ask, i, plan) {
-  Object.assign(viewer, { ask, i, plan });
+// Abre el visor. mode: "one" (una a una), "side" (lado a lado) o "slider"; en comparación i y j son las dos opciones.
+export function openViewer(ask, i, plan, mode, j) {
+  const n = ask.options.length;
+  mode = mode || savedMode();
+  if (n < 2) mode = "one";
+  if (j == null) j = (i + 1) % n;
+  Object.assign(viewer, { ask, i, j, plan, mode, active: 0, pos: { x: 0, y: 0 } });
+  if (mode !== "one") saveMode(mode);
   if (!viewer.width) viewer.width = window.innerWidth < 600 ? 390 : LOGICAL;  // empieza con el ancho de la pantalla
   const d = document.getElementById("viewer");
   if (!d.open) d.showModal();
+  showViewer();
+}
+
+function setMode(mode) {
+  if (!viewer.ask || viewer.mode === mode) return;
+  const n = viewer.ask.options.length;
+  if (mode !== "one" && n < 2) return;
+  if (viewer.mode === "one") viewer.j = (viewer.i + 1) % n;
+  else if (mode === "one") viewer.i = viewer.sel[viewer.active];
+  else { viewer.i = viewer.sel[0]; viewer.j = viewer.sel[1]; }
+  viewer.mode = mode;
+  viewer.pos = { x: 0, y: 0 };
+  saveMode(mode);
   showViewer();
 }
 
@@ -206,6 +353,7 @@ export function setupViewer() {
   put(document.getElementById("v-close"), "x");
   for (const [w, name, text] of [["390", "phone", "Móvil"], ["820", "tablet", "Tableta"], ["1280", "desktop", "Escritorio"]])
     put(d.querySelector(`[data-w="${w}"]`), name, text);
+  for (const b of d.querySelectorAll("[data-mode]")) b.addEventListener("click", () => setMode(b.dataset.mode));
   if (!document.getElementById("v-extra")) {
     const x = el("div", "v-extra");
     x.id = "v-extra";
@@ -223,11 +371,16 @@ export function setupViewer() {
     d.close();
   }));
   d.addEventListener("keydown", (e) => {
-    if (e.target.closest("textarea, input")) return;
-    if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
-    else if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
+    if (e.target.closest("textarea, input, select")) return;
+    if (viewer.mode === "one") {
+      if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
+    } else if (/^[1-9]$/.test(e.key) && viewer.setSel) {
+      e.preventDefault();
+      viewer.setSel(Number(e.key) - 1);
+    }
   });
-  d.addEventListener("close", () => { document.getElementById("v-stage").replaceChildren(); viewer.ask = null; });
+  d.addEventListener("close", () => { document.getElementById("v-stage").replaceChildren(); viewer.ask = null; viewer.frames = []; });
   window.addEventListener("resize", () => { if (d.open) fitViewer(); });
 }
 
@@ -267,6 +420,39 @@ function optionBody(ask, o, n) {
   body.append(t);
   if (o.desc) body.append(el("span", "opt-desc", o.desc));
   return body;
+}
+
+// Tira compacta del andén: una fila de miniaturas pequeñas, "Comparar" y la recomendación. Elegir se hace desde el visor.
+function strip(ask, plan) {
+  const opts = ask.options, wrap = el("div", "strip-wrap");
+  const row = el("div", "strip");
+  row.setAttribute("role", "group");
+  row.setAttribute("aria-label", "Propuestas");
+  opts.forEach((o, i) => {
+    const n = i + 1;
+    const b = button("", `strip-item${recommended(ask, n) ? " rec" : ""}`, () => openViewer(ask, i, plan, "one"), `Ver «${o.label}» a pantalla completa`);
+    const box = el("div", "thumb");
+    const f = frame(ask, n, o.label);
+    f.tabIndex = -1;
+    f.setAttribute("aria-hidden", "true");
+    box.append(f);
+    sizer.observe(box);
+    const cap = el("span", "strip-cap");
+    cap.append(el("b", "", String(n)));
+    if (recommended(ask, n)) cap.append(icon("star"));
+    cap.append(el("span", "strip-label", o.label));
+    b.append(box, cap);
+    row.append(b);
+  });
+  wrap.append(row);
+  const act = el("div", "act-row");
+  if (opts.length > 1) {
+    const r = ask.recommend > 0 && ask.recommend <= opts.length ? ask.recommend - 1 : 0;
+    act.append(button("Comparar", "pill primary", () => openViewer(ask, r, plan, "side", (r + 1) % opts.length)));
+  }
+  if (ask.recommend > 0) act.append(el("span", "strip-rec", `★ Recomienda la ${ask.recommend}`));
+  wrap.append(act);
+  return wrap;
 }
 
 // Tarjeta de una pregunta o propuesta. `compact`: versión más apretada para el andén o el detalle de un paso.
@@ -330,6 +516,11 @@ export function askCard(ask, plan, compact = false) {
 
   const key = `ask:${ask.id}`;
   const [msg, say] = status(key);
+  if (prop && opts.length && compact) {
+    card.append(strip(ask, plan));
+    if (ask.recommend === 0) card.append(el("p", "no-pref", "Sin preferencia del agente"));
+    return card;
+  }
   if (prop && opts.length) {
     const gal = el("div", "gallery");
     opts.forEach((o, i) => {

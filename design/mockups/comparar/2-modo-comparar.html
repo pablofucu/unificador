@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modo comparar</title>
+<style>
+:root { --ink:#1f2338; --muted:#6a7088; --line:#e4e7f1; --soft:#eff1f8; --ok:#1fa971; --warn:#f59e0b; --ai:#6c5ce7;
+  font-family:system-ui,"Segoe UI",Roboto,sans-serif; }
+* { box-sizing:border-box; }
+html, body { height:100%; }
+body { margin:0; background:#14162a; color:#fff; display:flex; flex-direction:column; }
+.bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:10px 16px; background:#1d2038; border-bottom:1px solid #2c3052; }
+.bar .ttl { font-weight:700; margin-right:auto; min-width:0; }
+.bar .ttl small { display:block; font-weight:500; color:#a3a8c7; font-size:.78rem; }
+.seg { display:inline-flex; background:#2a2e4d; border-radius:99px; padding:3px; gap:2px; }
+.seg button { border:0; background:none; color:#c9cce3; font:inherit; font-size:.82rem; padding:6px 12px; border-radius:99px; cursor:pointer; }
+.seg button[aria-pressed="true"] { background:#fff; color:var(--ink); font-weight:600; }
+.x { border:0; background:#2a2e4d; color:#fff; width:36px; height:36px; border-radius:50%; cursor:pointer; font-size:1rem; }
+.keys { font-size:.75rem; color:#a3a8c7; padding:6px 16px; }
+kbd { background:#2a2e4d; border-radius:5px; padding:1px 6px; font:inherit; color:#fff; }
+.stage { flex:1; min-height:0; padding:0 16px 16px; display:grid; gap:14px; }
+.stage.side { grid-template-columns:1fr 1fr; }
+.col { display:grid; grid-template-rows:auto 1fr auto; gap:8px; min-height:0; }
+.colhead { display:flex; gap:8px; align-items:center; }
+select { font:inherit; font-size:.85rem; background:#2a2e4d; color:#fff; border:1px solid #3a3f66; border-radius:10px; padding:6px 10px; min-width:0; flex:1; }
+.star { color:var(--warn); font-size:.78rem; white-space:nowrap; }
+.frame { position:relative; background:#fff; border-radius:10px; overflow:auto; min-height:220px; }
+.pick { justify-self:start; border:0; border-radius:99px; background:var(--ai); color:#fff; font:inherit; font-weight:600; font-size:.85rem; padding:8px 16px; cursor:pointer; }
+/* Deslizador */
+.stage.slide { grid-template-rows:auto 1fr auto; }
+.slidehead { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.slidehead select { flex:0 1 220px; }
+.slidehead .vs { color:#a3a8c7; font-size:.85rem; }
+.over { position:relative; border-radius:10px; overflow:hidden; background:#fff; min-height:260px; }
+.over .layer { position:absolute; inset:0; overflow:auto; }
+.over .top { clip-path:inset(0 calc(100% - var(--x)) 0 0); }
+.handle { position:absolute; top:0; bottom:0; left:var(--x); width:3px; margin-left:-1.5px; background:var(--ai); pointer-events:none; }
+.handle::after { content:"⇆"; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:34px; height:34px; border-radius:50%; background:var(--ai); color:#fff; display:grid; place-items:center; font-size:.9rem; box-shadow:0 2px 10px rgba(0,0,0,.35); }
+.over input[type=range] { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:ew-resize; margin:0; }
+.tag { position:absolute; top:8px; padding:2px 9px; border-radius:99px; font-size:.72rem; font-weight:700; background:rgba(20,22,42,.8); color:#fff; pointer-events:none; }
+.tag.l { left:8px; } .tag.r { right:8px; }
+.picks { display:flex; gap:8px; flex-wrap:wrap; }
+
+/* ── Las páginas falsas (portada de proyectos) ── */
+.pg { font-size:13px; color:#1f2338; min-height:100%; }
+.pg header { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid #e4e7f1; }
+.pg header b { margin-right:auto; }
+.pg .btn { font-size:12px; padding:5px 11px; border-radius:99px; background:#6c5ce7; color:#fff; }
+.pg h2 { margin:14px 16px 8px; font-size:15px; }
+.pg .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; padding:0 16px 16px; }
+.pg .card { border:1px solid #e4e7f1; border-radius:12px; padding:10px; display:grid; gap:6px; }
+.pg .card b { font-size:13px; }
+.pg .bar2 { height:6px; border-radius:99px; background:#eef0f7; overflow:hidden; }
+.pg .bar2 i { display:block; height:100%; background:#1fa971; }
+.pg .card span { font-size:11px; color:#6a7088; }
+/* 1 Clara */
+.pg.p1 { background:#fff; }
+/* 2 Oscura */
+.pg.p2 { background:#1b1e2e; color:#eef0ff; }
+.pg.p2 header { border-color:#2c3052; }
+.pg.p2 .card { border-color:#2c3052; background:#24283d; }
+.pg.p2 .card span { color:#a3a8c7; }
+.pg.p2 .bar2 { background:#353a59; } .pg.p2 .bar2 i { background:#8b7dff; }
+/* 3 Compacta */
+.pg.p3 { background:#f3f4f9; display:grid; grid-template-columns:120px 1fr; }
+.pg.p3 header { grid-column:1/-1; background:#fff; }
+.pg.p3 nav { background:#e6e8f2; padding:10px; display:grid; gap:6px; align-content:start; font-size:12px; }
+.pg.p3 .grid { grid-template-columns:1fr; gap:6px; }
+.pg.p3 .card { grid-template-columns:1fr auto; align-items:center; background:#fff; padding:7px 10px; }
+.pg.p3 .card .bar2 { grid-column:1/-1; }
+
+@media (max-width:700px) {
+  .stage.side { grid-template-columns:1fr; grid-template-rows:1fr 1fr; }
+  .bar .ttl { flex-basis:100%; }
+  .keys { display:none; }
+  .pg.p3 { grid-template-columns:1fr; } .pg.p3 nav { display:none; }
+}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="ttl">¿Cómo enseñamos la portada?<small>P-4 · Comparando 2 de 3</small></div>
+  <div class="seg" role="group" aria-label="Modo">
+    <button data-mode="one">Una a una</button>
+    <button data-mode="side" aria-pressed="true">Lado a lado</button>
+    <button data-mode="slide">Deslizador</button>
+  </div>
+  <button class="x" title="Cerrar">✕</button>
+</div>
+<div class="keys">Pulsa <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> para cambiar la columna activa sin perder el scroll · el desplazamiento va sincronizado</div>
+<div class="stage side" id="stage"></div>
+
+<script>
+const OPTS = [
+  { n:1, label:"Clara", rec:true },
+  { n:2, label:"Oscura" },
+  { n:3, label:"Compacta" },
+];
+const PROJ = [["Unificador",92],["Kanvas",64],["Tienda online",30],["Recetario",100],["Portfolio",12],["Blog de viajes",48],["App del gimnasio",75],["Facturas",20]];
+function page(n) {
+  const cards = PROJ.map(([t,p]) => `<div class="card"><b>${t}</b><span>${p}% hecho</span><div class="bar2"><i style="width:${p}%"></i></div></div>`).join("");
+  const nav = n === 3 ? `<nav><b>Filtros</b><span>En curso</span><span>Con dudas</span><span>Terminados</span></nav>` : "";
+  return `<div class="pg p${n}"><header><b>Tus proyectos</b><span class="btn">+ Nuevo</span></header>${nav}<div><h2>8 proyectos</h2><div class="grid">${cards}</div>
+  <h2>Actividad reciente</h2><div class="grid">${cards}</div></div></div>`;
+}
+const sel = (v) => `<select>${OPTS.map(o => `<option value="${o.n}" ${o.n===v?"selected":""}>${o.n} · ${o.label}${o.rec?" ★":""}</option>`).join("")}</select>`;
+const state = { mode:"side", a:1, b:2, active:0, x:50 };
+const stage = document.getElementById("stage");
+
+function syncScroll(frames) {
+  let lock = false;
+  frames.forEach(f => f.addEventListener("scroll", () => {
+    if (lock) return; lock = true;
+    frames.forEach(g => { if (g !== f) { g.scrollTop = f.scrollTop; g.scrollLeft = f.scrollLeft; } });
+    requestAnimationFrame(() => lock = false);
+  }));
+}
+function render() {
+  stage.className = "stage " + state.mode;
+  document.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === state.mode)));
+  if (state.mode === "side" || state.mode === "one") {
+    const cols = state.mode === "one" ? [state.a] : [state.a, state.b];
+    stage.style.gridTemplateColumns = state.mode === "one" ? "1fr" : "";
+    stage.innerHTML = cols.map((v,i) => `<div class="col" data-i="${i}"><div class="colhead">${sel(v)}${OPTS[v-1].rec?'<span class="star">★ Recomendada</span>':""}</div>
+      <div class="frame">${page(v)}</div><button class="pick">Elegir «${OPTS[v-1].label}»</button></div>`).join("");
+    stage.querySelectorAll(".col").forEach((c,i) => {
+      c.querySelector("select").onchange = e => { state[i?"b":"a"] = +e.target.value; render(); };
+      c.addEventListener("pointerdown", () => state.active = i);
+    });
+    syncScroll([...stage.querySelectorAll(".frame")]);
+  } else {
+    stage.style.gridTemplateColumns = "";
+    stage.innerHTML = `<div class="slidehead">${sel(state.a)}<span class="vs">a la izquierda · a la derecha</span>${sel(state.b)}</div>
+      <div class="over" style="--x:${state.x}%"><div class="layer">${page(state.b)}</div><div class="layer top">${page(state.a)}</div>
+      <div class="handle"></div><span class="tag l">${state.a} · ${OPTS[state.a-1].label}</span><span class="tag r">${state.b} · ${OPTS[state.b-1].label}</span>
+      <input type="range" min="0" max="100" value="${state.x}" aria-label="Mover el deslizador"></div>
+      <div class="picks"><button class="pick">Elegir «${OPTS[state.a-1].label}»</button><button class="pick">Elegir «${OPTS[state.b-1].label}»</button></div>`;
+    const [s1, s2] = stage.querySelectorAll("select");
+    s1.onchange = e => { state.a = +e.target.value; render(); };
+    s2.onchange = e => { state.b = +e.target.value; render(); };
+    const over = stage.querySelector(".over");
+    over.querySelector("input").oninput = e => { state.x = +e.target.value; over.style.setProperty("--x", state.x + "%"); };
+    // la rueda del ratón desplaza las dos capas a la vez
+    const layers = [...over.querySelectorAll(".layer")];
+    over.addEventListener("wheel", e => { e.preventDefault(); layers.forEach(l => l.scrollTop += e.deltaY); }, { passive:false });
+  }
+}
+document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => { state.mode = b.dataset.mode; render(); });
+document.addEventListener("keydown", e => {
+  const n = +e.key; if (!(n >= 1 && n <= OPTS.length) || e.target.tagName === "SELECT") return;
+  const f = stage.querySelector(".frame, .layer"); const top = f ? f.scrollTop : 0;
+  if (state.active && state.mode === "side") state.b = n; else state.a = n;
+  render();
+  stage.querySelectorAll(".frame, .layer").forEach(g => g.scrollTop = top);
+});
+render();
+</script>
+</body>
+</html>
