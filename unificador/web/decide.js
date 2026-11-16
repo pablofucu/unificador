@@ -278,6 +278,13 @@ function renderCompare() {
   mount();
 }
 
+function closePop() {
+  const pop = document.getElementById("v-pop"), b = document.getElementById("v-infobtn");
+  if (pop) pop.hidden = true;
+  if (b) b.setAttribute("aria-expanded", "false");
+}
+const popOpen = () => { const p = document.getElementById("v-pop"); return !!p && !p.hidden; };
+
 function showViewer() {
   const { ask, i } = viewer, o = ask.options[i];
   const d = document.getElementById("viewer");
@@ -285,12 +292,13 @@ function showViewer() {
   for (const b of d.querySelectorAll("[data-w]")) b.setAttribute("aria-pressed", String(Number(b.dataset.w) === viewer.width));
   const one = viewer.mode === "one";
   for (const id of ["v-prev", "v-next", "v-pick"]) document.getElementById(id).hidden = !one;
-  const extra = document.getElementById("v-extra");
-  extra.replaceChildren();
+  const star = document.getElementById("v-star"), infoBtn = document.getElementById("v-infobtn");
+  closePop();
+  star.hidden = true;
+  infoBtn.hidden = true;
   if (!one) {
     document.getElementById("v-title").textContent = viewer.mode === "side" ? "Comparar lado a lado" : "Comparar con deslizador";
     document.getElementById("v-count").textContent = ask.title;
-    extra.hidden = true;
     renderCompare();
     return;
   }
@@ -303,9 +311,9 @@ function showViewer() {
   if (chosen) pick.replaceChildren(icon("check"), "Elegida");
   else pick.replaceChildren("Elegir esta");
   pick.disabled = !!chosen;
-  if (recommended(ask, i + 1)) extra.append(recBadge());
-  if (o.desc) extra.append(el("span", "v-desc", o.desc));
-  extra.hidden = !extra.childElementCount;
+  star.hidden = !recommended(ask, i + 1);
+  infoBtn.hidden = !o.desc;
+  document.getElementById("v-pop").textContent = o.desc || "";
   const box = el("div", "v-frame");
   box.append(frame(ask, i + 1, o.label));
   document.getElementById("v-stage").replaceChildren(box);
@@ -351,15 +359,20 @@ export function setupViewer() {
   put(document.getElementById("v-prev"), "left");
   put(document.getElementById("v-next"), "right");
   put(document.getElementById("v-close"), "x");
-  for (const [w, name, text] of [["390", "phone", "Móvil"], ["820", "tablet", "Tableta"], ["1280", "desktop", "Escritorio"]])
-    put(d.querySelector(`[data-w="${w}"]`), name, text);
+  put(document.getElementById("v-infobtn"), "info");
+  put(document.getElementById("v-star"), "star");
+  for (const [w, name] of [["390", "phone"], ["820", "tablet"], ["1280", "desktop"]])
+    put(d.querySelector(`[data-w="${w}"]`), name);
+  for (const m of MODES) put(d.querySelector(`[data-mode="${m}"]`), m);
+  const pop = document.getElementById("v-pop"), ib = document.getElementById("v-infobtn");
+  ib.addEventListener("click", (e) => {
+    e.stopPropagation();
+    pop.hidden = !pop.hidden;
+    ib.setAttribute("aria-expanded", String(!pop.hidden));
+  });
+  d.addEventListener("click", (e) => { if (popOpen() && !e.target.closest("#v-pop, #v-infobtn")) closePop(); });
+  d.addEventListener("cancel", (e) => { if (popOpen()) { e.preventDefault(); closePop(); } });
   for (const b of d.querySelectorAll("[data-mode]")) b.addEventListener("click", () => setMode(b.dataset.mode));
-  if (!document.getElementById("v-extra")) {
-    const x = el("div", "v-extra");
-    x.id = "v-extra";
-    x.hidden = true;
-    d.querySelector(".v-info").append(x);
-  }
   document.getElementById("v-prev").addEventListener("click", () => step(-1));
   document.getElementById("v-next").addEventListener("click", () => step(1));
   document.getElementById("v-close").addEventListener("click", () => d.close());
@@ -371,6 +384,7 @@ export function setupViewer() {
     d.close();
   }));
   d.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && popOpen()) { e.preventDefault(); e.stopPropagation(); closePop(); return; }
     if (e.target.closest("textarea, input, select")) return;
     if (viewer.mode === "one") {
       if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }

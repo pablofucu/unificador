@@ -184,13 +184,13 @@ function dependencies(plan, p) {
   }).filter(Boolean);
 }
 
-function mix(steps) {
+// Progreso de la fase en el color de la rama (las categorías ya se ven en cada paso).
+function mix(done, total) {
   const m = el("div", "mix");
   m.setAttribute("aria-hidden", "true");
-  for (const c in CATS) {
-    const n = steps.filter((s) => s.cat === c).length;
-    if (n) { const i = el("i"); i.style.setProperty("--k", CATS[c].color); i.style.flex = String(n); m.append(i); }
-  }
+  const i = el("i");
+  i.style.width = `${pctOf(done, total)}%`;
+  m.append(i);
   return m;
 }
 
@@ -241,7 +241,7 @@ function platform(plan, b, p, k) {
   }
   const [done, total] = count(p.steps);
   const foot = el("div", "pcf");
-  foot.append(mix(p.steps), el("span", null, `${done} de ${total}${status === "approved" && p.review.at ? ` · ${when(p.review.at)}` : ""}`));
+  foot.append(mix(done, total), el("span", null, `${done} de ${total}${status === "approved" && p.review.at ? ` · ${when(p.review.at)}` : ""}`));
   card.append(foot);
   return card;
 }
@@ -384,7 +384,10 @@ function layout() {
   const z = narrow() ? 1 : zoom;
   alignDeps(box);
   box.style.transform = z === 1 ? "" : `scale(${z})`;
-  sizer.style.width = narrow() ? "" : `${Math.ceil(box.offsetWidth * z)}px`;
+  // Media pantalla de margen a cada lado: el plan queda centrado y siempre se puede arrastrar a izquierda o derecha.
+  const off = sideRoom();
+  box.style.left = narrow() ? "" : `${off}px`;
+  sizer.style.width = narrow() ? "" : `${Math.ceil(box.offsetWidth * z) + 2 * off}px`;
   sizer.style.height = narrow() ? "" : `${Math.ceil(box.offsetHeight * z)}px`;
   drawLayer(box);
   const lab = $("z-label");
@@ -392,12 +395,19 @@ function layout() {
   document.querySelector(".zoom")?.toggleAttribute("hidden", narrow());
 }
 
+const sideRoom = () => (narrow() ? 0 : Math.round(($("canvas")?.clientWidth || 0) / 2));
+
+function center() {
+  const root = $("canvas");
+  if (root) root.scrollLeft = (root.scrollWidth - root.clientWidth) / 2;
+}
+
 function setZoom(z, cx, cy) {
-  const root = $("canvas"), old = zoom;
+  const root = $("canvas"), old = zoom, off = sideRoom();
   zoom = Math.min(ZMAX, Math.max(ZMIN, z));
   const r = root.getBoundingClientRect();
   const px = cx == null ? r.width / 2 : cx - r.left, py = cy == null ? r.height / 2 : cy - r.top;
-  const x = (root.scrollLeft + px) * (zoom / old) - px, y = (root.scrollTop + py) * (zoom / old) - py;
+  const x = (root.scrollLeft + px - off) * (zoom / old) + off - px, y = (root.scrollTop + py) * (zoom / old) - py;
   layout();
   root.scrollLeft = x; root.scrollTop = y;
   saveZoom();
@@ -405,9 +415,12 @@ function setZoom(z, cx, cy) {
 
 function fit() {
   const root = $("canvas"), box = $("branches");
-  const z = Math.min(1, (root.clientWidth - 8) / box.offsetWidth, (root.clientHeight - 8) / box.offsetHeight);
+  if (!box.offsetWidth || !box.offsetHeight) return;
+  // Que quepa a lo ancho; a lo alto solo hasta cierto punto, para que no quede ilegible (el resto, con scroll).
+  const z = Math.min(1, (root.clientWidth - 8) / box.offsetWidth, Math.max(0.6, (root.clientHeight - 8) / box.offsetHeight));
   setZoom(z);
-  root.scrollTo(0, 0);
+  root.scrollTop = 0;
+  center();
 }
 
 function enablePan(root) {
@@ -435,6 +448,21 @@ function applyFilter() {
     e.classList.toggle("on", on);
     e.setAttribute("aria-pressed", String(on));
   });
+  // El botón de la barra dice qué filtro hay puesto y toma su color.
+  const b = $("filt-b");
+  if (b) {
+    b.replaceChildren(icon(filter || "filter"), el("span", null, filter ? CATS[filter].name : "Filtrar"));
+    b.classList.toggle("on", !!filter);
+    if (filter) b.style.setProperty("--k", CATS[filter].color); else b.style.removeProperty("--k");
+  }
+}
+
+function filtMenu(open) {
+  const lg = $("legend"), b = $("filt-b");
+  if (!lg || open === !lg.hidden) return;
+  lg.hidden = !open;
+  b.setAttribute("aria-expanded", String(open));
+  if (open) (lg.querySelector(".chip-cat.on") || lg.querySelector(".chip-cat"))?.focus();
 }
 
 let drawerFrom = null;
@@ -456,11 +484,14 @@ export function initBoard() {
     if (key) b.style.setProperty("--k", CATS[key].color);
     if (ic) b.append(icon(ic));
     b.append(el("span", null, text));
-    b.addEventListener("click", () => { filter = key || null; applyFilter(); });
+    b.addEventListener("click", () => { filter = key || null; applyFilter(); filtMenu(false); $("filt-b").focus(); });
     return b;
   };
   legend.replaceChildren(mk("", "Todas"), ...Object.keys(CATS).map((c) => mk(c, CATS[c].name, c)));
   applyFilter();
+  $("filt-b").addEventListener("click", () => filtMenu($("legend").hidden));
+  document.addEventListener("pointerdown", (e) => { if (!e.target.closest("#filt")) filtMenu(false); });
+  $("filt").addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("legend").hidden) { e.stopPropagation(); filtMenu(false); $("filt-b").focus(); } });
 
   for (const [id, name, fn] of [["z-out", "zoomout", () => setZoom(zoom / 1.2)], ["z-in", "zoomin", () => setZoom(zoom * 1.2)], ["z-fit", "fit", fit]]) {
     const b = $(id); b.prepend(icon(name)); b.addEventListener("click", fn);
@@ -495,10 +526,12 @@ export function initBoard() {
 
 export function renderPlan(plan) {
   app.plan = plan;
-  if (zoomPid !== app.pid) { zoomPid = app.pid; loadZoom(); }
+  const fresh = zoomPid !== app.pid;
+  if (fresh) { zoomPid = app.pid; loadZoom(); }
   const all = plan.branches || [];
-  const colorIndex = new Map(all.map((b, i) => [b, i]));
   const live = all.filter((b) => !finished(b)), old = all.filter(finished);
+  // Color por orden en pantalla: de arriba abajo, en orden del arcoíris.
+  const colorIndex = new Map([...live, ...old].map((b, i) => [b, i]));
   const [done, total] = count(all.filter((b) => !b.archived).flatMap(allSteps));
   if (openId && !all.some((b) => allSteps(b).some((s) => s.id === openId))) openId = null;
 
@@ -547,6 +580,8 @@ export function renderPlan(plan) {
   layout();
   applyFilter();
   root.scrollLeft = sx; root.scrollTop = sy;
+  // Al abrir el proyecto, el plan se encaja solo en la pantalla.
+  if (fresh) { if (narrow()) center(); else fit(); }
   window.scrollTo(0, y);
   return waitingPhases(plan).length;
 }

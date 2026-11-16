@@ -6,7 +6,8 @@
   <meta name="theme-color" content="#6c5ce7">
   <title>Unificador</title>
   <link rel="icon" href="data:,">
-  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="stylesheet" href="app.css">
   <link rel="stylesheet" href="decide.css">
 </head>
@@ -26,6 +27,7 @@
             <h1 id="home-title">Tus proyectos</h1>
             <p class="muted">Tu agente trabaja en su propio programa; aquí ves cómo va todo y decides lo que te toca.</p>
           </div>
+          <button type="button" id="install-home" class="pill install-btn" hidden>📲 Instalar app</button>
           <button type="button" id="logout-home" class="pill logout-btn" hidden>Cerrar sesión</button>
         </header>
         <div id="projects" class="projects"></div>
@@ -41,8 +43,12 @@
             <strong id="total-text"></strong>
             <div class="bar"><i id="total-bar"></i></div>
           </div>
-          <div id="legend" class="legend" role="group" aria-label="Filtrar por categoría"></div>
+          <div class="filt" id="filt">
+            <button type="button" id="filt-b" class="filt-b" aria-controls="legend" aria-expanded="false"><span id="filt-t">Filtrar</span></button>
+            <div id="legend" class="legend" role="group" aria-label="Filtrar por categoría" hidden></div>
+          </div>
           <button type="button" id="decb" class="decb" aria-controls="drawer" aria-expanded="false"></button>
+          <button type="button" id="install-board" class="pill install-btn" hidden>📲 Instalar app</button>
           <button type="button" id="logout-board" class="pill logout-btn" hidden>Cerrar sesión</button>
         </header>
         <p id="project-sub" class="muted sub"></p>
@@ -73,26 +79,29 @@
   <dialog id="viewer" class="viewer" aria-labelledby="v-title">
     <div class="v-bar">
       <div class="v-info">
+        <span id="v-star" class="v-star" hidden></span>
         <strong id="v-title"></strong>
         <span id="v-count" class="muted"></span>
+        <button type="button" class="pill icon v-infobtn" id="v-infobtn" aria-label="Descripción" title="Descripción" aria-expanded="false" aria-controls="v-pop" hidden></button>
       </div>
       <div class="v-tools">
         <div class="v-widths v-modes" role="group" aria-label="Modo de vista">
-          <button type="button" class="pill" data-mode="one">Una a una</button>
-          <button type="button" class="pill" data-mode="side">Lado a lado</button>
-          <button type="button" class="pill" data-mode="slider">Deslizador</button>
+          <button type="button" class="pill icon" data-mode="one" aria-label="Una a una" title="Una a una"></button>
+          <button type="button" class="pill icon" data-mode="side" aria-label="Lado a lado" title="Lado a lado"></button>
+          <button type="button" class="pill icon" data-mode="slider" aria-label="Deslizador" title="Deslizador"></button>
         </div>
         <div class="v-widths" role="group" aria-label="Ancho de la vista">
-          <button type="button" class="pill" data-w="390"></button>
-          <button type="button" class="pill" data-w="820"></button>
-          <button type="button" class="pill" data-w="1280"></button>
+          <button type="button" class="pill icon" data-w="390" aria-label="Móvil" title="Móvil"></button>
+          <button type="button" class="pill icon" data-w="820" aria-label="Tableta" title="Tableta"></button>
+          <button type="button" class="pill icon" data-w="1280" aria-label="Escritorio" title="Escritorio"></button>
         </div>
-        <button type="button" class="pill icon" id="v-prev" aria-label="Propuesta anterior"></button>
-        <button type="button" class="pill icon" id="v-next" aria-label="Propuesta siguiente"></button>
+        <button type="button" class="pill icon" id="v-prev" aria-label="Propuesta anterior" title="Anterior"></button>
+        <button type="button" class="pill icon" id="v-next" aria-label="Propuesta siguiente" title="Siguiente"></button>
         <button type="button" class="pill primary" id="v-pick">Elegir esta</button>
-        <button type="button" class="pill icon" id="v-close" aria-label="Cerrar"></button>
+        <button type="button" class="pill icon" id="v-close" aria-label="Cerrar" title="Cerrar"></button>
       </div>
     </div>
+    <div class="v-pop" id="v-pop" role="dialog" aria-label="Descripción de la propuesta" hidden></div>
     <div class="v-stage" id="v-stage"></div>
   </dialog>
 

@@ -60,15 +60,19 @@
 .choices.done .choice { cursor: default; }
 
 /* Visor */
-.viewer .pill { min-height: var(--tap); }
+.viewer { --vtap: 34px; }
+.viewer .pill { min-height: var(--vtap); }
 .viewer .pill .i { width: 17px; height: 17px; }
-.viewer .pill.icon { width: var(--tap); }
-.v-extra { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 2px; }
-.v-desc { color: #d5d9ee; font-size: .85rem; overflow-wrap: anywhere; }
+.viewer .pill.icon { width: var(--vtap); padding: 0; justify-content: center; }
+.viewer .v-widths .pill.icon { width: 32px; min-height: 30px; }
 .viewer .rec-badge { background: #ffe9b8; color: #6b3a00; }
+.v-star { flex: none; display: inline-flex; color: #ffd27a; }
+.v-star .i { width: 15px; height: 15px; fill: currentColor; }
+.v-infobtn { flex: none; background: transparent !important; }
+.v-infobtn[aria-expanded="true"] { background: #363b57 !important; }
+.v-pop { position: absolute; z-index: 20; top: 48px; left: 10px; max-width: min(460px, calc(100vw - 20px)); padding: 10px 14px; border-radius: 10px; background: #fff; color: var(--ink); font-size: .88rem; line-height: 1.4; overflow-wrap: anywhere; box-shadow: 0 8px 30px rgba(0, 0, 0, .5); }
 @media (max-width: 640px) {
   .ficha { padding: 12px 11px; }
-  .v-widths .pill { padding: 6px 10px; }
 }
 
 /* Tira compacta del andén */
@@ -87,13 +91,14 @@
 /* Visor: modos de comparación */
 .viewer [hidden] { display: none !important; }
 .v-cols { flex: 1; align-self: stretch; min-width: 0; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.v-col { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
-.v-colhead { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
-.v-select { flex: 1; min-width: 0; min-height: var(--tap); border-radius: 10px; border: 0; padding: 0 8px; background: #363b57; color: #fff; font: inherit; }
-.v-choose { flex: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-col { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.v-colhead { position: absolute; z-index: 4; top: 6px; left: 6px; right: 6px; display: flex; gap: 6px; align-items: center; min-width: 0; padding: 4px; border-radius: 12px; background: rgba(27, 30, 46, .72); backdrop-filter: blur(4px); }
+.v-select { flex: 1; min-width: 0; min-height: 30px; border-radius: 8px; border: 0; padding: 0 6px; background: #363b57; color: #fff; font: inherit; font-size: .85rem; }
+.v-choose { flex: none; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .v-body { flex: 1; min-height: 0; display: flex; justify-content: center; align-items: flex-start; overflow: hidden; }
-.v-cols.slider { grid-template-columns: 1fr; grid-template-rows: auto 1fr; gap: 6px; }
-.v-heads { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.v-cols.slider { position: relative; grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.v-heads { position: absolute; z-index: 4; top: 6px; left: 6px; right: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; pointer-events: none; }
+.v-heads .v-colhead { position: static; pointer-events: auto; }
 .v-slide iframe { pointer-events: none; }
 .v-slide .v-over { clip-path: inset(0 calc(100% - var(--x)) 0 0); }
 .v-slide .v-handle { position: absolute; top: 0; bottom: 0; left: var(--x); width: 4px; margin-left: -2px; background: var(--ai); pointer-events: none; z-index: 2; }
@@ -102,6 +107,6 @@
 .v-slide:focus-within .v-grip { outline: 3px solid #fff; }
 @media (max-width: 700px) {
   .v-cols:not(.slider) { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; gap: 6px; }
-  .v-heads { grid-template-columns: 1fr; gap: 4px; }
-  .v-modes .pill { padding: 6px 9px; }
+  .v-heads { gap: 6px; }
+  .v-colhead { top: 4px; left: 4px; right: 4px; }
 }

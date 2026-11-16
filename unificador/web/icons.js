@@ -35,6 +35,11 @@ const SHAPES = {
   grid: [["rect", { x: 3.5, y: 3.5, width: 7, height: 7, rx: 1.5 }], ["rect", { x: 13.5, y: 3.5, width: 7, height: 7, rx: 1.5 }],
     ["rect", { x: 3.5, y: 13.5, width: 7, height: 7, rx: 1.5 }], ["rect", { x: 13.5, y: 13.5, width: 7, height: 7, rx: 1.5 }]],
   logout: [P("M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9")],
+  filter: [P("M3 5h18l-7 8v6l-4 2v-8z")],
+  one: [["rect", { x: 4, y: 4, width: 16, height: 16, rx: 2.5 }]],
+  side: [["rect", { x: 2.5, y: 4, width: 8, height: 16, rx: 2 }], ["rect", { x: 13.5, y: 4, width: 8, height: 16, rx: 2 }]],
+  slider: [["rect", { x: 3, y: 4, width: 18, height: 16, rx: 2.5 }], P("M12 2v20M9.5 10l-2 2 2 2M14.5 10l2 2-2 2")],
+  info: [["circle", { cx: 12, cy: 12, r: 9 }], P("M12 11v6M12 7.5v.2")],
 };
 
 export const ICONS = Object.keys(SHAPES);

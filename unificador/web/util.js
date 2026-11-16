@@ -153,10 +153,9 @@ export const allSteps = (b) => b.phases.flatMap((p) => p.steps);
 export const count = (list) => [list.filter((s) => s.state === "done").length, list.length];
 export const pctOf = (done, total) => (total ? Math.round((done / total) * 100) : 0);
 
-// Color de la rama: índice 0-7 de la paleta, o un color CSS si viene como texto.
+// Color de la rama: el de su puesto en pantalla (orden del arcoíris), salvo un color CSS propio (#hex).
 export function paint(node, b, i) {
   const raw = b.color;
   if (typeof raw === "string" && /^#[0-9a-f]{3,8}$/i.test(raw)) { node.style.setProperty("--accent", raw); return; }
-  const n = raw === "" || raw == null || isNaN(Number(raw)) ? i : Number(raw);
-  node.dataset.color = String(((n % 8) + 8) % 8);
+  node.dataset.color = String((((i || 0) % 8) + 8) % 8);
 }

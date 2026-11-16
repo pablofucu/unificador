@@ -2719,6 +2719,405 @@
           }
         }
       ]
+    },
+    {
+      "key": "IMA",
+      "name": "Interfaz más alegre",
+      "goal": "Tablero centrado, barra de abajo limpia y más color",
+      "icon": "🌈",
+      "color": 4,
+      "created": "2026-11-15T03:18:19+01:00",
+      "by": "claude",
+      "next_id": 6,
+      "phases": [
+        {
+          "name": "Ajustes de distribución",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IMA-1",
+              "title": "Centrar el tablero con desplazamiento lateral",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-15T03:19:19+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-15T03:20:29+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "El lienzo deja media pantalla de margen a cada lado y arranca centrado; al alejar el zoom el plan queda en el centro y se puede arrastrar a ambos lados. Comprobado en el navegador a 1440 px y al 69%."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-15T03:20:29+01:00",
+              "result": "El lienzo deja media pantalla de margen a cada lado y arranca centrado; al alejar el zoom el plan queda en el centro y se puede arrastrar a ambos lados. Comprobado en el navegador a 1440 px y al 69%."
+            },
+            {
+              "id": "IMA-2",
+              "title": "Quitar los colores de categoría de la barra de abajo",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-15T03:20:29+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-15T03:20:29+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "La barra de cada fase ya no reparte colores por categoría: muestra el progreso de la fase en el color de la rama. Comprobado en el navegador."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-15T03:20:29+01:00",
+              "result": "La barra de cada fase ya no reparte colores por categoría: muestra el progreso de la fase en el color de la rama. Comprobado en el navegador."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-15T03:21:40+01:00",
+            "seen": true
+          }
+        },
+        {
+          "name": "Propuestas de color",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IMA-3",
+              "title": "Maquetas de estilos más coloridos",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-15T03:23:01+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-15T03:24:41+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "4 propuestas de color generadas a partir de una captura del tablero real (design/mockups/color/build.py); revisadas una a una en el navegador."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-15T03:24:41+01:00",
+              "result": "4 propuestas de color generadas a partir de una captura del tablero real (design/mockups/color/build.py); revisadas una a una en el navegador."
+            },
+            {
+              "id": "IMA-4",
+              "title": "Elegir estilo",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-15T03:24:41+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-15T03:26:41+01:00",
+                  "by": "persona",
+                  "kind": "change",
+                  "text": "Hazme más pruebas pero viendo  como hacer que se usen más colores orden arcoiris"
+                },
+                {
+                  "at": "2026-11-15T03:27:24+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-15T03:34:26+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-15T03:34:27+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Elegido en P-4: Pop con ramas en arcoíris (rojo→rosa por orden de rama), texto oscuro en cabeceras de color"
+                },
+                {
+                  "at": "2026-11-15T03:35:36+01:00",
+                  "by": "claude",
+                  "kind": "note",
+                  "text": "Comprobado: la persona eligió la opción 1 de P-4 en la web; las tres maquetas se revisaron antes en el navegador."
+                }
+              ],
+              "cat": "decidir",
+              "updated": "2026-11-15T03:35:36+01:00",
+              "result": "Elegido en P-4: Pop con ramas en arcoíris (rojo→rosa por orden de rama), texto oscuro en cabeceras de color"
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-15T03:34:31+01:00",
+            "seen": true
+          }
+        },
+        {
+          "name": "Montaje",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IMA-5",
+              "title": "Aplicar el estilo elegido",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-15T03:34:54+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-15T03:35:32+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "app.css: paleta de ramas en arcoíris y estilo Pop (crema punteado, bordes negros, sombras duras, texto oscuro en cabeceras). plan.js/util.js: el color sale del puesto en pantalla (vivas y luego terminadas), solo se respeta un #hex propio. Comprobado en el navegador: filas rojo, naranja; vías del mismo color; sin errores en consola."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-15T03:35:32+01:00",
+              "result": "app.css: paleta de ramas en arcoíris y estilo Pop (crema punteado, bordes negros, sombras duras, texto oscuro en cabeceras). plan.js/util.js: el color sale del puesto en pantalla (vivas y luego terminadas), solo se respeta un #hex propio. Comprobado en el navegador: filas rojo, naranja; vías del mismo color; sin errores en consola."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-16T00:49:53+01:00",
+            "seen": true
+          }
+        }
+      ]
+    },
+    {
+      "key": "MEP",
+      "name": "Más espacio para ver",
+      "goal": "Que el lienzo y las maquetas ocupen casi toda la pantalla",
+      "icon": "🔭",
+      "color": 5,
+      "created": "2026-11-16T00:49:26+01:00",
+      "by": "claude",
+      "next_id": 5,
+      "phases": [
+        {
+          "name": "Lienzo",
+          "icon": "",
+          "steps": [
+            {
+              "id": "MEP-1",
+              "title": "Barra fina arriba con filtros desplegables",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-16T00:49:28+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-16T00:51:28+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Cabecera del tablero en una sola línea de 40px (proyecto, progreso, botón Filtrar con menú desplegable que toma el color del filtro, Decisiones); menos margen alrededor del lienzo y sin límite de ancho. Probado a 1280x720 en el navegador."
+                },
+                {
+                  "at": "2026-11-16T00:51:43+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Cabecera del tablero en una sola línea de 40px (proyecto, progreso, botón Filtrar con menú desplegable que toma el color del filtro, Decisiones); menos margen y sin límite de ancho. Comprobado en el navegador a 1280x720 con capturas: abrir menú, elegir Interfaz."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-16T00:51:43+01:00",
+              "result": "Cabecera del tablero en una sola línea de 40px (proyecto, progreso, botón Filtrar con menú desplegable que toma el color del filtro, Decisiones); menos margen y sin límite de ancho. Comprobado en el navegador a 1280x720 con capturas: abrir menú, elegir Interfaz."
+            },
+            {
+              "id": "MEP-2",
+              "title": "Encajar el zoom al abrir",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-16T00:51:28+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-16T00:51:28+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Al abrir un proyecto en escritorio se llama a fit(): cabe a lo ancho y a lo alto sin bajar de 60%. Probado: abre al 91% con todo visible."
+                },
+                {
+                  "at": "2026-11-16T00:51:43+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Al abrir un proyecto en escritorio se encaja el zoom (cabe a lo ancho, a lo alto sin bajar de 60%). Comprobado en el navegador: abre al 91% con todo visible."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-16T00:51:43+01:00",
+              "result": "Al abrir un proyecto en escritorio se encaja el zoom (cabe a lo ancho, a lo alto sin bajar de 60%). Comprobado en el navegador: abre al 91% con todo visible."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-16T00:56:45+01:00",
+            "seen": true
+          }
+        },
+        {
+          "name": "Comparador",
+          "icon": "",
+          "steps": [
+            {
+              "id": "MEP-3",
+              "title": "Modos del comparador con iconos",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-16T00:56:45+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-16T01:00:02+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Barra del comparador en una línea con modos y anchos solo con icono, título con estrella y botón de info que abre la descripción. Comprobado en el navegador a 1280x720 en los modos una a una y lado a lado."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-16T01:00:02+01:00",
+              "result": "Barra del comparador en una línea con modos y anchos solo con icono, título con estrella y botón de info que abre la descripción. Comprobado en el navegador a 1280x720 en los modos una a una y lado a lado."
+            },
+            {
+              "id": "MEP-4",
+              "title": "Probar en escritorio y móvil",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-16T01:00:02+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-16T01:00:03+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "En móvil la cabecera del visor pasa a 2 filas (título, Elegir y cerrar arriba; modos, anchos y flechas abajo). Comprobado en el navegador a 375x812 y a 1280x720; el tablero en móvil también se ve bien."
+                }
+              ],
+              "cat": "pruebas",
+              "together": true,
+              "updated": "2026-11-16T01:00:03+01:00",
+              "result": "En móvil la cabecera del visor pasa a 2 filas (título, Elegir y cerrar arriba; modos, anchos y flechas abajo). Comprobado en el navegador a 375x812 y a 1280x720; el tablero en móvil también se ve bien."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-16T01:01:24+01:00",
+            "seen": true
+          }
+        }
+      ]
+    },
+    {
+      "key": "ICA",
+      "name": "Instalar como app (PWA)",
+      "goal": "Poder instalar Unificador en Android/Chrome como una app independiente",
+      "icon": "📲",
+      "color": 6,
+      "created": "2026-11-16T01:00:44+01:00",
+      "by": "claude",
+      "next_id": 4,
+      "phases": [
+        {
+          "name": "Instalable",
+          "icon": "",
+          "steps": [
+            {
+              "id": "ICA-1",
+              "title": "Manifiesto con iconos PNG y credenciales",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-16T01:00:49+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-16T01:01:07+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Manifiesto con id, iconos PNG 192/512 y maskable, manifest con crossorigin=use-credentials (está tras la sesión), apple-touch-icon y caché v2"
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-16T01:01:07+01:00",
+              "result": "Manifiesto con id, iconos PNG 192/512 y maskable, manifest con crossorigin=use-credentials (está tras la sesión), apple-touch-icon y caché v2"
+            },
+            {
+              "id": "ICA-2",
+              "title": "Botón Instalar en la web",
+              "desc": "",
+              "state": "doing",
+              "notes": [
+                {
+                  "at": "2026-11-16T01:01:08+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-16T01:01:08+01:00"
+            },
+            {
+              "id": "ICA-3",
+              "title": "Probar manifiesto e iconos",
+              "desc": "",
+              "state": "pending",
+              "notes": [],
+              "cat": "pruebas",
+              "together": true
+            }
+          ]
+        }
+      ]
     }
   ],
   "asks": [
@@ -2795,7 +3194,82 @@
       },
       "by": "claude",
       "created": "2026-11-12T12:04:55+01:00"
+    },
+    {
+      "id": "P-3",
+      "kind": "proposal",
+      "title": "Estilo más colorido",
+      "text": "",
+      "step": "IMA-4",
+      "branch": "IMA",
+      "options": [
+        {
+          "label": "Pastel",
+          "desc": "fondo degradado suave y tarjetas teñidas con el color de su rama",
+          "file": ".unificador/propuestas/P-3/1.html"
+        },
+        {
+          "label": "Caramelo",
+          "desc": "cabeceras de fase rellenas de color, iconos de categoría rellenos, relieve",
+          "file": ".unificador/propuestas/P-3/2.html"
+        },
+        {
+          "label": "Neón",
+          "desc": "modo oscuro con brillos del color de cada rama",
+          "file": ".unificador/propuestas/P-3/3.html"
+        },
+        {
+          "label": "Pop",
+          "desc": "crema con bordes negros gruesos y sombras duras, estilo cómic",
+          "file": ".unificador/propuestas/P-3/4.html"
+        }
+      ],
+      "recommend": 2,
+      "answer": {
+        "option": 4,
+        "text": "",
+        "by": "persona",
+        "at": "2026-11-15T03:26:02+01:00",
+        "seen": true
+      },
+      "by": "claude",
+      "created": "2026-11-15T03:24:42+01:00"
+    },
+    {
+      "id": "P-4",
+      "kind": "proposal",
+      "title": "Pop arcoíris",
+      "text": "",
+      "step": "IMA-4",
+      "branch": "IMA",
+      "options": [
+        {
+          "label": "Ramas en arcoíris",
+          "desc": "cada rama, de arriba abajo, toma el siguiente color: rojo, naranja, amarillo, verde, cian, azul, violeta, rosa",
+          "file": ".unificador/propuestas/P-4/1.html"
+        },
+        {
+          "label": "Arcoíris en diagonal",
+          "desc": "además, cada fase avanza un color dentro de su rama, así que el tablero se ve como franjas diagonales",
+          "file": ".unificador/propuestas/P-4/2.html"
+        },
+        {
+          "label": "Arcoíris a tope",
+          "desc": "ramas en arcoíris, y también las categorías en orden arcoíris, una franja arriba y barras de progreso con degradado",
+          "file": ".unificador/propuestas/P-4/3.html"
+        }
+      ],
+      "recommend": 1,
+      "answer": {
+        "option": 1,
+        "text": "",
+        "by": "persona",
+        "at": "2026-11-15T03:34:00+01:00",
+        "seen": true
+      },
+      "by": "claude",
+      "created": "2026-11-15T03:29:55+01:00"
     }
   ],
-  "next_ask": 3
+  "next_ask": 5
 }
