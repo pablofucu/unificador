@@ -3094,28 +3094,57 @@
               "id": "ICA-2",
               "title": "Botón Instalar en la web",
               "desc": "",
-              "state": "doing",
+              "state": "done",
               "notes": [
                 {
                   "at": "2026-11-16T01:01:08+01:00",
                   "by": "claude",
                   "kind": "start",
                   "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-16T01:01:41+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Botón Instalar app (beforeinstallprompt) en portada y tablero; oculto salvo que Chrome ofrezca instalar"
                 }
               ],
               "cat": "codigo",
-              "updated": "2026-11-16T01:01:08+01:00"
+              "updated": "2026-11-16T01:01:41+01:00",
+              "result": "Botón Instalar app (beforeinstallprompt) en portada y tablero; oculto salvo que Chrome ofrezca instalar"
             },
             {
               "id": "ICA-3",
               "title": "Probar manifiesto e iconos",
               "desc": "",
-              "state": "pending",
-              "notes": [],
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-16T01:01:41+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-16T01:01:41+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Test del manifiesto, iconos PNG y crossorigin; suite completa 100 pasan"
+                }
+              ],
               "cat": "pruebas",
-              "together": true
+              "together": true,
+              "updated": "2026-11-16T01:01:41+01:00",
+              "result": "Test del manifiesto, iconos PNG y crossorigin; suite completa 100 pasan"
             }
-          ]
+          ],
+          "review": {
+            "state": "waiting",
+            "text": "",
+            "by": "claude",
+            "at": "2026-11-16T01:01:41+01:00",
+            "seen": true
+          }
         }
       ]
     }

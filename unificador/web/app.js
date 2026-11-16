@@ -18,6 +18,31 @@ function syncChrome() {
   }
 }
 
+// Instalación como app (Chrome/Android): el navegador avisa con beforeinstallprompt.
+let installEvt = null;
+function syncInstall() {
+  for (const id of ["install-home", "install-board"]) {
+    const btn = $(id);
+    if (btn) btn.hidden = !installEvt;
+  }
+}
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  installEvt = e;
+  syncInstall();
+});
+window.addEventListener("appinstalled", () => { installEvt = null; syncInstall(); });
+for (const id of ["install-home", "install-board"]) {
+  $(id)?.addEventListener("click", async () => {
+    if (!installEvt) return;
+    const evt = installEvt;
+    installEvt = null;
+    syncInstall();
+    evt.prompt();
+    await evt.userChoice.catch(() => {});
+  });
+}
+
 async function loadProjects() {
   try {
     const data = await getJSON("/api/projects");

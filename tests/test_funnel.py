@@ -560,7 +560,16 @@ class FunnelOfflineCacheTest(FunnelServerTest):
         self.assertIn("application/manifest+json", r.getheader("Content-Type") or "")
         manifest = json.loads(raw_manifest)
         self.assertEqual(manifest["name"], "Unificador")
-        self.assertEqual(manifest["icons"][0]["src"], "icon.svg")
+        srcs = {i["src"]: i for i in manifest["icons"]}
+        for need, size in (("icon-192.png", "192x192"), ("icon-512.png", "512x512")):
+            self.assertEqual(srcs[need]["sizes"], size)
+        self.assertEqual(srcs["icon-maskable-512.png"]["purpose"], "maskable")
+        self.assertIn("icon.svg", srcs)
+        self.assertIn('crossorigin="use-credentials"', html)
+        for png in srcs:
+            st_i, _, r_i = self.call("GET", "/" + png, headers=auth_h)
+            self.assertEqual(st_i, 200, png)
+        self.assertIn("install-home", html)
 
         # Icono SVG válido
         st, svg, r = self.call("GET", "/icon.svg", headers=auth_h)

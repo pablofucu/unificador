@@ -78,7 +78,7 @@ unificador funnel enable
 
 - **Puerta cerrada aunque se filtre la URL**: sin la clave correcta nadie ve nombres de proyectos, rutas, pasos ni propuestas; solo aparece una pantalla de acceso y todo lo demás responde `401`.
 - **Puerto e inicio automático**: usa el puerto público `443` (o `8443` / `10000` si está ocupado, configurable con `--port`) apuntando al servidor local (`127.0.0.1:8766`). Cada vez que tú o un agente trabajáis en un proyecto con `uni.py`, se levanta el servidor en segundo plano si estaba parado y se marca ese proyecto como el activo.
-- **Copia de caché sin conexión**: una vez dentro desde fuera, Unificador registra un Service Worker (`sw.js`) y se puede instalar en el móvil. Si apagas o suspendes el ordenador, sigues viendo el último tablero cargado en modo **solo lectura** (con aviso arriba). Al cerrar sesión o caducar la clave, la caché se borra automáticamente.
+- **Copia de caché sin conexión**: una vez dentro desde fuera, Unificador registra un Service Worker (`sw.js`) y se puede instalar como app independiente en Android/Chrome (menú ⋮ → «Instalar app», o el botón «📲 Instalar app» de la propia web). Si apagas o suspendes el ordenador, sigues viendo el último tablero cargado en modo **solo lectura** (con aviso arriba). Al cerrar sesión o caducar la clave, la caché se borra automáticamente.
 - **Revocar sesiones**: si sospechas que alguien tiene tu clave o tu móvil, ejecuta `unificador funnel reset-key` para cambiar la clave e invalidar todas las cookies al instante.
 
 ## Clientes
