@@ -489,7 +489,10 @@ export function initBoard() {
   };
   legend.replaceChildren(mk("", "Todas"), ...Object.keys(CATS).map((c) => mk(c, CATS[c].name, c)));
   applyFilter();
-  $("filt-b").addEventListener("click", () => filtMenu($("legend").hidden));
+  $("filt-b").addEventListener("click", () => {
+    if ($("legend").hidden) { drawer(false); if (!$("box-scrim").hidden) $("box-scrim").click(); }
+    filtMenu($("legend").hidden);
+  });
   document.addEventListener("pointerdown", (e) => { if (!e.target.closest("#filt")) filtMenu(false); });
   $("filt").addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("legend").hidden) { e.stopPropagation(); filtMenu(false); $("filt-b").focus(); } });
 
@@ -499,7 +502,10 @@ export function initBoard() {
   $("drawer-close").append(icon("x"));
   $("drawer-close").addEventListener("click", () => drawer(false));
   $("scrim").addEventListener("click", () => drawer(false));
-  $("decb").addEventListener("click", () => drawer($("drawer").hidden));
+  const closeBox = () => { if (!$("box-scrim").hidden) $("box-scrim").click(); };
+  $("decb").addEventListener("click", () => { closeBox(); drawer($("drawer").hidden); });
+  // Pestaña «Plan» (solo en el móvil): cierra lo que esté abierto y vuelve arriba.
+  $("tab-plan").addEventListener("click", () => { drawer(false); closeBox(); filtMenu(false); window.scrollTo({ top: 0, behavior: "smooth" }); });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !$("drawer").hidden && !document.querySelector("dialog[open]")) { e.preventDefault(); drawer(false); }
   });

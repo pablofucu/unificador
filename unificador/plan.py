@@ -530,11 +530,19 @@ def set_state(plan: Dict[str, Any], step_id: str, state: str, by: str = "ia", te
         branch.pop("archived", None)
     step["state"] = state
     step["updated"] = now()
+    if state == DONE and phase_state(phase) == DONE:
+        _phase_news(plan, branch, phase, by)
     if state != DONE:
         _clear_review(phase)
     elif phase_state(phase) == DONE and not branch.get("nonstop") and review_state(phase) not in (WAITING, APPROVED):
         phase["review"] = {"state": WAITING, "text": "", "by": by, "at": now(), "seen": True}
     return step
+
+
+def _phase_news(plan: Dict[str, Any], branch: dict, phase: dict, by: str) -> None:
+    """Una fase recién terminada pasa a ser novedad de la próxima versión (una sola vez)."""
+    name = f"{branch.get('icon', '')} {branch['name']}".strip()
+    add_news(plan, f"{name}: {phase['name']}", "fase", by, ref=f"{branch['key']}/{phase['name']}")
 
 
 def _clear_review(phase: dict) -> None:
@@ -1233,6 +1241,107 @@ def render_commits(items: List[dict]) -> str:
     lines.append(f'Apunta cada uno: si era un retoque, {UNI} tweak "Qué cambió" --commit SHA; '
                  f"si era de un paso, {UNI} link ID SHA. Si son antiguos y no importan: {UNI} commits --from-now")
     return "\n".join(lines)
+# ── Versiones y novedades ────────────────────────────────────────────────────
+
+NEWS_KINDS = {"nuevo": "✨", "arreglo": "🐛", "cambio": "🔧", "fase": "🏁"}
+_KIND_ALIAS = {"new": "nuevo", "feat": "nuevo", "fix": "arreglo", "change": "cambio", "phase": "fase"}
+_SEMVER = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
+FIRST_VERSION = "0.1.0"
+
+
+def norm_kind(kind: str) -> str:
+    k = str(kind or "").strip().lower()
+    k = _KIND_ALIAS.get(k, k)
+    if k not in NEWS_KINDS:
+        raise PlanError(f"Tipo de novedad desconocido «{kind}». Usa: {', '.join(NEWS_KINDS)}.")
+    return k
+
+
+def add_news(plan: Dict[str, Any], text: str, kind: str = "nuevo", by: str = "ia", ref: str = "") -> Optional[dict]:
+    """Apunta una novedad para la próxima versión. Con ``ref``, no la repite (devuelve None si ya está)."""
+    text = _clean(text)
+    if not text:
+        raise PlanError(f'La novedad necesita un texto: {UNI} news "Ya se puede comprar desde el móvil"')
+    news = plan.setdefault("news", [])
+    if ref and any(n.get("ref") == ref for n in news):
+        return None
+    item = {"text": text, "kind": norm_kind(kind), "by": by, "at": now()}
+    if ref:
+        item["ref"] = ref
+    news.append(item)
+    return item
+
+
+def parse_version(v: str) -> Tuple[int, int, int]:
+    m = _SEMVER.match(str(v or "").strip())
+    if not m:
+        raise PlanError(f"«{v}» no es una versión SemVer (MAYOR.MENOR.PARCHE, por ejemplo 1.4.0).")
+    return int(m.group(1)), int(m.group(2)), int(m.group(3))
+
+
+def last_version(plan: Dict[str, Any]) -> str:
+    versions = plan.get("versions") or []
+    return versions[-1]["version"] if versions else ""
+
+
+def suggest_bump(news: List[dict]) -> str:
+    """minor si hay algo nuevo o una fase cerrada; patch si solo son arreglos o cambios."""
+    return "minor" if any(n.get("kind") in ("nuevo", "fase") for n in news) else "patch"
+
+
+def next_version(plan: Dict[str, Any], bump: str = "") -> str:
+    last = last_version(plan)
+    if not last:
+        return FIRST_VERSION
+    major, minor, patch = parse_version(last)
+    bump = bump or suggest_bump(plan.get("news") or [])
+    if bump == "major":
+        return f"{major + 1}.0.0"
+    if bump == "minor":
+        return f"{major}.{minor + 1}.0"
+    if bump == "patch":
+        return f"{major}.{minor}.{patch + 1}"
+    raise PlanError(f"Salto desconocido «{bump}». Usa major, minor o patch (o una versión concreta).")
+
+
+def cut_version(plan: Dict[str, Any], version: str = "", by: str = "ia", bump: str = "") -> dict:
+    """Cierra la próxima versión: se lleva las novedades pendientes y las deja en el historial."""
+    news = plan.get("news") or []
+    if not news:
+        raise PlanError(f'No hay novedades que publicar. Apunta alguna: {UNI} news "Qué trae"')
+    version = version.strip().lstrip("v") if version else next_version(plan, bump)
+    new = parse_version(version)
+    last = last_version(plan)
+    if last and new <= parse_version(last):
+        raise PlanError(f"La versión {version} no es mayor que la última ({last}).")
+    entry = {"version": version, "at": now(), "by": by, "news": news}
+    plan.setdefault("versions", []).append(entry)
+    plan["news"] = []
+    return entry
+
+
+def render_news(plan: Dict[str, Any]) -> str:
+    news = plan.get("news") or []
+    last = last_version(plan)
+    lines = [f"Próxima versión: {next_version(plan)}" + (f"  (la última es {last})" if last else "  (la primera)")]
+    if not news:
+        lines.append(f'  Sin novedades todavía. Apunta una: {UNI} news "Qué trae" --kind nuevo|arreglo|cambio')
+    for n in news:
+        lines.append(f"  {NEWS_KINDS.get(n.get('kind'), '·')} {n['text']}")
+    return "\n".join(lines)
+
+
+def render_versions(plan: Dict[str, Any], limit: int = 10) -> str:
+    versions = (plan.get("versions") or [])[-max(1, limit):]
+    if not versions:
+        return "Aún no hay versiones publicadas."
+    out = []
+    for v in reversed(versions):
+        out.append(f"🏷️ {v['version']}  {v['at'][:10]}")
+        out.extend(f"   {NEWS_KINDS.get(n.get('kind'), '·')} {n['text']}" for n in v.get("news", []))
+    return "\n".join(out)
+
+
 # ── Texto para la terminal ───────────────────────────────────────────────────
 
 def _wait_flag(plan: Dict[str, Any], branch: dict, phase: dict) -> str:
@@ -1657,6 +1766,11 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--all", action="store_true", help="también los hechos")
     s = sub.add_parser("tweaks", help="los últimos retoques apuntados")
     s.add_argument("-n", type=int, default=15)
+    s = sub.add_parser("news", help='novedades de la próxima versión; news "Qué trae" --kind nuevo|arreglo|cambio')
+    s.add_argument("text", nargs="?", help="la novedad, en llano (sin texto: lista las pendientes)")
+    s.add_argument("--kind", default="nuevo", help="nuevo (por defecto), arreglo o cambio")
+    s = sub.add_parser("versions", help="historial de versiones publicadas con sus novedades")
+    s.add_argument("-n", type=int, default=10)
     s = sub.add_parser("link", help="enlaza un commit a un paso o retoque: link ID SHA")
     s.add_argument("id")
     s.add_argument("commit")
@@ -2083,6 +2197,14 @@ def main(argv: Optional[List[str]] = None) -> int:
             for t in reversed(items):
                 print(f"✎ {t['id']}  {t['at'][:10]}  {t['title']}"
                       + (f"  ({', '.join(c[:7] for c in t.get('commits') or [])})" if t.get("commits") else ""))
+        elif cmd == "news":
+            if args.text:
+                n = mutate(path, lambda plan: add_news(plan, args.text, args.kind, by))
+                print(f"{NEWS_KINDS[n['kind']]} Apuntada para la próxima versión: {n['text']}")
+            else:
+                print(render_news(load(path)))
+        elif cmd == "versions":
+            print(render_versions(load(path), args.n))
         elif cmd == "link":
             sha = resolve_commit(path.resolve().parent, args.commit)
             t = mutate(path, lambda plan: link_commit(plan, args.id, sha))

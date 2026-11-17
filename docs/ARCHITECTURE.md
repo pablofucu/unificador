@@ -27,6 +27,8 @@ branches[]   rama: key, name, goal, icon, color, archived?
 ideas[]      idea: id (I-n), text, by, at, state (open | planned | dropped), branch?, note?, seen
 queue[]      encargo: id (C-n), title, text, prompt?, branch?, phase?, state (pending | done), result?, seen
 tweaks[]     retoque: id (R-n), title, cat?, commits[], at
+news[]       novedad sin publicar: text, kind (nuevo | arreglo | cambio | fase), ref?, by, at
+versions[]   versión publicada: version (SemVer, sin «v»), at, by, news[]
 ```
 
 - **Ideas** (`uni.py idea`, `ideas plan|drop|reopen`, `branch … --ideas I-1,I-2`): la caja de cosas que no tocan
@@ -37,6 +39,9 @@ tweaks[]     retoque: id (R-n), title, cat?, commits[], at
   o una fase. El agente los recoge por `inbox` y los cierra con `queue done C-1 -m`.
 - **Retoques** (`uni.py tweak "…" --commit HEAD`): cambios rápidos sin rama. `commits` lista los commits que no
   están enlazados a ningún paso ni retoque (`--from-now` marca el punto de partida).
+- **Versiones** (`uni.py news "…" --kind`, `news`, `versions`): SemVer. Al terminar una fase se apunta sola como
+  novedad (`kind: fase`, `ref: RAMA/Fase`, sin repetirse). La próxima versión sube MENOR si hay algo nuevo o una
+  fase, PARCHE si solo son arreglos o cambios, y MAYOR solo si se pide; la primera es 0.1.0.
 
 - El estado de fases y ramas se calcula a partir de sus pasos; no se guarda.
 - `change` es una corrección pedida por la persona: reabre el paso hasta que la IA lo termina otra vez.
@@ -56,7 +61,7 @@ tweaks[]     retoque: id (R-n), title, cat?, commits[], at
 | `agents.py` | Localiza el ejecutable de `claude`, `agy` y `codex` (PATH y carpetas habituales); lo usa `doctor`. |
 | `kanvas_import.py` | Convierte un `kanvas.json` antiguo en plan. |
 | `projects.py` | Registro de proyectos (`~/.unificador/proyectos.json`) y proyecto activo (`active.json`, o `UNIFICADOR_HOME`). |
-| `web/` | La página, JavaScript sin librerías en módulos ES: `index.html`, `app.css`, `app.js` (portada con todos los proyectos o tablero de uno, `#p=<id>`, y eventos en vivo), `util.js` (nodos, peticiones, borradores, modo sin conexión y cierre de sesión), `plan.js` (carriles por rama con fases en tarjetas y sus pasos), `box.js` (cajón «Caja»: ideas, prompts maestros, cola de encargos y retoques), `decide.js` (bandeja «Te toca», revisar fases, preguntas, propuestas en miniatura y visor a pantalla completa), `sw.js`, `manifest.webmanifest` e `icon.svg` (PWA y caché de solo lectura en remoto). |
+| `web/` | La página, JavaScript sin librerías en módulos ES: `index.html`, `app.css`, `app.js` (portada con todos los proyectos o tablero de uno, `#p=<id>`, y eventos en vivo), `util.js` (nodos, peticiones, borradores, modo sin conexión y cierre de sesión), `plan.js` (carriles por rama con fases en tarjetas y sus pasos), `box.js` (cajón «Caja»: ideas, prompts maestros, cola de encargos y retoques), `decide.js` (bandeja «Te toca», revisar fases, preguntas, propuestas en miniatura y visor a pantalla completa), `sw.js` (en móvil, cabecera y `nav.tabs` como barra inferior: Plan, Filtrar, Caja y Decisiones), `manifest.webmanifest` e `icon.svg` (PWA y caché de solo lectura en remoto). |
 
 ## API
 

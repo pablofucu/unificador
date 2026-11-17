@@ -342,7 +342,7 @@ svg.layer { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: non
   .tb { flex-wrap: wrap; gap: 8px; }
   .pick { flex: 1; }
   .pick select { max-width: 100%; width: 100%; }
-  .tb .total { order: 3; flex: 1; }
+  .tb .total { order: 3; flex: 1 1 100%; height: 34px; }
   .tb .bar { flex: 1; width: auto; }
   .filt { order: 4; margin-left: 0; }
   .decb-t { display: none; }
@@ -445,4 +445,27 @@ body, main { background-color: #fff4dc; background-image: radial-gradient(#efd29
 .bx-sel { max-width: 100%; min-height: 36px; border-radius: 99px; padding: 0 10px; font: inherit; background: var(--panel); color: inherit; border: 1px solid var(--line, rgba(0,0,0,.15)); }
 .bx-more summary { cursor: pointer; font-size: .9rem; padding: 4px 0; }
 .bx-more .bx-list { margin-top: 6px; }
-@media (max-width: 640px) { .boxb .decb-t { display: none; } }
+
+/* Pestañas: en escritorio van en la cabecera; en el móvil, fijas abajo al alcance del pulgar. */
+.tabs { display: contents; }
+.tab-plan { display: none; }
+@media (max-width: 760px) {
+  .tabs { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; gap: 4px; padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    background: var(--panel); border-top: 1.5px solid var(--line); box-shadow: 0 -6px 18px rgba(20, 24, 44, .08); }
+  .tabs > * { flex: 1 1 0; min-width: 0; }
+  .tabs .filt { margin-left: 0; order: 9; }
+  .tabs .tab-plan, .tabs .decb, .tabs .filt-b { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    width: 100%; height: auto; min-height: 54px; padding: 4px 2px; border: 0; border-radius: 14px; box-shadow: none;
+    background: none; color: var(--ink); font-size: .72rem; font-weight: 700; cursor: pointer; }
+  .tabs .tab-plan::before { content: ""; width: 22px; height: 22px; border-radius: 6px;
+    background: linear-gradient(var(--ink) 0 0) 0 0 / 100% 4px no-repeat, linear-gradient(var(--ink) 0 0) 0 9px / 70% 4px no-repeat, linear-gradient(var(--ink) 0 0) 0 18px / 85% 4px no-repeat; opacity: .8; }
+  .tabs .filt-b.on { color: var(--k); }
+  .tabs svg.i { width: 22px; height: 22px; }
+  .tabs .decb-t, .tabs .filt-b span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabs .decb .n { position: absolute; top: 2px; left: calc(50% + 6px); min-width: 18px; height: 18px; font-size: .68rem; padding: 0 5px; color: #fff; }
+  .tabs .decb.zero .n { display: none; }
+  .tabs [aria-expanded="true"], .tabs:not(:has([aria-expanded="true"])) .tab-plan { background: var(--soft); }
+  .legend { position: fixed; top: auto; left: 10px; right: 10px; bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .drawer { bottom: calc(67px + env(safe-area-inset-bottom)); }
+  main, main:has(> #board:not([hidden])) { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+}

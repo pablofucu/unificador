@@ -245,7 +245,7 @@ export function initBox() {
   $("box-close").append(icon("x"));
   $("box-close").addEventListener("click", () => box(false));
   $("box-scrim").addEventListener("click", () => box(false));
-  $("boxb").addEventListener("click", () => { box($("box").hidden); if (app.plan) renderBox(app.plan); });
+  $("boxb").addEventListener("click", () => { if (!$("scrim").hidden) $("scrim").click(); box($("box").hidden); if (app.plan) renderBox(app.plan); });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !$("box").hidden && !document.querySelector("dialog[open]")) { e.preventDefault(); box(false); }
   });

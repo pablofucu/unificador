@@ -1963,10 +1963,10 @@
             }
           ],
           "review": {
-            "state": "waiting",
+            "state": "approved",
             "text": "",
-            "by": "claude",
-            "at": "2026-11-17T15:20:08+01:00",
+            "by": "persona",
+            "at": "2026-11-17T15:26:53+01:00",
             "seen": true
           }
         },
@@ -1978,17 +1978,54 @@
               "id": "PM-3",
               "title": "Poner un prompt en cola sobre una rama o fase",
               "desc": "",
-              "state": "pending",
-              "notes": []
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:27:01+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:27:01+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "queue add/done/drop y POST /api/plan/queue; botón Encargar en la Caja con selector de rama; probado en test_box"
+                }
+              ],
+              "updated": "2026-11-17T15:27:01+01:00",
+              "result": "queue add/done/drop y POST /api/plan/queue; botón Encargar en la Caja con selector de rama; probado en test_box"
             },
             {
               "id": "PM-4",
               "title": "Que el agente lo recoja con el aviso automático",
               "desc": "",
-              "state": "pending",
-              "notes": []
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:27:01+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:27:02+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "inbox avisa de los encargos pendientes con la orden queue done C-n; probado en BoxApi.test_encargo_desde_la_web"
+                }
+              ],
+              "updated": "2026-11-17T15:27:02+01:00",
+              "result": "inbox avisa de los encargos pendientes con la orden queue done C-n; probado en BoxApi.test_encargo_desde_la_web"
             }
-          ]
+          ],
+          "review": {
+            "state": "waiting",
+            "text": "",
+            "by": "claude",
+            "at": "2026-11-17T15:27:02+01:00",
+            "seen": true
+          }
         }
       ]
     },
@@ -3249,11 +3286,33 @@
               "id": "IPM-3",
               "title": "Elegir la vista móvil",
               "desc": "",
-              "state": "pending",
-              "notes": [],
-              "cat": "decidir"
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:27:06+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:27:06+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "La persona sigue con la recomendada: A, barra inferior (P-5)"
+                }
+              ],
+              "cat": "decidir",
+              "updated": "2026-11-17T15:27:06+01:00",
+              "result": "La persona sigue con la recomendada: A, barra inferior (P-5)"
             }
-          ]
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-17T15:27:14+01:00",
+            "seen": true
+          }
         },
         {
           "name": "Montaje",
@@ -3263,20 +3322,57 @@
               "id": "IPM-4",
               "title": "Montar la vista móvil",
               "desc": "",
-              "state": "pending",
-              "notes": [],
-              "cat": "interfaz"
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:27:18+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:29:52+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Opción A montada: en <760px Plan/Caja/Decisiones/Filtrar pasan a una barra fija abajo (nav.tabs, display:contents en escritorio), el progreso va en su propia fila y la leyenda y los cajones dejan libre la barra; cambiar de pestaña cierra lo abierto. Escritorio sin cambios (captura)."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-17T15:29:52+01:00",
+              "result": "Opción A montada: en <760px Plan/Caja/Decisiones/Filtrar pasan a una barra fija abajo (nav.tabs, display:contents en escritorio), el progreso va en su propia fila y la leyenda y los cajones dejan libre la barra; cambiar de pestaña cierra lo abierto. Escritorio sin cambios (captura)."
             },
             {
               "id": "IPM-5",
               "title": "Probar en anchos de móvil",
               "desc": "",
-              "state": "pending",
-              "notes": [],
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:29:52+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:29:52+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Probado en el navegador a 320, 375 y escritorio: sin scroll horizontal, pestañas de 70px y 54px de alto, Caja/Decisiones/Filtrar/Plan se cierran entre sí; el interruptor «Sin paradas» ya tenía 46px de zona táctil"
+                }
+              ],
               "cat": "pruebas",
-              "together": true
+              "together": true,
+              "updated": "2026-11-17T15:29:52+01:00",
+              "result": "Probado en el navegador a 320, 375 y escritorio: sin scroll horizontal, pestañas de 70px y 54px de alto, Caja/Decisiones/Filtrar/Plan se cierran entre sí; el interruptor «Sin paradas» ya tenía 46px de zona táctil"
             }
-          ]
+          ],
+          "review": {
+            "state": "waiting",
+            "text": "",
+            "by": "claude",
+            "at": "2026-11-17T15:29:52+01:00",
+            "seen": true
+          }
         }
       ]
     },
@@ -3365,10 +3461,10 @@
             }
           ],
           "review": {
-            "state": "waiting",
+            "state": "approved",
             "text": "",
-            "by": "claude",
-            "at": "2026-11-17T15:20:07+01:00",
+            "by": "persona",
+            "at": "2026-11-17T15:26:52+01:00",
             "seen": true
           }
         },
@@ -3380,27 +3476,79 @@
               "id": "CDI-4",
               "title": "Planificar las ideas agrupándolas",
               "desc": "",
-              "state": "pending",
-              "notes": [],
-              "cat": "codigo"
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:26:59+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:27:00+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "branch … --ideas I-1,I-2 e ideas plan I-n --branch RAMA marcan las ideas como planificadas y las enlazan a la rama; comprobado en test_box"
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T15:27:00+01:00",
+              "result": "branch … --ideas I-1,I-2 e ideas plan I-n --branch RAMA marcan las ideas como planificadas y las enlazan a la rama; comprobado en test_box"
             },
             {
               "id": "CDI-5",
               "title": "Reglas para los agentes",
               "desc": "",
-              "state": "pending",
-              "notes": [],
-              "cat": "codigo"
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:27:00+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:27:00+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "AGENTS_BLOCK con idea, branch --ideas, ideas plan/drop; reinstalado AGENTS.md"
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T15:27:00+01:00",
+              "result": "AGENTS_BLOCK con idea, branch --ideas, ideas plan/drop; reinstalado AGENTS.md"
             },
             {
               "id": "CDI-6",
               "title": "Probar el paso de ideas a ramas",
               "desc": "",
-              "state": "pending",
-              "notes": [],
-              "cat": "pruebas"
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:27:00+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:27:01+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "tests/test_box.py: idea→plan, rama nueva con ideas (y que una idea inexistente no deja la rama a medias); 110 tests OK"
+                }
+              ],
+              "cat": "pruebas",
+              "updated": "2026-11-17T15:27:01+01:00",
+              "result": "tests/test_box.py: idea→plan, rama nueva con ideas (y que una idea inexistente no deja la rama a medias); 110 tests OK"
             }
-          ]
+          ],
+          "review": {
+            "state": "waiting",
+            "text": "",
+            "by": "claude",
+            "at": "2026-11-17T15:27:01+01:00",
+            "seen": true
+          }
         }
       ]
     },
@@ -3489,10 +3637,10 @@
             }
           ],
           "review": {
-            "state": "waiting",
+            "state": "approved",
             "text": "",
-            "by": "claude",
-            "at": "2026-11-17T15:12:30+01:00",
+            "by": "persona",
+            "at": "2026-11-17T15:26:52+01:00",
             "seen": true
           }
         },
@@ -3525,10 +3673,10 @@
             }
           ],
           "review": {
-            "state": "waiting",
+            "state": "approved",
             "text": "",
-            "by": "claude",
-            "at": "2026-11-17T15:20:08+01:00",
+            "by": "persona",
+            "at": "2026-11-17T15:27:14+01:00",
             "seen": true
           }
         }
@@ -3552,27 +3700,79 @@
               "id": "VYN-1",
               "title": "Cómo numerar las versiones",
               "desc": "",
-              "state": "pending",
-              "notes": [],
-              "cat": "decidir"
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:27:14+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:27:14+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "SemVer (P-6): mayor.menor.arreglo"
+                }
+              ],
+              "cat": "decidir",
+              "updated": "2026-11-17T15:27:14+01:00",
+              "result": "SemVer (P-6): mayor.menor.arreglo"
             },
             {
               "id": "VYN-2",
               "title": "Guardar versiones y sus novedades",
               "desc": "",
-              "state": "pending",
-              "notes": [],
-              "cat": "codigo"
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:30:40+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:32:30+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "plan.py guarda news[] y versions[] (SemVer): add_news, next_version/suggest_bump, cut_version, órdenes news y versions. Probado en tests/test_versions.py (113 pruebas OK)."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T15:32:30+01:00",
+              "result": "plan.py guarda news[] y versions[] (SemVer): add_news, next_version/suggest_bump, cut_version, órdenes news y versions. Probado en tests/test_versions.py (113 pruebas OK)."
             },
             {
               "id": "VYN-3",
               "title": "Al cerrar una fase, apuntar sus novedades",
               "desc": "",
-              "state": "pending",
-              "notes": [],
-              "cat": "codigo"
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:32:31+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:32:31+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "set_state apunta la fase terminada como novedad (kind fase, ref RAMA/Fase, sin duplicar al reabrir y cerrar). Probado en test_fase_cerrada_es_novedad."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T15:32:31+01:00",
+              "result": "set_state apunta la fase terminada como novedad (kind fase, ref RAMA/Fase, sin duplicar al reabrir y cerrar). Probado en test_fase_cerrada_es_novedad."
             }
-          ]
+          ],
+          "review": {
+            "state": "waiting",
+            "text": "",
+            "by": "claude",
+            "at": "2026-11-17T15:32:31+01:00",
+            "seen": true
+          }
         },
         {
           "name": "Publicar",
@@ -3794,7 +3994,13 @@
         }
       ],
       "recommend": 1,
-      "answer": null,
+      "answer": {
+        "option": 1,
+        "text": "Sigue con la recomendada (barra inferior)",
+        "by": "persona",
+        "at": "2026-11-17T15:26:53+01:00",
+        "seen": true
+      },
       "by": "claude",
       "created": "2026-11-17T15:22:04+01:00"
     },
@@ -3820,10 +4026,26 @@
         }
       ],
       "recommend": 1,
-      "answer": null,
+      "answer": {
+        "option": 1,
+        "text": "SemVer",
+        "by": "persona",
+        "at": "2026-11-17T15:26:53+01:00",
+        "seen": true
+      },
       "by": "claude",
       "created": "2026-11-17T15:22:05+01:00"
     }
   ],
-  "next_ask": 7
+  "next_ask": 7,
+  "git_since": "a42fdec323f4fa30a4ebc9b158d809350276fe84",
+  "news": [
+    {
+      "text": "🏷️ Versiones y novedades: Modelo",
+      "kind": "fase",
+      "by": "claude",
+      "at": "2026-11-17T15:32:31+01:00",
+      "ref": "VYN/Modelo"
+    }
+  ]
 }
