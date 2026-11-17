@@ -62,6 +62,38 @@ a.proj:hover { transform: translateY(-2px); box-shadow: var(--shadow-up); border
 .proj-count { margin: 8px 0 0; font-weight: 600; font-size: .9rem; }
 .proj-wait { margin: 8px 0 0; padding: 8px 12px; border-radius: 12px; background: var(--warn-soft); color: var(--warn-ink); font-weight: 700; }
 .proj-calm { margin: 8px 0 0; color: var(--muted); font-size: .88rem; }
+.proj-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.proj-tools { display: flex; gap: 4px; flex: none; opacity: .55; transition: opacity .15s; }
+.proj:hover .proj-tools, .proj:focus-within .proj-tools { opacity: 1; }
+@media (hover: none) { .proj-tools { opacity: 1; } }
+.icon-btn { width: 34px; height: 34px; display: inline-grid; place-items: center; border-radius: 10px; border: 1.5px solid transparent;
+  background: var(--soft); color: var(--muted); cursor: pointer; padding: 0; }
+.icon-btn:hover { border-color: var(--ai); color: var(--ink); }
+.proj.editing { border-color: var(--ai); }
+.proj-edit { display: grid; gap: 4px; width: 100%; }
+.proj-rename { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; }
+.proj-rename input { flex: 1 1 160px; min-width: 0; font: inherit; font-size: 1.05rem; font-weight: 600; padding: 8px 12px;
+  border-radius: 12px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); }
+.proj-rename input:focus { outline: none; border-color: var(--ai); }
+.proj-hint { margin: 0; font-size: .78rem; }
+.proj-confirm { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--bad) 8%, var(--card)); display: grid; gap: 8px; }
+.proj-confirm p { margin: 0; font-size: .88rem; }
+.proj-confirm-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.pill.danger { background: var(--bad); color: #fff; font-weight: 600; }
+.proj-err { margin: 0; color: var(--bad); font-size: .85rem; }
+.proj-branches { display: grid; gap: 6px; margin-top: 6px; }
+.proj-sum { margin: 0; font-size: .82rem; color: var(--muted); }
+.mini-branches { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.mini { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; align-items: center; font-size: .85rem; }
+.mini-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.mini-count { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--muted); font-size: .8rem; }
+.mini-bar { grid-column: 1 / -1; display: block; height: 4px; border-radius: 4px; background: var(--soft); overflow: hidden; }
+.mini-bar b { display: block; height: 100%; background: var(--ai); border-radius: 4px; }
+.mini.pending .mini-name { color: var(--muted); }
+.mini.pending .mini-bar b { background: var(--line); }
+.proj-more { margin: 0; font-size: .8rem; }
+.proj-cleanup { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px;
+  border-radius: 14px; background: var(--soft); color: var(--muted); font-size: .9rem; }
 
 /* ── Bandeja «Te toca» ──────────────────────────────────────────── */
 .inbox { background: linear-gradient(180deg, #fffaf0, #fff); border: 2px solid color-mix(in srgb, var(--warn) 55%, white); border-radius: 24px;

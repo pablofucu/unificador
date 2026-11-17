@@ -169,7 +169,7 @@ class Project:
 
     @property
     def name(self) -> str:
-        return self.path.name
+        return R.name_of(self.path)
 
 
 def project_id(path: str | Path) -> str:
@@ -345,11 +345,19 @@ def summary(project: "Project") -> Dict[str, Any]:
         plan = P.load(project.plan_path)
     except P.PlanError as e:
         return {**out, "error": str(e)}
+    branches = []
     for b in plan.get("branches", []):
         if not b.get("archived"):
             done, total = P.branch_progress(b)
             out["done"] += done
             out["total"] += total
+            states = [P.phase_state(p) for p in b.get("phases", [])]
+            state = (P.DONE if total and done == total else
+                     P.DOING if done or P.DOING in states else P.PENDING)
+            branches.append({"key": b.get("key", ""), "name": b.get("name", ""), "icon": b.get("icon", ""),
+                             "done": done, "total": total, "state": state})
+    out["branches"] = branches
+    out["counts"] = {s: sum(1 for b in branches if b["state"] == s) for s in (P.DOING, P.PENDING, P.DONE)}
     out["waiting"] = waiting_count(plan)
     out["title"] = plan.get("title") or ""
     return out
@@ -365,13 +373,40 @@ def get_projects(project, args, query, body):
     """El de arranque (``current``), el último trabajado (``active``) y los del registro."""
     start = project
     active = R.active_id()
-    items = [{"id": start.id, "name": start.name, "path": str(start.path), "exists": start.path.is_dir()}]
+    items = [{"id": start.id, "name": start.name, "folder": start.path.name, "path": str(start.path),
+              "exists": start.path.is_dir()}]
     items += [i for i in R.listing() if i["id"] != start.id]
     out = []
     for item in items:
         p = start if item["id"] == start.id else Project(item["path"], item["id"])
         out.append({**item, "current": item["id"] == start.id, "active": item["id"] == active, **summary(p)})
     return {"projects": out}
+
+
+@route("POST", "/api/projects/([0-9a-f]{4,40})/name")
+def post_project_name(project, args, query, body):
+    """Nombre propio para la tarjeta (vacío = el de la carpeta). La carpeta no se toca."""
+    pid = args[0]
+    if pid != project.id and R.find(pid) is None:
+        raise ApiError("Ese proyecto no está en la lista.", 404)
+    try:
+        R.rename(pid, body.get("name", ""))
+    except ValueError as e:
+        raise ApiError(str(e))
+    return get_projects(project, args, query, body)
+
+
+@route("POST", "/api/projects/([0-9a-f]{4,40})/forget")
+def post_project_forget(project, args, query, body):
+    """Quita el proyecto de la lista. No borra nada del disco; vuelve si se trabaja otra vez en él."""
+    pid = args[0]
+    if pid == project.id:
+        raise ApiError("Es el proyecto con el que arrancó Unificador: no se puede quitar mientras está abierto.")
+    if not R.forget_id(pid):
+        raise ApiError("Ese proyecto no está en la lista.", 404)
+    if R.active_id() == pid:
+        R.clear_active()
+    return get_projects(project, args, query, body)
 
 
 @route("GET", "/api/project")

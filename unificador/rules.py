@@ -62,9 +62,10 @@ Cuando preguntes algo, pregúntalo SIEMPRE en el chat (y apúntalo con `ask` si 
 - **En cada paso**: `{UNI} start ID` → trabaja → `{UNI} done ID -m "qué ha cambiado y cómo lo has comprobado"`.
   Cada orden te dice cuál es la siguiente. Termina las fases en orden; si descubres algo que la persona
   deba saber, `{UNI} note ID "…"`.
-- **Al cerrar una fase**: pasa `{UNI} check` y arregla sus errores. Después PARA, resume qué se ha hecho y pregunta en el chat si sigues.
-  Si dice que sí: `{UNI} approve RAMA`. Si pide cambios: `{UNI} revise RAMA -m "qué quiere cambiar"`.
-  Si la rama es «sin paradas», no hace falta preguntar.
+- **Al cerrar una fase**: pasa `{UNI} check` y arregla sus errores. Cuenta en una línea qué se ha hecho y sigue
+  con la siguiente fase SIN preguntar: la revisión es opcional y la persona la hace en la web si quiere.
+  Para y pregunta solo si te pidió revisar antes de seguir. Si da una fase por buena: `{UNI} approve RAMA`;
+  si pide cambios: `{UNI} revise RAMA -m "qué quiere cambiar"` y atiéndelos lo primero.
 - **Dudas con opciones**: ficha fija: contexto corto en `-d` (Markdown ligero, máx. 800), cada opción
   `"Título | qué implica"` y la que recomiendas con `--recommend N` (0 = sin preferencia):
   `{UNI} ask "¿Qué color?" --step ID -d "Por qué importa" --option "Azul | más sobrio" --option "Verde | más contraste" --recommend 1`.
@@ -83,7 +84,7 @@ Cuando preguntes algo, pregúntalo SIEMPRE en el chat (y apúntalo con `ask` si 
   `{UNI} commits` te dice cuáles y cómo apuntarlos.
 - **Versiones** (SemVer): cada fase cerrada se apunta sola como novedad; apunta las demás con
   `{UNI} news "Qué trae, en llano" --kind nuevo|arreglo|cambio`. `{UNI} news` enseña la próxima versión y lo
-  comiteado sin publicar. Publica solo cuando la persona lo pida: `{UNI} release` (crea el tag `vX.Y.Z`).
+  comiteado sin publicar. Publica solo cuando la persona lo pida, y entonces hazlo sin más preguntas: `{UNI} release` (crea el tag `vX.Y.Z`).
 - **Ideas** que salen y no tocan ahora: `{UNI} idea "Qué se te ocurre"` (van a la caja; las de la persona
   te llegan por `inbox`). Para convertirlas en trabajo: `{UNI} branch … --ideas I-1,I-3` o
   `{UNI} ideas plan I-2 --branch RAMA`; si no van a hacerse, `{UNI} ideas drop I-4 -m "por qué"`.

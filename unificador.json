@@ -3868,10 +3868,187 @@
             }
           ],
           "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-17T21:03:52+01:00",
+            "seen": true
+          }
+        }
+      ]
+    },
+    {
+      "key": "LDP",
+      "name": "Lista de proyectos",
+      "goal": "Poner nombre, quitar proyectos y ver de un vistazo cómo va cada uno",
+      "icon": "🗂️",
+      "color": 3,
+      "created": "2026-11-17T20:56:11+01:00",
+      "by": "claude",
+      "next_id": 7,
+      "phases": [
+        {
+          "name": "Registro",
+          "icon": "",
+          "steps": [
+            {
+              "id": "LDP-1",
+              "title": "Nombre propio y quitar de la lista",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T20:56:24+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T20:58:54+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Registro guarda nombre propio (nombres.json aparte, para que los uni.py viejos no lo borren) y quita por id; rutas POST /api/projects/<id>/name y /forget. Probado con test_rename_and_forget_projects."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T20:58:54+01:00",
+              "result": "Registro guarda nombre propio (nombres.json aparte, para que los uni.py viejos no lo borren) y quita por id; rutas POST /api/projects/<id>/name y /forget. Probado con test_rename_and_forget_projects."
+            },
+            {
+              "id": "LDP-2",
+              "title": "Que las pruebas no llenen la lista",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T20:58:54+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T20:58:55+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "tests/conftest.py da a cada prueba su propio UNIFICADOR_HOME. Tras pasar la batería, ~/.unificador/proyectos.json no cambia."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T20:58:55+01:00",
+              "result": "tests/conftest.py da a cada prueba su propio UNIFICADOR_HOME. Tras pasar la batería, ~/.unificador/proyectos.json no cambia."
+            },
+            {
+              "id": "LDP-3",
+              "title": "Probar nombre y quitar",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T20:58:55+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T20:58:55+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "116 pruebas pasan, incluida la nueva de nombre y quitar (límite de largo, id inventado, no quitar el de arranque, carpeta intacta)."
+                }
+              ],
+              "cat": "pruebas",
+              "together": true,
+              "updated": "2026-11-17T20:58:55+01:00",
+              "result": "116 pruebas pasan, incluida la nueva de nombre y quitar (límite de largo, id inventado, no quitar el de arranque, carpeta intacta)."
+            }
+          ],
+          "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-17T21:03:52+01:00",
+            "seen": true
+          }
+        },
+        {
+          "name": "Portada",
+          "icon": "",
+          "steps": [
+            {
+              "id": "LDP-4",
+              "title": "Resumen por rama en la lista",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T21:05:43+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T21:06:26+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "summary() de /api/projects añade branches (clave, nombre, icono, hechos/total, estado) y counts por estado. Probado en test_several_projects."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T21:06:26+01:00",
+              "result": "summary() de /api/projects añade branches (clave, nombre, icono, hechos/total, estado) y counts por estado. Probado en test_several_projects."
+            },
+            {
+              "id": "LDP-5",
+              "title": "Renombrar y quitar desde la tarjeta",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T21:06:26+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T21:09:16+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Cada tarjeta tiene lápiz (renombrar en línea; vacío = nombre de carpeta) y ✕ (quitar, con confirmación). Barra para quitar de una vez las carpetas que ya no existen. El refresco de 5 s no pisa lo que se escribe. Probado en el navegador, escritorio y móvil (375 px, sin scroll lateral)."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-17T21:09:16+01:00",
+              "result": "Cada tarjeta tiene lápiz (renombrar en línea; vacío = nombre de carpeta) y ✕ (quitar, con confirmación). Barra para quitar de una vez las carpetas que ya no existen. El refresco de 5 s no pisa lo que se escribe. Probado en el navegador, escritorio y móvil (375 px, sin scroll lateral)."
+            },
+            {
+              "id": "LDP-6",
+              "title": "Ramas en curso en pequeño",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T21:09:16+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T21:09:16+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Resumen «N ramas · X en curso · Y por empezar · Z terminadas» y hasta 4 ramas en curso/por empezar con icono, «hechos/total» y barra fina. Orden: activo primero, luego lo que espera respuesta. Comprobado en el navegador."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-17T21:09:16+01:00",
+              "result": "Resumen «N ramas · X en curso · Y por empezar · Z terminadas» y hasta 4 ramas en curso/por empezar con icono, «hechos/total» y barra fina. Orden: activo primero, luego lo que espera respuesta. Comprobado en el navegador."
+            }
+          ],
+          "review": {
             "state": "waiting",
             "text": "",
             "by": "claude",
-            "at": "2026-11-17T15:38:36+01:00",
+            "at": "2026-11-17T21:09:16+01:00",
             "seen": true
           }
         }
@@ -4119,6 +4296,20 @@
       "by": "claude",
       "at": "2026-11-17T15:38:36+01:00",
       "ref": "VYN/Web"
+    },
+    {
+      "text": "🗂️ Lista de proyectos: Registro",
+      "kind": "fase",
+      "by": "claude",
+      "at": "2026-11-17T20:58:55+01:00",
+      "ref": "LDP/Registro"
+    },
+    {
+      "text": "🗂️ Lista de proyectos: Portada",
+      "kind": "fase",
+      "by": "claude",
+      "at": "2026-11-17T21:09:16+01:00",
+      "ref": "LDP/Portada"
     }
   ]
 }

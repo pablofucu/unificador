@@ -210,6 +210,9 @@ class AppTest(ServerCase):
         self.assertEqual((items["Tienda"]["done"], items["Tienda"]["total"], items["Tienda"]["waiting"]), (0, 2, 0))
         self.assertEqual((items["Blog"]["done"], items["Blog"]["total"], items["Blog"]["waiting"]), (0, 2, 1))
         self.assertFalse(items["Borrado"]["exists"])
+        self.assertEqual([(b["name"], b["done"], b["total"], b["state"]) for b in items["Blog"]["branches"]],
+                         [("Entradas", 0, 2, "pending")])
+        self.assertEqual(items["Blog"]["counts"], {"doing": 0, "pending": 1, "done": 0})
         blog = items["Blog"]["id"]
 
         status, plan, _ = self.call("GET", f"/api/plan?project={blog}")
@@ -226,6 +229,29 @@ class AppTest(ServerCase):
             self.assertEqual(self.call("GET", f"/api/plan?project={pid}")[0], 404, pid)
         R.forget(other)
         self.assertEqual(self.call("GET", f"/api/plan?project={blog}")[0], 404)
+
+    def test_rename_and_forget_projects(self):
+        other = Path(self.tmp.name) / "Blog"
+        other.mkdir()
+        R.register(other)
+        blog = R.listing()[0]["id"]
+        status, data, _ = self.call("POST", f"/api/projects/{blog}/name", {"name": "  Mi   blog "})
+        self.assertEqual(status, 200, data)
+        items = {p["id"]: p for p in data["projects"]}
+        self.assertEqual((items[blog]["name"], items[blog]["folder"]), ("Mi blog", "Blog"))
+        self.assertEqual(self.call("GET", f"/api/project?project={blog}")[1]["name"], "Mi blog")
+        self.assertEqual(self.call("POST", f"/api/projects/{blog}/name", {"name": "x" * 61})[0], 400)
+        self.assertEqual(self.call("POST", "/api/projects/abcdef1234/name", {"name": "Nada"})[0], 404)
+        _, data, _ = self.call("POST", f"/api/projects/{blog}/name", {"name": ""})  # vuelve al de la carpeta
+        self.assertEqual({p["id"]: p["name"] for p in data["projects"]}[blog], "Blog")
+        # el de arranque no se quita; los demás sí, sin tocar la carpeta
+        start = next(p["id"] for p in data["projects"] if p["current"])
+        self.assertEqual(self.call("POST", f"/api/projects/{start}/forget", {})[0], 400)
+        status, data, _ = self.call("POST", f"/api/projects/{blog}/forget", {})
+        self.assertEqual(status, 200, data)
+        self.assertNotIn(blog, [p["id"] for p in data["projects"]])
+        self.assertTrue(other.is_dir())
+        self.assertEqual(self.call("POST", f"/api/projects/{blog}/forget", {})[0], 404)
 
     def test_live_events_follow_the_project(self):
         other = Path(self.tmp.name) / "Blog"

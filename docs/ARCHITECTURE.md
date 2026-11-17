@@ -74,7 +74,9 @@ arrancó el servidor. Un id que no esté en el registro da 404: nunca se sirve u
 
 | Ruta | Para qué |
 | --- | --- |
-| `GET /api/projects` | El de arranque (`current`), el último trabajado (`active`), indicador `remote` y los registrados: `id, name, path, exists, done, total, waiting`. |
+| `GET /api/projects` | El de arranque (`current`), el último trabajado (`active`), indicador `remote` y los registrados: `id, name, path, exists, folder, path, exists, done, total, waiting, branches, counts` (`branches`: clave, nombre, icono, hechos/total y estado de cada rama). |
+| `POST /api/projects/<id>/name` | Nombre propio del proyecto (`{name}`; vacío = el de la carpeta). Se guarda en `~/.unificador/nombres.json`. |
+| `POST /api/projects/<id>/forget` | Quita el proyecto de la lista (no toca la carpeta; vuelve si se trabaja otra vez en él). El de arranque no se puede quitar. |
 | `GET /api/project` | Id, nombre y ruta del proyecto. |
 | `GET /api/plan` | El plan tal cual (ramas, fases con `review`, `asks`). |
 | `POST /api/plan/steps/<id>/state` | Marcar un paso a mano: `{state, text?}`. |

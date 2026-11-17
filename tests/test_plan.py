@@ -189,10 +189,10 @@ class PlanTest(unittest.TestCase):
         self.assertIn('revise CDC -m', out)
         self.assertEqual(self.phase(0)["review"]["state"], P.WAITING)
         self.assertIn("esperando tu revisión", run(self.path, "status")[1])
-        # sin candado: se puede empezar la fase siguiente, con aviso
+        # la revisión es opcional: se sigue con la fase siguiente sin aviso
         code, out, _ = run(self.path, "start", "CDC-2")
         self.assertEqual(code, 0)
-        self.assertIn("Aviso", out)
+        self.assertNotIn("Aviso", out)
         code, out, _ = run(self.path, "approve", "CDC", "-m", "Me gusta")
         self.assertEqual(code, 0, out)
         self.assertIn("aprobada", out)

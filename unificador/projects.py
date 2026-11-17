@@ -17,6 +17,8 @@ from typing import Dict, List, Optional
 
 FILE_NAME = "proyectos.json"
 ACTIVE_FILE = "active.json"
+NAMES_FILE = "nombres.json"
+MAX_NAME = 60
 
 
 def _home() -> Path:
@@ -26,6 +28,10 @@ def _home() -> Path:
 
 def _file() -> Path:
     return _home() / FILE_NAME
+
+
+def _names_file() -> Path:
+    return _home() / NAMES_FILE
 
 
 def _active_file() -> Path:
@@ -94,6 +100,13 @@ def set_active(path) -> str:
     return pid
 
 
+def clear_active() -> None:
+    try:
+        _active_file().unlink()
+    except OSError:
+        pass
+
+
 def active_id() -> str:
     """El id del último proyecto activo registrado, o ``""`` si no hay ninguno."""
     try:
@@ -104,10 +117,64 @@ def active_id() -> str:
     return pid if isinstance(pid, str) else ""
 
 
+def _names() -> Dict[str, str]:
+    """Nombres puestos por la persona, por id (fichero aparte: los ``uni.py`` viejos reescriben el registro)."""
+    try:
+        data = json.loads(_names_file().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {k: v for k, v in data.items() if isinstance(k, str) and isinstance(v, str) and v.strip()}
+
+
+def clean_name(name) -> str:
+    """Un nombre en una línea, sin espacios de sobra; vacío = volver al de la carpeta."""
+    if not isinstance(name, str):
+        raise ValueError("El nombre tiene que ser texto.")
+    text = " ".join(name.split())
+    if len(text) > MAX_NAME:
+        raise ValueError(f"El nombre es demasiado largo (máx. {MAX_NAME} caracteres).")
+    return text
+
+
+def name_of(path) -> str:
+    """El nombre con el que se enseña la carpeta: el puesto por la persona o el de la carpeta."""
+    return _names().get(_id(str(path))) or Path(str(path)).name or str(path)
+
+
+def rename(project_id: str, name) -> str:
+    """Pone (o quita, con ``""``) el nombre del proyecto. Devuelve el nombre guardado."""
+    text = clean_name(name)
+    names = _names()
+    if text:
+        names[project_id] = text
+    else:
+        names.pop(project_id, None)
+    _write_json(_names_file(), names)
+    return text
+
+
+def forget_id(project_id: str) -> bool:
+    """Quita de la lista el proyecto con ese id (la carpeta no se toca). ``False`` si no estaba."""
+    path = find(project_id)
+    if path is None:
+        return False
+    forget(path)
+    names = _names()
+    if names.pop(project_id, None) is not None:
+        _write_json(_names_file(), names)
+    return True
+
+
 def listing() -> List[Dict]:
-    """Proyectos conocidos, por nombre: ``{"id", "name", "path", "exists"}``."""
-    out = [{"id": _id(p), "name": Path(p).name or p, "path": p, "exists": Path(p).is_dir()}
-           for p in _load()]
+    """Proyectos conocidos, por nombre: ``{"id", "name", "folder", "path", "exists"}``."""
+    names = _names()
+    out = []
+    for p in _load():
+        pid, folder = _id(p), Path(p).name or p
+        out.append({"id": pid, "name": names.get(pid) or folder, "folder": folder,
+                    "path": p, "exists": Path(p).is_dir()})
     return sorted(out, key=lambda d: (d["name"].lower(), d["path"]))
 
 

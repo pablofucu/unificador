@@ -1528,8 +1528,8 @@ def render_status(plan: Dict[str, Any]) -> str:
         lines += [f"  Fase «{p['name']}» [{b['key']}]: {p['review'].get('text', '')}" for b, p in phase_changes]
     waiting = [(b, p) for b in branches for p in b["phases"] if review_state(p) == WAITING]
     if waiting:
-        lines.append("\n⏸ FASES ESPERANDO LA REVISIÓN DE LA PERSONA (pregúntale si sigues):")
-        lines += [f"  «{p['name']}» [{b['key']}]  → cuando conteste: {UNI} approve {b['key']}  "
+        lines.append("\n⏸ FASES SIN REVISAR (opcional: no hace falta preguntar; si la persona las da por buenas, apruébalas):")
+        lines += [f"  «{p['name']}» [{b['key']}]  → {UNI} approve {b['key']}  "
                   f'(o  revise {b["key"]} -m "qué quiere cambiar")' for b, p in waiting]
     for b in branches:
         d, t = branch_progress(b)
@@ -1670,9 +1670,12 @@ def _what_next(plan: Dict[str, Any], step_id: str) -> str:
     branch, phase, _ = find_step(plan, step_id)
     if phase_state(phase) == DONE and review_state(phase) == WAITING:
         last = "" if next_step(branch) else " Es la última fase de la rama."
-        return (f"FASE TERMINADA: «{phase['name']}».{last} Para aquí: resume a la persona qué se ha hecho y "
-                f"pregúntale si sigues. Cuando conteste: {UNI} approve {branch['key']}  "
-                f'(o  {UNI} revise {branch["key"]} -m "qué quiere cambiar")')
+        nxt = next_step(branch)
+        go = f" Sigue: {UNI} start {nxt['id']}   ({nxt['title']})" if nxt else ""
+        return (f"FASE TERMINADA: «{phase['name']}».{last} Cuéntale en una línea qué se ha hecho y sigue sin "
+                f"preguntar: la revisión es opcional (la persona la hace en la web si quiere). Para solo si te "
+                f"pidió revisar antes de seguir. Si en el chat la da por buena: {UNI} approve {branch['key']}  "
+                f'(si pide cambios: {UNI} revise {branch["key"]} -m "qué quiere cambiar").' + go)
     return _branch_next(branch)
 
 
@@ -1683,8 +1686,7 @@ def _start_warning(plan: Dict[str, Any], step_id: str) -> str:
         if p is phase:
             break
         if review_state(p) == WAITING:
-            return (f"Aviso: la fase «{p['name']}» sigue esperando la revisión de la persona. Si ya te ha dicho que "
-                    f"sigas: {UNI} approve {branch['key']}")
+            return ""  # la revisión es opcional: seguir sin ella está bien
         if review_state(p) == CHANGES:
             return f"Aviso: la persona pidió cambios en la fase «{p['name']}»: {p['review'].get('text', '')}"
     return ""
