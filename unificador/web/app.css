@@ -95,6 +95,15 @@ a.proj:hover { transform: translateY(-2px); box-shadow: var(--shadow-up); border
 .proj-cleanup { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px;
   border-radius: 14px; background: var(--soft); color: var(--muted); font-size: .9rem; }
 
+/* Aviso de actualizaciones (portada) */
+.upd { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px 14px; flex-wrap: wrap;
+  padding: 10px 14px; border-radius: 14px; background: var(--soft); font-size: .9rem; min-width: 0; }
+.upd-new { background: color-mix(in srgb, var(--accent, #7c5cff) 12%, var(--card)); border: 1.5px solid color-mix(in srgb, var(--accent, #7c5cff) 45%, transparent); }
+.upd-text { min-width: 0; overflow-wrap: anywhere; }
+.upd-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.upd-auto { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--muted); }
+.upd-msg { flex-basis: 100%; margin: 0; color: var(--muted); font-size: .85rem; }
+
 /* ── Bandeja «Te toca» ──────────────────────────────────────────── */
 .inbox { background: linear-gradient(180deg, #fffaf0, #fff); border: 2px solid color-mix(in srgb, var(--warn) 55%, white); border-radius: 24px;
   padding: 18px 20px 20px; margin-bottom: 26px; box-shadow: var(--shadow); animation: rise .3s ease-out; }

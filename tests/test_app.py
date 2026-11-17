@@ -230,6 +230,23 @@ class AppTest(ServerCase):
         R.forget(other)
         self.assertEqual(self.call("GET", f"/api/plan?project={blog}")[0], 404)
 
+    def test_update_routes(self):
+        status, data, _ = self.call("GET", "/api/update")
+        self.assertEqual(status, 200, data)
+        self.assertIn("current", data)
+        self.assertFalse(data["auto"])
+        self.assertTrue(self.call("POST", "/api/update/auto", {"on": True})[1]["auto"])
+        self.assertEqual(self.call("POST", "/api/update/check", {})[0], 200)
+        from unificador import update as U
+        with mock.patch.object(U, "apply", side_effect=U.UpdateError("choca")),                 mock.patch.object(U, "spawn_restart") as restart:
+            status, data, _ = self.call("POST", "/api/update/apply", {})
+        self.assertEqual(status, 409)
+        restart.assert_not_called()
+        with mock.patch.object(U, "apply", return_value="Hecho."), mock.patch.object(U, "refresh_all"),                 mock.patch.object(U, "spawn_restart") as restart:
+            status, data, _ = self.call("POST", "/api/update/apply", {})
+        self.assertEqual((status, data["message"], data["restarting"]), (200, "Hecho.", True))
+        restart.assert_called_once()
+
     def test_rename_and_forget_projects(self):
         other = Path(self.tmp.name) / "Blog"
         other.mkdir()

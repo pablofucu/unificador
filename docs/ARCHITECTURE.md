@@ -57,7 +57,8 @@ versions[]   versión publicada: version (SemVer, sin «v»), at, by, news[], sh
 
 | Módulo | Qué hace |
 | --- | --- |
-| `cli.py` | Orden `unificador`: abrir la web, `install`, `doctor`, `import-kanvas`, `funnel`. |
+| `cli.py` | Orden `unificador`: abrir la web, `install`, `doctor`, `import-kanvas`, `funnel`, `update`, `restart`. |
+| `update.py` | Actualizaciones: mira si hay versión nueva (clon git: commits por detrás de `origin`; instalado con pip: tag `vX.Y.Z` más alto con `git ls-remote` o la API de GitHub), la instala (`git pull --ff-only` o `pip install -U`), pone al día `uni.py` y reglas en todos los proyectos de la lista y reinicia el servidor. Al arrancar el servidor, un hilo pone al día los proyectos y comprueba una vez al día; con «actualizar solo» (`~/.unificador/update.json`, apagado de serie) instala sin preguntar. `UNIFICADOR_NO_UPDATE_CHECK=1` apaga la red (pruebas). |
 | `app.py` | Servidor HTTP: ficheros de `web/`, puerta remota (`LOGIN_HTML` y `/auth/*`), API JSON y eventos en vivo. |
 | `funnel.py` | Clave cifrada (`PBKDF2-HMAC-SHA256`), cookies firmadas (`HMAC-SHA256`), límite de intentos, CLI de Tailscale Funnel y arranque en segundo plano. |
 | `plan.py` | Formato del plan, operaciones y la orden `uni` (se copia al proyecto como `.unificador/uni.py`, incluida la activación automática del proyecto y del servidor). |
@@ -76,6 +77,8 @@ arrancó el servidor. Un id que no esté en el registro da 404: nunca se sirve u
 | --- | --- |
 | `GET /api/projects` | El de arranque (`current`), el último trabajado (`active`), indicador `remote` y los registrados: `id, name, path, exists, folder, path, exists, done, total, waiting, branches, counts` (`branches`: clave, nombre, icono, hechos/total y estado de cada rama). |
 | `POST /api/projects/<id>/name` | Nombre propio del proyecto (`{name}`; vacío = el de la carpeta). Se guarda en `~/.unificador/nombres.json`. |
+| `GET /api/update` | Versión instalada, forma (`git`/`pip`), si hay nueva (`available`, `behind`, `latest`), `auto` y último error. No sale a la red. |
+| `POST /api/update/check` · `/auto` · `/apply` | Comprobar ya; encender o apagar «actualizar solo» (`{on}`); instalar, poner al día los proyectos y reiniciar el servidor (409 si no se pudo). |
 | `POST /api/projects/<id>/forget` | Quita el proyecto de la lista (no toca la carpeta; vuelve si se trabaja otra vez en él). El de arranque no se puede quitar. |
 | `GET /api/project` | Id, nombre y ruta del proyecto. |
 | `GET /api/plan` | El plan tal cual (ramas, fases con `review`, `asks`). |

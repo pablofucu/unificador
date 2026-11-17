@@ -48,7 +48,12 @@ unificador funnel enable [RUTA] [--port 443]    activa URL pública con Tailscal
 unificador funnel status                        muestra URL pública, servidor activo y último proyecto
 unificador funnel reset-key [--generate]        cambia la clave y cierra todas las sesiones abiertas
 unificador funnel off                           desactiva el acceso público por Funnel
+unificador update [--check]                     instala la versión nueva, pone al día todos los proyectos y reinicia el servidor
+unificador update --auto on|off                 «actualizar solo»: instala las versiones nuevas sin preguntar
 ```
+
+Al arrancar, el servidor pone al día `uni.py` y las reglas de todos tus proyectos y mira una vez al día si hay
+versión nueva; la portada lo avisa con un botón «Actualizar ahora». En cada ordenador se instala una sola vez.
 
 La IA (y tú, si quieres) maneja el plan con `python .unificador/uni.py`:
 

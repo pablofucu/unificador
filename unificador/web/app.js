@@ -209,6 +209,83 @@ function cleanupBar() {
   return bar;
 }
 
+// ── Actualizaciones ──────────────────────────────────────────────────
+
+// Lo último que el servidor sabe de versiones (GET no sale a la red). ``busy``: lo que se está haciendo ahora.
+const upd = { info: null, busy: "", msg: "" };
+
+async function loadUpdate() {
+  try { upd.info = await getJSON("/api/update"); } catch { /* sin conexión: se queda lo que hubiera */ }
+}
+
+async function updateAction(what, body) {
+  const r = await fetch(`/api/update/${what}`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+  if (r.status === 401) { location.reload(); throw new Error("Sesión cerrada"); }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `Error ${r.status}`);
+  upd.info = data;
+  return data;
+}
+
+// Tras instalar, el servidor se reinicia: se espera a que vuelva y se recarga la página con el código nuevo.
+async function waitRestart() {
+  await new Promise((ok) => setTimeout(ok, 2500));
+  for (let i = 0; i < 40; i++) {
+    try { const r = await fetch("/api/health", { cache: "no-store" }); if (r.ok) { location.reload(); return; } } catch { /* aún no */ }
+    await new Promise((ok) => setTimeout(ok, 750));
+  }
+  upd.busy = ""; upd.msg = "El servidor no ha vuelto. Ábrelo otra vez con «unificador» en una terminal.";
+  renderHome();
+}
+
+function newsText(u) {
+  if (u.kind === "git") return `${u.behind} ${u.behind === 1 ? "cambio nuevo" : "cambios nuevos"} en GitHub`;
+  return `versión ${u.latest} (tienes ${u.current})`;
+}
+
+function updateBar() {
+  const u = upd.info;
+  const bar = el("div", "upd");
+  if (!u || app.offline) { bar.hidden = true; return bar; }
+  if (u.available) bar.classList.add("upd-new");
+  const text = el("div", "upd-text");
+  if (upd.busy === "apply") text.append(el("strong", null, "Actualizando… "), el("span", "muted", "Unificador se reinicia y la página se recarga sola."));
+  else if (u.available) text.append(el("strong", null, "🔄 Hay novedades: "), el("span", null, newsText(u)));
+  else text.append(el("span", "muted", `Unificador ${u.current}${u.kind === "git" ? " (desde git)" : ""} · `),
+    el("span", "muted", u.checked ? "al día" : "sin comprobar todavía"));
+  bar.append(text);
+  const tools = el("div", "upd-tools");
+  const pill = (label, cls, fn) => {
+    const b = el("button", cls, label); b.type = "button"; b.disabled = !!upd.busy;
+    b.addEventListener("click", fn); tools.append(b); return b;
+  };
+  if (u.available) pill("Actualizar ahora", "pill primary", async () => {
+    upd.busy = "apply"; upd.msg = ""; renderHome();
+    try { await updateAction("apply"); await waitRestart(); }
+    catch (e) { upd.busy = ""; upd.msg = `No se pudo actualizar: ${e.message}`; renderHome(); }
+  });
+  pill(upd.busy === "check" ? "Mirando…" : "Buscar ahora", "pill", async () => {
+    upd.busy = "check"; upd.msg = ""; renderHome();
+    try { const d = await updateAction("check"); upd.msg = d.error ? `No se pudo mirar: ${d.error}` : d.available ? "" : "Está al día."; }
+    catch (e) { upd.msg = `No se pudo mirar: ${e.message}`; }
+    upd.busy = ""; renderHome();
+  });
+  const auto = el("label", "upd-auto");
+  const box = el("input"); box.type = "checkbox"; box.checked = !!u.auto; box.disabled = !!upd.busy;
+  box.addEventListener("change", async () => {
+    try { await updateAction("auto", { on: box.checked }); upd.msg = box.checked ? "Se instalarán solas al arrancar y una vez al día." : ""; }
+    catch (e) { upd.msg = `No se pudo cambiar: ${e.message}`; }
+    renderHome();
+  });
+  auto.append(box, el("span", null, "Actualizar solo"));
+  tools.append(auto);
+  bar.append(tools);
+  const note = upd.msg || (u.error && !upd.busy ? `Última comprobación fallida: ${u.error}` : "");
+  if (note) bar.append(el("p", "upd-msg", note));
+  return bar;
+}
+
 // Activos primero, después los que esperan algo, después por nombre; los que no existen al final.
 function ordered(list) {
   const rank = (p) => (!p.exists ? 3 : p.active || p.current ? 0 : p.waiting ? 1 : 2);
@@ -216,7 +293,7 @@ function ordered(list) {
 }
 
 function renderHome() {
-  $("projects").replaceChildren(cleanupBar(), ...ordered(app.projects).map(projectCard));
+  $("projects").replaceChildren(updateBar(), cleanupBar(), ...ordered(app.projects).map(projectCard));
 }
 
 async function showHome() {
@@ -226,8 +303,13 @@ async function showHome() {
   $("home").hidden = false;
   document.title = "Tus proyectos · Unificador";
   renderHome();
+  loadUpdate().then(() => { if (!$("home").hidden) renderHome(); });
   clearInterval(homeTimer);
-  homeTimer = setInterval(async () => { if (homeEdit.id) return; await loadProjects(); if (!$("home").hidden) renderHome(); }, 5000);
+  homeTimer = setInterval(async () => {
+    if (homeEdit.id || upd.busy) return;
+    await Promise.all([loadProjects(), loadUpdate()]);
+    if (!$("home").hidden) renderHome();
+  }, 5000);
 }
 
 // ── Tablero ──────────────────────────────────────────────────────────

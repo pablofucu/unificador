@@ -4053,6 +4053,183 @@
           }
         }
       ]
+    },
+    {
+      "key": "AC",
+      "name": "Actualizaciones",
+      "goal": "Que Unificador se ponga al día solo en todos los proyectos y ordenadores",
+      "icon": "🔄",
+      "color": 4,
+      "created": "2026-11-17T21:20:58+01:00",
+      "by": "claude",
+      "next_id": 7,
+      "phases": [
+        {
+          "name": "Puesta al día",
+          "icon": "",
+          "steps": [
+            {
+              "id": "AC-1",
+              "title": "Al arrancar, poner al día todos los proyectos",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T21:21:03+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T21:23:46+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "update.refresh_all() pone al día uni.py, reglas y hooks en todos los proyectos de la lista con .unificador/; se lanza en un hilo al arrancar el servidor (cli.serve → update.on_start). Probado en AC-3."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T21:23:46+01:00",
+              "result": "update.refresh_all() pone al día uni.py, reglas y hooks en todos los proyectos de la lista con .unificador/; se lanza en un hilo al arrancar el servidor (cli.serve → update.on_start). Probado en AC-3."
+            },
+            {
+              "id": "AC-2",
+              "title": "Orden unificador update",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T21:23:46+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T21:24:54+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "unificador update [--check] [--auto on|off]: git pull --ff-only (instalación editable) o pip install -U desde GitHub, pone al día los proyectos y reinicia el servidor de fondo (unificador restart). Probado: 'update --check' real dice que está al día; pruebas con git/pip simulados."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T21:24:54+01:00",
+              "result": "unificador update [--check] [--auto on|off]: git pull --ff-only (instalación editable) o pip install -U desde GitHub, pone al día los proyectos y reinicia el servidor de fondo (unificador restart). Probado: 'update --check' real dice que está al día; pruebas con git/pip simulados."
+            },
+            {
+              "id": "AC-3",
+              "title": "Probar update y la puesta al día",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T21:24:54+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T21:24:54+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "tests/test_update.py (8) + test_update_routes en test_app; conftest apaga la red con UNIFICADOR_NO_UPDATE_CHECK. 125 pruebas pasan."
+                }
+              ],
+              "cat": "pruebas",
+              "together": true,
+              "updated": "2026-11-17T21:24:54+01:00",
+              "result": "tests/test_update.py (8) + test_update_routes en test_app; conftest apaga la red con UNIFICADOR_NO_UPDATE_CHECK. 125 pruebas pasan."
+            }
+          ],
+          "review": {
+            "state": "waiting",
+            "text": "",
+            "by": "claude",
+            "at": "2026-11-17T21:24:54+01:00",
+            "seen": true
+          }
+        },
+        {
+          "name": "Aviso",
+          "icon": "",
+          "steps": [
+            {
+              "id": "AC-4",
+              "title": "Mirar la última versión en GitHub",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T21:24:55+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T21:25:20+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "check(): en clon git hace fetch y cuenta commits por detrás de origin; si no, mira el tag vX.Y.Z más alto con git ls-remote (vale para repos privados) o la API de GitHub. Una vez al día, guardado en update.json. Probado en vivo: ls-remote responde (sin tags aún) y update --check dice al día."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T21:25:20+01:00",
+              "result": "check(): en clon git hace fetch y cuenta commits por detrás de origin; si no, mira el tag vX.Y.Z más alto con git ls-remote (vale para repos privados) o la API de GitHub. Una vez al día, guardado en update.json. Probado en vivo: ls-remote responde (sin tags aún) y update --check dice al día."
+            },
+            {
+              "id": "AC-5",
+              "title": "Aviso y botón en la web",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T21:25:20+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T21:27:01+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Portada: barra de actualizaciones (versión, 'Hay novedades' con Actualizar ahora, Buscar ahora, casilla Actualizar solo); tras actualizar espera a que el servidor vuelva y recarga. Rutas GET /api/update y POST check/auto/apply. Visto en el navegador en escritorio y móvil 375px sin scroll lateral; Buscar ahora probado de verdad; reinicio probado con un servidor de prueba (pid cambia y responde)."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-17T21:27:01+01:00",
+              "result": "Portada: barra de actualizaciones (versión, 'Hay novedades' con Actualizar ahora, Buscar ahora, casilla Actualizar solo); tras actualizar espera a que el servidor vuelva y recarga. Rutas GET /api/update y POST check/auto/apply. Visto en el navegador en escritorio y móvil 375px sin scroll lateral; Buscar ahora probado de verdad; reinicio probado con un servidor de prueba (pid cambia y responde)."
+            },
+            {
+              "id": "AC-6",
+              "title": "Ajuste actualizar solo",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T21:27:02+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T21:27:02+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "update.json guarda auto; con auto encendido, el hilo de arranque (y cada hora, mirando como mucho una vez al día) instala la versión nueva, pone al día los proyectos y se reinicia; un fallo se apunta y no se reintenta hasta el día siguiente. Apagado de serie. Probado: test_auto_setting_persists y la casilla en la web."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T21:27:02+01:00",
+              "result": "update.json guarda auto; con auto encendido, el hilo de arranque (y cada hora, mirando como mucho una vez al día) instala la versión nueva, pone al día los proyectos y se reinicia; un fallo se apunta y no se reintenta hasta el día siguiente. Apagado de serie. Probado: test_auto_setting_persists y la casilla en la web."
+            }
+          ],
+          "review": {
+            "state": "waiting",
+            "text": "",
+            "by": "claude",
+            "at": "2026-11-17T21:27:02+01:00",
+            "seen": true
+          }
+        }
+      ]
     }
   ],
   "asks": [
@@ -4310,6 +4487,20 @@
       "by": "claude",
       "at": "2026-11-17T21:09:16+01:00",
       "ref": "LDP/Portada"
+    },
+    {
+      "text": "🔄 Actualizaciones: Puesta al día",
+      "kind": "fase",
+      "by": "claude",
+      "at": "2026-11-17T21:24:54+01:00",
+      "ref": "AC/Puesta al día"
+    },
+    {
+      "text": "🔄 Actualizaciones: Aviso",
+      "kind": "fase",
+      "by": "claude",
+      "at": "2026-11-17T21:27:02+01:00",
+      "ref": "AC/Aviso"
     }
   ]
 }

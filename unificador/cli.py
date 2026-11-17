@@ -7,6 +7,7 @@ Comando ``unificador``: abre la web del proyecto en el que estás.
     unificador doctor [RUTA]        comprueba que todo está listo y dice qué falta
     unificador import-kanvas [RUTA] [--force]   convierte un tablero Kanvas en plan
     unificador funnel enable|status|off|reset-key  acceso público con Tailscale Funnel y clave
+    unificador update [--check] [--auto on|off]  instala la versión nueva, pone al día los proyectos y reinicia
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from unificador import plan as P
 from unificador import projects
 from unificador import rules
 
-COMMANDS = ("install", "doctor", "import-kanvas", "funnel")
+COMMANDS = ("install", "doctor", "import-kanvas", "funnel", "update", "restart")
 
 
 def _project(path: str) -> Path:
@@ -47,6 +48,8 @@ def serve(root: Path, port: int, open_browser: bool, host: str = "127.0.0.1",
     fcfg = funnel.load_config()
     server = app.make_server(root, port, host=host, tailscale=bool(tailscale or fcfg.get("enabled")))
     actual_port = server.server_address[1]
+    from unificador import update
+    update.on_start(root, port=actual_port)
     pid = os.getpid()
     try:
         funnel.register_runtime(actual_port, pid=pid)
@@ -287,6 +290,57 @@ def funnel_command(argv: List[str]) -> int:
     return 0
 
 
+def update_command(root: Path, check_only: bool, auto: Optional[str]) -> int:
+    from unificador import update
+    if auto:
+        st = update.set_auto(auto == "on")
+        print("Actualizar solo: " + ("encendido (al arrancar y una vez al día)." if st["auto"] else "apagado."))
+        return 0
+    st = update.check(force=True)
+    if st["error"]:
+        print(f"No se pudo mirar si hay versión nueva: {st['error']}")
+        if check_only:
+            return 1
+    elif not st["available"]:
+        print(f"Unificador {st['current']} está al día.")
+    elif st["kind"] == "git":
+        print(f"Hay {st['behind']} commit(s) nuevos en origin.")
+    else:
+        print(f"Hay versión nueva: {st['latest']} (tienes {st['current']}).")
+    if check_only:
+        return 0
+    if not st["available"] and not st["error"]:
+        changed = update.refresh_all()
+        if changed:
+            print(f"Puestos al día {len(changed)} proyecto(s).")
+        return 0
+    try:
+        print(update.apply())
+    except update.UpdateError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+    # El código nuevo ya está en disco: la puesta al día y el reinicio van en un proceso nuevo.
+    env = dict(os.environ)
+    r = subprocess.run([sys.executable, "-m", "unificador", "restart", str(root), "--refresh"], env=env)
+    return r.returncode
+
+
+def restart_command(root: Path, delay: float, refresh: bool, pid: Optional[int] = None,
+                    port: Optional[int] = None) -> int:
+    from unificador import update
+    if refresh:
+        changed = update.refresh_all()
+        if changed:
+            print(f"Puestos al día {len(changed)} proyecto(s): " + ", ".join(Path(p).name for p in changed))
+    srv = funnel.load_server()
+    if not (port or srv.get("port")):
+        print("No hay servidor de fondo apuntado; ábrelo con: unificador")
+        return 0
+    ok = update.restart(root, delay=delay, pid=pid, port=port)
+    print("Servidor reiniciado." if ok else "El servidor no ha vuelto a arrancar; ábrelo con: unificador")
+    return 0 if ok else 1
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     for stream in (sys.stdout, sys.stderr):
         try:
@@ -312,6 +366,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         parser.add_argument("--tailscale", action="store_true", help="aceptar peticiones proxificadas de Tailscale Serve/Funnel")
         parser.add_argument("--daemon", action="store_true", help=argparse.SUPPRESS)
         parser.add_argument("--no-open", action="store_true", help="no abrir el navegador")
+    elif command == "update":
+        parser.add_argument("--check", action="store_true", help="solo mirar si hay versión nueva")
+        parser.add_argument("--auto", choices=("on", "off"), help="encender o apagar «actualizar solo»")
+    elif command == "restart":
+        parser.add_argument("--delay", type=float, default=0.0, help=argparse.SUPPRESS)
+        parser.add_argument("--pid", type=int, default=None, help=argparse.SUPPRESS)
+        parser.add_argument("--port", type=int, default=None, help=argparse.SUPPRESS)
+        parser.add_argument("--refresh", action="store_true", help="poner al día antes todos los proyectos")
     elif command == "import-kanvas":
         parser.add_argument("--force", action="store_true", help="sustituir el plan que ya haya")
     args = parser.parse_args(argv)
@@ -325,6 +387,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             changed = rules.install(root)
             print("Preparado: " + ", ".join(changed) if changed else "Ya estaba todo al día.")
             return 0
+        if command == "update":
+            return update_command(root, args.check, args.auto)
+        if command == "restart":
+            return restart_command(root, args.delay, args.refresh, args.pid, args.port)
         if command == "doctor":
             return doctor(root)
         from unificador import kanvas_import

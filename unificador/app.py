@@ -27,6 +27,7 @@ from urllib.parse import parse_qs, unquote, urlsplit
 from unificador import funnel
 from unificador import plan as P
 from unificador import projects as R
+from unificador import update as U
 
 WEB_DIR = Path(__file__).parent / "web"
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "[::1]"}
@@ -314,6 +315,7 @@ def refusal(method: str, headers: Any, port: int, host: str = "127.0.0.1",
 
 Route = Callable[["Project", Tuple[str, ...], Dict[str, str], Dict[str, Any]], Any]
 ROUTES: List[Tuple[str, "re.Pattern[str]", Route]] = []
+_PORT: Optional[int] = None  # puerto en el que escucha este servidor (para reiniciarse en el mismo)
 
 
 def route(method: str, pattern: str):
@@ -502,6 +504,34 @@ def get_versions(project, args, query, body):
             "versions": list(reversed(plan.get("versions") or [])),
             "unreleased": [{"sha": c["sha"][:7], "subject": c["subject"], "date": c["date"],
                             "refs": P.commit_refs(plan, c)} for c in commits]}
+
+
+@route("GET", "/api/update")
+def get_update(project, args, query, body):
+    """Versión instalada y si hay una nueva (lo último que se miró; no sale a la red)."""
+    return U.status()
+
+
+@route("POST", "/api/update/check")
+def post_update_check(project, args, query, body):
+    return U.check(force=True)
+
+
+@route("POST", "/api/update/auto")
+def post_update_auto(project, args, query, body):
+    return U.set_auto(bool(body.get("on")))
+
+
+@route("POST", "/api/update/apply")
+def post_update_apply(project, args, query, body):
+    """Instala la versión nueva, pone al día los proyectos y reinicia este servidor (la web se recarga sola)."""
+    try:
+        msg = U.apply()
+    except U.UpdateError as e:
+        raise ApiError(str(e), 409)
+    U.refresh_all()
+    U.spawn_restart(project.path, pid=os.getpid(), port=_PORT)
+    return {**U.status(), "message": msg, "restarting": True}
 
 
 @route("POST", "/api/plan/queue")
@@ -791,6 +821,8 @@ def make_server(project_path: str | Path, port: int = DEFAULT_PORT, host: str = 
             server.project = project  # type: ignore[attr-defined]
             server.host = host  # type: ignore[attr-defined]
             server.tailscale = tailscale  # type: ignore[attr-defined]
+            global _PORT
+            _PORT = server.server_address[1]
             return server
         except OSError as e:
             last = e
