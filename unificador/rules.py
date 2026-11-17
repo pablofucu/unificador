@@ -81,6 +81,9 @@ Cuando preguntes algo, pregúntalo SIEMPRE en el chat (y apúntalo con `ask` si 
 - **Retoques** (un cambio rápido que no merece rama): hazlo y, al comitearlo, apúntalo en una línea:
   `{UNI} tweak "Qué ha cambiado, en llano" --commit HEAD`. Si `status` dice «Commits sin apuntar»,
   `{UNI} commits` te dice cuáles y cómo apuntarlos.
+- **Versiones** (SemVer): cada fase cerrada se apunta sola como novedad; apunta las demás con
+  `{UNI} news "Qué trae, en llano" --kind nuevo|arreglo|cambio`. `{UNI} news` enseña la próxima versión y lo
+  comiteado sin publicar. Publica solo cuando la persona lo pida: `{UNI} release` (crea el tag `vX.Y.Z`).
 - **Ideas** que salen y no tocan ahora: `{UNI} idea "Qué se te ocurre"` (van a la caja; las de la persona
   te llegan por `inbox`). Para convertirlas en trabajo: `{UNI} branch … --ideas I-1,I-3` o
   `{UNI} ideas plan I-2 --branch RAMA`; si no van a hacerse, `{UNI} ideas drop I-4 -m "por qué"`.

@@ -2020,10 +2020,10 @@
             }
           ],
           "review": {
-            "state": "waiting",
+            "state": "approved",
             "text": "",
-            "by": "claude",
-            "at": "2026-11-17T15:27:02+01:00",
+            "by": "persona",
+            "at": "2026-11-17T15:33:16+01:00",
             "seen": true
           }
         }
@@ -3367,10 +3367,10 @@
             }
           ],
           "review": {
-            "state": "waiting",
+            "state": "approved",
             "text": "",
-            "by": "claude",
-            "at": "2026-11-17T15:29:52+01:00",
+            "by": "persona",
+            "at": "2026-11-17T15:33:17+01:00",
             "seen": true
           }
         }
@@ -3543,10 +3543,10 @@
             }
           ],
           "review": {
-            "state": "waiting",
+            "state": "approved",
             "text": "",
-            "by": "claude",
-            "at": "2026-11-17T15:27:01+01:00",
+            "by": "persona",
+            "at": "2026-11-17T15:33:16+01:00",
             "seen": true
           }
         }
@@ -3767,10 +3767,10 @@
             }
           ],
           "review": {
-            "state": "waiting",
+            "state": "approved",
             "text": "",
-            "by": "claude",
-            "at": "2026-11-17T15:32:31+01:00",
+            "by": "persona",
+            "at": "2026-11-17T15:33:17+01:00",
             "seen": true
           }
         },
@@ -3782,17 +3782,47 @@
               "id": "VYN-4",
               "title": "Ver lo comiteado sin publicar",
               "desc": "",
-              "state": "pending",
-              "notes": [],
-              "cat": "codigo"
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:33:17+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:35:02+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "news enseña lo comiteado desde la última versión (por sha o tag), marcando lo que no está apuntado. Comprobado en este repo (40 commits) y en test_release_con_tag_y_lo_no_publicado."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T15:35:02+01:00",
+              "result": "news enseña lo comiteado desde la última versión (por sha o tag), marcando lo que no está apuntado. Comprobado en este repo (40 commits) y en test_release_con_tag_y_lo_no_publicado."
             },
             {
               "id": "VYN-5",
               "title": "Sacar una versión con su tag",
               "desc": "",
-              "state": "pending",
-              "notes": [],
-              "cat": "codigo"
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:35:03+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:35:03+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "release [X.Y.Z|--bump] valida la versión, crea el tag anotado vX.Y.Z en HEAD y guarda sha/tag; regla nueva en AGENTS.md. Probado con git temporal en test_release_con_tag_y_lo_no_publicado (114 pruebas OK)."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T15:35:03+01:00",
+              "result": "release [X.Y.Z|--bump] valida la versión, crea el tag anotado vX.Y.Z en HEAD y guarda sha/tag; regla nueva en AGENTS.md. Probado con git temporal en test_release_con_tag_y_lo_no_publicado (114 pruebas OK)."
             }
           ],
           "after": [
@@ -3800,7 +3830,14 @@
               "branch": "RAL",
               "phase": "Registro"
             }
-          ]
+          ],
+          "review": {
+            "state": "waiting",
+            "text": "",
+            "by": "claude",
+            "at": "2026-11-17T15:35:03+01:00",
+            "seen": true
+          }
         },
         {
           "name": "Web",
@@ -4046,6 +4083,13 @@
       "by": "claude",
       "at": "2026-11-17T15:32:31+01:00",
       "ref": "VYN/Modelo"
+    },
+    {
+      "text": "🏷️ Versiones y novedades: Publicar",
+      "kind": "fase",
+      "by": "claude",
+      "at": "2026-11-17T15:35:03+01:00",
+      "ref": "VYN/Publicar"
     }
   ]
 }

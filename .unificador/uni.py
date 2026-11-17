@@ -1241,6 +1241,8 @@ def render_commits(items: List[dict]) -> str:
     lines.append(f'Apunta cada uno: si era un retoque, {UNI} tweak "Qué cambió" --commit SHA; '
                  f"si era de un paso, {UNI} link ID SHA. Si son antiguos y no importan: {UNI} commits --from-now")
     return "\n".join(lines)
+
+
 # ── Versiones y novedades ────────────────────────────────────────────────────
 
 NEWS_KINDS = {"nuevo": "✨", "arreglo": "🐛", "cambio": "🔧", "fase": "🏁"}
@@ -1318,6 +1320,60 @@ def cut_version(plan: Dict[str, Any], version: str = "", by: str = "ia", bump: s
     plan.setdefault("versions", []).append(entry)
     plan["news"] = []
     return entry
+
+
+def unreleased_commits(plan: Dict[str, Any], folder: Path, limit: int = 50) -> Optional[List[dict]]:
+    """Commits posteriores a la última versión (su sha o su tag), sin los que solo tocan el plan. None sin git."""
+    last = (plan.get("versions") or [{}])[-1]
+    since = None
+    for ref in (last.get("sha"), last.get("tag")):
+        if ref and git(folder, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"):
+            since = ref
+            break
+    commits = git_log(folder, since, limit) if since else git_log(folder, None, limit)
+    if commits is None:
+        return None
+    return [c for c in commits if not _plan_only(c)]
+
+
+def render_unreleased(plan: Dict[str, Any], commits: Optional[List[dict]], show: int = 12) -> str:
+    if commits is None:
+        return ""
+    where = f"desde la {last_version(plan)}" if last_version(plan) else "(aún no hay ninguna versión)"
+    if not commits:
+        return f"Nada comiteado sin publicar {where}."
+    lines = [f"Comiteado sin publicar {where}: {len(commits)} commit{'s' if len(commits) != 1 else ''}"]
+    for c in commits[:show]:
+        refs = commit_refs(plan, c)
+        lines.append(f"  {c['sha'][:7]}  {c['subject']}" + ("" if refs else "  (sin apuntar en el plan)"))
+    if len(commits) > show:
+        lines.append(f"  … y {len(commits) - show} más")
+    lines.append(f"Para publicarla: {UNI} release  (o release 1.0.0, o release --bump major)")
+    return "\n".join(lines)
+
+
+def release(path: Path, version: str = "", bump: str = "", by: str = "ia", tag: bool = True) -> dict:
+    """Saca la próxima versión: pasa las novedades al historial y, si hay git, crea el tag ``vX.Y.Z`` en HEAD."""
+    folder = path.resolve().parent
+    trial = json.loads(json.dumps(load(path)))
+    entry = cut_version(trial, version, by, bump)  # valida antes de tocar git
+    name = f"v{entry['version']}"
+    sha = ""
+    if tag and git(folder, "rev-parse", "--git-dir") is not None:
+        if git(folder, "rev-parse", "--verify", "--quiet", f"refs/tags/{name}"):
+            raise PlanError(f"El tag {name} ya existe. Elige otra versión: {UNI} release X.Y.Z")
+        sha = resolve_commit(folder, "HEAD")
+        body = "\n".join(f"{NEWS_KINDS.get(n.get('kind'), '-')} {n['text']}" for n in entry["news"])
+        if git(folder, "tag", "-a", name, "-m", f"{name}\n\n{body}") is None:
+            raise PlanError(f"git no pudo crear el tag {name}.")
+
+    def apply(plan: Dict[str, Any]) -> dict:
+        e = cut_version(plan, entry["version"], by)
+        if sha:
+            e["sha"], e["tag"] = sha, name
+        return e
+
+    return mutate(path, apply)
 
 
 def render_news(plan: Dict[str, Any]) -> str:
@@ -1769,6 +1825,10 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("news", help='novedades de la próxima versión; news "Qué trae" --kind nuevo|arreglo|cambio')
     s.add_argument("text", nargs="?", help="la novedad, en llano (sin texto: lista las pendientes)")
     s.add_argument("--kind", default="nuevo", help="nuevo (por defecto), arreglo o cambio")
+    s = sub.add_parser("release", help="saca la próxima versión con su tag: release [X.Y.Z] [--bump major|minor|patch]")
+    s.add_argument("version", nargs="?", default="", help="versión concreta (por defecto, la que toca por SemVer)")
+    s.add_argument("--bump", default="", choices=["", "major", "minor", "patch"], help="forzar el salto")
+    s.add_argument("--no-tag", action="store_true", help="no crear el tag de git")
     s = sub.add_parser("versions", help="historial de versiones publicadas con sus novedades")
     s.add_argument("-n", type=int, default=10)
     s = sub.add_parser("link", help="enlaza un commit a un paso o retoque: link ID SHA")
@@ -2202,7 +2262,17 @@ def main(argv: Optional[List[str]] = None) -> int:
                 n = mutate(path, lambda plan: add_news(plan, args.text, args.kind, by))
                 print(f"{NEWS_KINDS[n['kind']]} Apuntada para la próxima versión: {n['text']}")
             else:
-                print(render_news(load(path)))
+                plan = load(path)
+                print(render_news(plan))
+                extra = render_unreleased(plan, unreleased_commits(plan, path.resolve().parent))
+                if extra:
+                    print(extra)
+        elif cmd == "release":
+            e = release(path, args.version, args.bump, by, not args.no_tag)
+            print(f"🏷️ Versión {e['version']} publicada con {len(e['news'])} novedad{'es' if len(e['news']) != 1 else ''}"
+                  + (f" y el tag {e['tag']} en {e['sha'][:7]}." if e.get("tag") else "."))
+            if e.get("tag"):
+                print(f"Comitea el plan (unificador.json) y sube el tag si usas remoto: git push origin {e['tag']}")
         elif cmd == "versions":
             print(render_versions(load(path), args.n))
         elif cmd == "link":

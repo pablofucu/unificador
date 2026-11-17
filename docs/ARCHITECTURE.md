@@ -28,7 +28,7 @@ ideas[]      idea: id (I-n), text, by, at, state (open | planned | dropped), bra
 queue[]      encargo: id (C-n), title, text, prompt?, branch?, phase?, state (pending | done), result?, seen
 tweaks[]     retoque: id (R-n), title, cat?, commits[], at
 news[]       novedad sin publicar: text, kind (nuevo | arreglo | cambio | fase), ref?, by, at
-versions[]   versión publicada: version (SemVer, sin «v»), at, by, news[]
+versions[]   versión publicada: version (SemVer, sin «v»), at, by, news[], sha?, tag? (vX.Y.Z)
 ```
 
 - **Ideas** (`uni.py idea`, `ideas plan|drop|reopen`, `branch … --ideas I-1,I-2`): la caja de cosas que no tocan
@@ -42,6 +42,9 @@ versions[]   versión publicada: version (SemVer, sin «v»), at, by, news[]
 - **Versiones** (`uni.py news "…" --kind`, `news`, `versions`): SemVer. Al terminar una fase se apunta sola como
   novedad (`kind: fase`, `ref: RAMA/Fase`, sin repetirse). La próxima versión sube MENOR si hay algo nuevo o una
   fase, PARCHE si solo son arreglos o cambios, y MAYOR solo si se pide; la primera es 0.1.0.
+  `news` enseña también lo comiteado desde la última versión (desde su `sha` o su tag; sin los commits que solo
+  tocan el plan). `release [X.Y.Z] [--bump …] [--no-tag]` valida, crea el tag anotado `vX.Y.Z` en HEAD con las
+  novedades como mensaje y después pasa las novedades al historial.
 
 - El estado de fases y ramas se calcula a partir de sus pasos; no se guarda.
 - `change` es una corrección pedida por la persona: reabre el paso hasta que la IA lo termina otra vez.
