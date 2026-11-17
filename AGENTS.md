@@ -49,5 +49,14 @@ Cuando preguntes algo, pregúntalo SIEMPRE en el chat (y apúntalo con `ask` si 
   enseña las rutas en el chat y pregunta cuál prefiere.
   Si contesta en el chat: `python .unificador/uni.py answer P-1 N -m "lo que dijo"`. Para esperar un rato a la web: `python .unificador/uni.py wait P-1`.
 - Firma con `--as <tu nombre>` (por ejemplo `--as claude`) salvo que `UNI_AGENT` ya esté puesto.
-- Preguntas y cambios diminutos: contesta sin tocar el plan.
+- **Commits**: pon en el mensaje los IDs de los pasos que cierra (`… (CDC-1, CDC-2)`), así quedan enlazados.
+- **Retoques** (un cambio rápido que no merece rama): hazlo y, al comitearlo, apúntalo en una línea:
+  `python .unificador/uni.py tweak "Qué ha cambiado, en llano" --commit HEAD`. Si `status` dice «Commits sin apuntar»,
+  `python .unificador/uni.py commits` te dice cuáles y cómo apuntarlos.
+- **Ideas** que salen y no tocan ahora: `python .unificador/uni.py idea "Qué se te ocurre"` (van a la caja; las de la persona
+  te llegan por `inbox`). Para convertirlas en trabajo: `python .unificador/uni.py branch … --ideas I-1,I-3` o
+  `python .unificador/uni.py ideas plan I-2 --branch RAMA`; si no van a hacerse, `python .unificador/uni.py ideas drop I-4 -m "por qué"`.
+- **Encargos en cola** (te llegan por `inbox`, a menudo un prompt maestro): hazlos cuando acabes lo que
+  tengas entre manos y ciérralos con `python .unificador/uni.py queue done C-1 -m "qué has hecho"`. Ver la cola: `python .unificador/uni.py queue`.
+- Preguntas sueltas: contesta sin tocar el plan.
 <!-- unificador:fin -->

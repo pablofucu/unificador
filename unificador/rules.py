@@ -77,7 +77,16 @@ Cuando preguntes algo, pregúntalo SIEMPRE en el chat (y apúntalo con `ask` si 
   enseña las rutas en el chat y pregunta cuál prefiere.
   Si contesta en el chat: `{UNI} answer P-1 N -m "lo que dijo"`. Para esperar un rato a la web: `{UNI} wait P-1`.
 - Firma con `--as <tu nombre>` (por ejemplo `--as claude`) salvo que `UNI_AGENT` ya esté puesto.
-- Preguntas y cambios diminutos: contesta sin tocar el plan.
+- **Commits**: pon en el mensaje los IDs de los pasos que cierra (`… (CDC-1, CDC-2)`), así quedan enlazados.
+- **Retoques** (un cambio rápido que no merece rama): hazlo y, al comitearlo, apúntalo en una línea:
+  `{UNI} tweak "Qué ha cambiado, en llano" --commit HEAD`. Si `status` dice «Commits sin apuntar»,
+  `{UNI} commits` te dice cuáles y cómo apuntarlos.
+- **Ideas** que salen y no tocan ahora: `{UNI} idea "Qué se te ocurre"` (van a la caja; las de la persona
+  te llegan por `inbox`). Para convertirlas en trabajo: `{UNI} branch … --ideas I-1,I-3` o
+  `{UNI} ideas plan I-2 --branch RAMA`; si no van a hacerse, `{UNI} ideas drop I-4 -m "por qué"`.
+- **Encargos en cola** (te llegan por `inbox`, a menudo un prompt maestro): hazlos cuando acabes lo que
+  tengas entre manos y ciérralos con `{UNI} queue done C-1 -m "qué has hecho"`. Ver la cola: `{UNI} queue`.
+- Preguntas sueltas: contesta sin tocar el plan.
 {BLOCK_END}"""
 
 CLAUDE_IMPORT = "@AGENTS.md"

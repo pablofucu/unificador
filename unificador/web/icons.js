@@ -34,6 +34,7 @@ const SHAPES = {
   sprout: [P("M12 21v-9"), P("M12 12c0-4 3-7 8-7 0 5-3 7-8 7z"), P("M12 14c0-3-2.5-5.5-7-5.5 0 4 2.5 5.5 7 5.5z")],
   grid: [["rect", { x: 3.5, y: 3.5, width: 7, height: 7, rx: 1.5 }], ["rect", { x: 13.5, y: 3.5, width: 7, height: 7, rx: 1.5 }],
     ["rect", { x: 3.5, y: 13.5, width: 7, height: 7, rx: 1.5 }], ["rect", { x: 13.5, y: 13.5, width: 7, height: 7, rx: 1.5 }]],
+  bulb: [P("M9 18h6M10 21h4"), P("M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z")],
   logout: [P("M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9")],
   filter: [P("M3 5h18l-7 8v6l-4 2v-8z")],
   one: [["rect", { x: 4, y: 4, width: 16, height: 16, rx: 2.5 }]],

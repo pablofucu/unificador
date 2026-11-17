@@ -1,0 +1,38 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cabecera en dos filas</title><style>
+*{box-sizing:border-box}body{margin:0;font:15px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;background:#fff7e8;color:#1d2140}
+.card{border:3px solid #1d2140;border-radius:18px;margin:12px;overflow:hidden;background:#fff}
+.bh{background:#ef4444;color:#fff;padding:12px 14px}.bh.o{background:#f97316}.bh.y{background:#eab308;color:#1d2140}
+.key{display:inline-block;background:#fff;color:#1d2140;border:2px solid #1d2140;border-radius:8px;font-weight:800;font-size:12px;padding:1px 6px}
+.bh h3{margin:6px 0 2px;font-size:17px}.bar{height:8px;border-radius:9px;background:rgba(255,255,255,.4);overflow:hidden}.bar i{display:block;height:100%;background:#1d2140}
+.ph{padding:10px 14px;border-top:3px solid #1d2140}.ph b{font-size:16px}.st{display:flex;gap:10px;align-items:center;min-height:44px;color:#555}
+.box{width:24px;height:24px;border:2px solid #1d2140;border-radius:7px;flex:none}.box.d{background:#ef4444;border-color:#ef4444}
+.wait{background:#f3f0ff;border:2px dashed #b9a7ff;border-radius:12px;padding:10px;margin:8px 0;color:#5b3fd6}
+.btn{border:0;border-radius:99px;padding:0 18px;min-height:44px;font:inherit;font-weight:700;background:#6d4aff;color:#fff}.btn.g{background:#fff;color:#1d2140;border:2px solid #e5e5ee}
+.n{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:99px;background:#8b5cf6;color:#fff;font-size:12px;font-weight:800;padding:0 5px}
+.n.a{background:#e8930c}
+
+.top{position:sticky;top:0;z-index:5;background:#fff7e8;padding:10px 12px 8px;border-bottom:2px solid #1d2140;display:grid;gap:8px}
+.r1{display:flex;align-items:center;gap:10px}.r1 select{flex:1;min-width:0;font:inherit;font-weight:800;min-height:44px;border:2px solid #1d2140;border-radius:99px;padding:0 12px;background:#fff}
+.pct{font-weight:800;font-size:14px;white-space:nowrap}
+.r2{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.chip{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:99px;border:2px solid #1d2140;background:#fff;font:inherit;font-weight:700}
+.chip.dk{background:#1d2140;color:#fff}
+
+</style></head><body>
+<header class="top"><div class="r1"><select aria-label="Proyecto"><option>Unificador</option></select><span class="pct">84%%</span></div>
+<div class="bar" style="background:#e7e2d6;height:6px"><i style="width:84%%"></i></div>
+<div class="r2"><button class="chip dk">📥 Decisiones <span class="n">4</span></button><button class="chip">💡 Caja <span class="n a">2</span></button><button class="chip">⚙️ Filtrar</button></div></header>
+<main>
+<section class="card"><div class="bh"><span class="key">PM</span><h3>📜 Prompts maestros</h3><small>2 de 4 pasos</small><div class="bar"><i style="width:50%"></i></div></div>
+<div class="ph"><b>1 · Biblioteca</b>
+<div class="st"><span class="box d"></span>Carpeta de prompts con unos de serie</div>
+<div class="st"><span class="box d"></span>Verlos y copiarlos desde la web</div>
+<div class="wait">Fase terminada. El agente se ha parado a esperarte.<div style="margin-top:8px;display:flex;gap:8px"><button class="btn">✓ Aprobar</button><button class="btn g">Pedir cambios</button></div></div></div>
+<div class="ph"><b>2 · Cola</b><div class="st"><span class="box"></span>Poner un prompt en cola sobre una rama o fase</div></div></section>
+<section class="card"><div class="bh o"><span class="key">IPM</span><h3>📱 Interfaz para móvil</h3><small>1 de 5 pasos</small><div class="bar"><i style="width:20%"></i></div></div>
+<div class="ph"><b>1 · Propuestas</b><div class="st"><span class="box d"></span>Qué falla hoy en el móvil</div><div class="st"><span class="box"></span>Propuestas de vista móvil</div></div></section>
+<section class="card"><div class="bh y"><span class="key">CDI</span><h3>💡 Caja de ideas</h3><small>3 de 6 pasos</small><div class="bar"><i style="width:50%"></i></div></div></section>
+</main>
+
+</body></html>

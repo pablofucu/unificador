@@ -432,6 +432,50 @@ def post_branch_nonstop(project, args, query, body):
     return P.load(project.plan_path)
 
 
+@route("POST", "/api/plan/ideas")
+def post_idea(project, args, query, body):
+    """Una idea suelta de la persona: queda sin ver para que el agente la reciba por inbox."""
+    text = _text(body, "text", P.MAX_IDEA)
+    P.mutate(project.plan_path, lambda plan: P.add_idea(plan, text, PERSON, seen=False))
+    return P.load(project.plan_path)
+
+
+@route("POST", "/api/plan/ideas/([^/]+)/drop")
+def post_idea_drop(project, args, query, body):
+    text = _text(body, "text", 500)
+    P.mutate(project.plan_path, lambda plan: P.drop_idea(plan, args[0], text))
+    return P.load(project.plan_path)
+
+
+@route("POST", "/api/plan/ideas/([^/]+)/reopen")
+def post_idea_reopen(project, args, query, body):
+    P.mutate(project.plan_path, lambda plan: P.reopen_idea(plan, args[0]))
+    return P.load(project.plan_path)
+
+
+@route("GET", "/api/prompts")
+def get_prompts(project, args, query, body):
+    return {"prompts": P.list_prompts(project.plan_path.resolve().parent)}
+
+
+@route("POST", "/api/plan/queue")
+def post_job(project, args, query, body):
+    """Encargar un prompt maestro (o un texto) al agente, sobre una rama o fase si se dice."""
+    name, extra = _text(body, "prompt", 120), _text(body, "text", P.MAX_JOB)
+    branch, phase = _text(body, "branch", 200) or None, _text(body, "phase", 200) or None
+    pr = P.find_prompt(project.plan_path.resolve().parent, name) if name else {}
+    text = "\n\n".join(x for x in (pr.get("text", ""), extra) if x)
+    P.mutate(project.plan_path, lambda plan: P.add_job(plan, text, pr.get("title", ""), branch, phase,
+                                                        pr.get("name", ""), PERSON, seen=False))
+    return P.load(project.plan_path)
+
+
+@route("POST", "/api/plan/queue/([^/]+)/drop")
+def post_job_drop(project, args, query, body):
+    P.mutate(project.plan_path, lambda plan: P.drop_job(plan, args[0]))
+    return P.load(project.plan_path)
+
+
 def _mtime(path: Path) -> float:
     try:
         return path.stat().st_mtime

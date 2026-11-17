@@ -1921,17 +1921,54 @@
               "id": "PM-1",
               "title": "Carpeta de prompts con unos de serie",
               "desc": "",
-              "state": "pending",
-              "notes": []
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:20:07+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:20:07+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Tres prompts de serie (revisar interfaz, revisar código, a prueba de errores) más los propios del proyecto en .unificador/prompts/*.md. Orden prompts. Probado en test_box."
+                }
+              ],
+              "updated": "2026-11-17T15:20:07+01:00",
+              "result": "Tres prompts de serie (revisar interfaz, revisar código, a prueba de errores) más los propios del proyecto en .unificador/prompts/*.md. Orden prompts. Probado en test_box."
             },
             {
               "id": "PM-2",
               "title": "Verlos y copiarlos desde la web",
               "desc": "",
-              "state": "pending",
-              "notes": []
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:20:07+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:20:08+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "En la Caja de la web se ven, se despliegan y se copian; GET /api/prompts. Comprobado en el navegador."
+                }
+              ],
+              "updated": "2026-11-17T15:20:08+01:00",
+              "result": "En la Caja de la web se ven, se despliegan y se copian; GET /api/prompts. Comprobado en el navegador."
             }
-          ]
+          ],
+          "review": {
+            "state": "waiting",
+            "text": "",
+            "by": "claude",
+            "at": "2026-11-17T15:20:08+01:00",
+            "seen": true
+          }
         },
         {
           "name": "Cola",
@@ -3139,12 +3176,445 @@
             }
           ],
           "review": {
+            "state": "approved",
+            "text": "",
+            "by": "persona",
+            "at": "2026-11-16T16:17:41+01:00",
+            "seen": true
+          }
+        }
+      ]
+    },
+    {
+      "key": "IPM",
+      "name": "Interfaz para móvil",
+      "goal": "Una vista pensada para el móvil, no la de escritorio encogida",
+      "icon": "📱",
+      "color": 7,
+      "created": "2026-11-16T11:51:50+01:00",
+      "by": "claude",
+      "next_id": 6,
+      "phases": [
+        {
+          "name": "Propuestas",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IPM-1",
+              "title": "Qué falla hoy en el móvil",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:20:40+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:20:41+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Probado a 375 px: el selector de proyecto queda en 15 px (inservible), el progreso se corta («84 d»), la cabecera no cabe (con Caja, peor) y los interruptores «Sin paradas» miden 28 px (menos que el dedo). Bien: plan en una columna y los cajones a pantalla completa."
+                }
+              ],
+              "cat": "investigar",
+              "updated": "2026-11-17T15:20:41+01:00",
+              "result": "Probado a 375 px: el selector de proyecto queda en 15 px (inservible), el progreso se corta («84 d»), la cabecera no cabe (con Caja, peor) y los interruptores «Sin paradas» miden 28 px (menos que el dedo). Bien: plan en una columna y los cajones a pantalla completa."
+            },
+            {
+              "id": "IPM-2",
+              "title": "Propuestas de vista móvil",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:20:41+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:22:05+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Tres maquetas autocontenidas en design/mockups/movil/ (barra inferior, dos filas, menú compacto), comprobadas a 375px"
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-17T15:22:05+01:00",
+              "result": "Tres maquetas autocontenidas en design/mockups/movil/ (barra inferior, dos filas, menú compacto), comprobadas a 375px"
+            },
+            {
+              "id": "IPM-3",
+              "title": "Elegir la vista móvil",
+              "desc": "",
+              "state": "pending",
+              "notes": [],
+              "cat": "decidir"
+            }
+          ]
+        },
+        {
+          "name": "Montaje",
+          "icon": "",
+          "steps": [
+            {
+              "id": "IPM-4",
+              "title": "Montar la vista móvil",
+              "desc": "",
+              "state": "pending",
+              "notes": [],
+              "cat": "interfaz"
+            },
+            {
+              "id": "IPM-5",
+              "title": "Probar en anchos de móvil",
+              "desc": "",
+              "state": "pending",
+              "notes": [],
+              "cat": "pruebas",
+              "together": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "CDI",
+      "name": "Caja de ideas",
+      "goal": "Ir apuntando ideas y que luego se conviertan en un plan ordenado",
+      "icon": "💡",
+      "color": 0,
+      "created": "2026-11-16T11:51:50+01:00",
+      "by": "claude",
+      "next_id": 7,
+      "phases": [
+        {
+          "name": "Apuntar ideas",
+          "icon": "",
+          "steps": [
+            {
+              "id": "CDI-1",
+              "title": "Guardar ideas en el plan",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:20:06+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:20:06+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Ideas en plan['ideas'] (I-n, estado abierta/planificada/descartada, quién y cuándo). Probado en tests/test_box.py."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T15:20:06+01:00",
+              "result": "Ideas en plan['ideas'] (I-n, estado abierta/planificada/descartada, quién y cuándo). Probado en tests/test_box.py."
+            },
+            {
+              "id": "CDI-2",
+              "title": "Orden para apuntar ideas",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:20:06+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:20:07+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Órdenes idea e ideas (lista, plan, drop, reopen). Las ideas de la web llegan por inbox. Probado en tests/test_box.py."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T15:20:07+01:00",
+              "result": "Órdenes idea e ideas (lista, plan, drop, reopen). Las ideas de la web llegan por inbox. Probado en tests/test_box.py."
+            },
+            {
+              "id": "CDI-3",
+              "title": "Apuntar y ver ideas en la web",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:20:06+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:20:07+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Nuevo panel Caja en la web: apuntar ideas, descartarlas o recuperarlas, y ver a qué rama han ido. API POST /api/plan/ideas. Comprobado en el navegador y en test_box."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-17T15:20:07+01:00",
+              "result": "Nuevo panel Caja en la web: apuntar ideas, descartarlas o recuperarlas, y ver a qué rama han ido. API POST /api/plan/ideas. Comprobado en el navegador y en test_box."
+            }
+          ],
+          "review": {
             "state": "waiting",
             "text": "",
             "by": "claude",
-            "at": "2026-11-16T01:01:41+01:00",
+            "at": "2026-11-17T15:20:07+01:00",
             "seen": true
           }
+        },
+        {
+          "name": "Planificar ideas",
+          "icon": "",
+          "steps": [
+            {
+              "id": "CDI-4",
+              "title": "Planificar las ideas agrupándolas",
+              "desc": "",
+              "state": "pending",
+              "notes": [],
+              "cat": "codigo"
+            },
+            {
+              "id": "CDI-5",
+              "title": "Reglas para los agentes",
+              "desc": "",
+              "state": "pending",
+              "notes": [],
+              "cat": "codigo"
+            },
+            {
+              "id": "CDI-6",
+              "title": "Probar el paso de ideas a ramas",
+              "desc": "",
+              "state": "pending",
+              "notes": [],
+              "cat": "pruebas"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "RAL",
+      "name": "Retoques a la vista",
+      "goal": "Que los cambios rápidos también queden en Unificador",
+      "icon": "🧩",
+      "color": 1,
+      "created": "2026-11-16T11:51:50+01:00",
+      "by": "claude",
+      "next_id": 5,
+      "phases": [
+        {
+          "name": "Registro",
+          "icon": "",
+          "steps": [
+            {
+              "id": "RAL-1",
+              "title": "Orden rápida para apuntar un retoque",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:08:15+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:12:29+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Orden tweak \"Título\" --commit HEAD guarda retoques R-n (categoría opcional) en plan.tweaks; tweaks los lista; link ID SHA enlaza un commit a paso o retoque; done --commit. Comprobado con tests/test_tweaks.py (5 pruebas pasan)."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T15:12:29+01:00",
+              "result": "Orden tweak \"Título\" --commit HEAD guarda retoques R-n (categoría opcional) en plan.tweaks; tweaks los lista; link ID SHA enlaza un commit a paso o retoque; done --commit. Comprobado con tests/test_tweaks.py (5 pruebas pasan)."
+            },
+            {
+              "id": "RAL-2",
+              "title": "Reglas para que los agentes la usen",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:12:30+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:12:30+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "Reglas de AGENTS.md (rules.py): IDs de pasos en el mensaje del commit y apuntar retoques con tweak; reinstalado con unificador install y revisado el bloque en AGENTS.md. Suite completa pasa (105)."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T15:12:30+01:00",
+              "result": "Reglas de AGENTS.md (rules.py): IDs de pasos en el mensaje del commit y apuntar retoques con tweak; reinstalado con unificador install y revisado el bloque en AGENTS.md. Suite completa pasa (105)."
+            },
+            {
+              "id": "RAL-3",
+              "title": "Detectar commits sin apuntar",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:12:30+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:12:30+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "commits lista los commits sin apuntar (ni sha enlazado ni ID en el mensaje; los que solo tocan el plan no cuentan), desde git_since o los 20 últimos; aviso en check y línea en status; --from-now fija el punto de partida. Comprobado con pruebas en repo git temporal y a mano aquí (13 commits viejos detectados)."
+                }
+              ],
+              "cat": "codigo",
+              "updated": "2026-11-17T15:12:30+01:00",
+              "result": "commits lista los commits sin apuntar (ni sha enlazado ni ID en el mensaje; los que solo tocan el plan no cuentan), desde git_since o los 20 últimos; aviso en check y línea en status; --from-now fija el punto de partida. Comprobado con pruebas en repo git temporal y a mano aquí (13 commits viejos detectados)."
+            }
+          ],
+          "review": {
+            "state": "waiting",
+            "text": "",
+            "by": "claude",
+            "at": "2026-11-17T15:12:30+01:00",
+            "seen": true
+          }
+        },
+        {
+          "name": "Web",
+          "icon": "",
+          "steps": [
+            {
+              "id": "RAL-4",
+              "title": "Ver los retoques en la web",
+              "desc": "",
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:20:08+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:20:08+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "La Caja enseña los últimos retoques con sus commits. Comprobado en el navegador."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-17T15:20:08+01:00",
+              "result": "La Caja enseña los últimos retoques con sus commits. Comprobado en el navegador."
+            }
+          ],
+          "review": {
+            "state": "waiting",
+            "text": "",
+            "by": "claude",
+            "at": "2026-11-17T15:20:08+01:00",
+            "seen": true
+          }
+        }
+      ]
+    },
+    {
+      "key": "VYN",
+      "name": "Versiones y novedades",
+      "goal": "Saber qué trae la próxima versión y el historial de las anteriores",
+      "icon": "🏷️",
+      "color": 2,
+      "created": "2026-11-16T11:51:51+01:00",
+      "by": "claude",
+      "next_id": 7,
+      "phases": [
+        {
+          "name": "Modelo",
+          "icon": "",
+          "steps": [
+            {
+              "id": "VYN-1",
+              "title": "Cómo numerar las versiones",
+              "desc": "",
+              "state": "pending",
+              "notes": [],
+              "cat": "decidir"
+            },
+            {
+              "id": "VYN-2",
+              "title": "Guardar versiones y sus novedades",
+              "desc": "",
+              "state": "pending",
+              "notes": [],
+              "cat": "codigo"
+            },
+            {
+              "id": "VYN-3",
+              "title": "Al cerrar una fase, apuntar sus novedades",
+              "desc": "",
+              "state": "pending",
+              "notes": [],
+              "cat": "codigo"
+            }
+          ]
+        },
+        {
+          "name": "Publicar",
+          "icon": "",
+          "steps": [
+            {
+              "id": "VYN-4",
+              "title": "Ver lo comiteado sin publicar",
+              "desc": "",
+              "state": "pending",
+              "notes": [],
+              "cat": "codigo"
+            },
+            {
+              "id": "VYN-5",
+              "title": "Sacar una versión con su tag",
+              "desc": "",
+              "state": "pending",
+              "notes": [],
+              "cat": "codigo"
+            }
+          ],
+          "after": [
+            {
+              "branch": "RAL",
+              "phase": "Registro"
+            }
+          ]
+        },
+        {
+          "name": "Web",
+          "icon": "",
+          "steps": [
+            {
+              "id": "VYN-6",
+              "title": "Próxima versión e historial en la web",
+              "desc": "",
+              "state": "pending",
+              "notes": [],
+              "cat": "interfaz"
+            }
+          ]
         }
       ]
     }
@@ -3298,7 +3768,62 @@
       },
       "by": "claude",
       "created": "2026-11-15T03:29:55+01:00"
+    },
+    {
+      "id": "P-5",
+      "kind": "proposal",
+      "title": "Vista móvil",
+      "text": "",
+      "step": "IPM-2",
+      "branch": "IPM",
+      "options": [
+        {
+          "label": "Barra inferior",
+          "desc": "pestañas fijas abajo, al alcance del pulgar",
+          "file": ".unificador/propuestas/P-5/1.html"
+        },
+        {
+          "label": "Cabecera en dos filas",
+          "desc": "todo arriba, selector ancho y chips",
+          "file": ".unificador/propuestas/P-5/2.html"
+        },
+        {
+          "label": "Menú compacto",
+          "desc": "cabecera mínima y menú que sube desde abajo",
+          "file": ".unificador/propuestas/P-5/3.html"
+        }
+      ],
+      "recommend": 1,
+      "answer": null,
+      "by": "claude",
+      "created": "2026-11-17T15:22:04+01:00"
+    },
+    {
+      "id": "P-6",
+      "kind": "question",
+      "title": "¿Cómo numeramos las versiones?",
+      "text": "Cada vez que se cierre algo apuntaremos una versión con sus novedades. Hay que elegir cómo se cuentan.",
+      "step": "VYN-1",
+      "branch": "VYN",
+      "options": [
+        {
+          "desc": "mayor.menor.arreglo; lo estándar, dice cuánto cambia",
+          "label": "SemVer (1.4.2)"
+        },
+        {
+          "desc": "por fecha; se ve cuándo salió, no cuánto cambia",
+          "label": "CalVer (2026.11)"
+        },
+        {
+          "desc": "lo más simple; no dice nada del tamaño del cambio",
+          "label": "Contador (v12)"
+        }
+      ],
+      "recommend": 1,
+      "answer": null,
+      "by": "claude",
+      "created": "2026-11-17T15:22:05+01:00"
     }
   ],
-  "next_ask": 5
+  "next_ask": 7
 }

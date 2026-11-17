@@ -1,0 +1,40 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Menú compacto</title><style>
+*{box-sizing:border-box}body{margin:0;font:15px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;background:#fff7e8;color:#1d2140}
+.card{border:3px solid #1d2140;border-radius:18px;margin:12px;overflow:hidden;background:#fff}
+.bh{background:#ef4444;color:#fff;padding:12px 14px}.bh.o{background:#f97316}.bh.y{background:#eab308;color:#1d2140}
+.key{display:inline-block;background:#fff;color:#1d2140;border:2px solid #1d2140;border-radius:8px;font-weight:800;font-size:12px;padding:1px 6px}
+.bh h3{margin:6px 0 2px;font-size:17px}.bar{height:8px;border-radius:9px;background:rgba(255,255,255,.4);overflow:hidden}.bar i{display:block;height:100%;background:#1d2140}
+.ph{padding:10px 14px;border-top:3px solid #1d2140}.ph b{font-size:16px}.st{display:flex;gap:10px;align-items:center;min-height:44px;color:#555}
+.box{width:24px;height:24px;border:2px solid #1d2140;border-radius:7px;flex:none}.box.d{background:#ef4444;border-color:#ef4444}
+.wait{background:#f3f0ff;border:2px dashed #b9a7ff;border-radius:12px;padding:10px;margin:8px 0;color:#5b3fd6}
+.btn{border:0;border-radius:99px;padding:0 18px;min-height:44px;font:inherit;font-weight:700;background:#6d4aff;color:#fff}.btn.g{background:#fff;color:#1d2140;border:2px solid #e5e5ee}
+.n{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:99px;background:#8b5cf6;color:#fff;font-size:12px;font-weight:800;padding:0 5px}
+.n.a{background:#e8930c}
+
+.top{position:sticky;top:0;z-index:5;background:#fff7e8;padding:8px 10px 8px 14px;border-bottom:2px solid #1d2140;display:flex;align-items:center;gap:8px}
+.nm{flex:1;min-width:0}.nm b{display:block;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nm small{color:#555}
+.ib{position:relative;width:44px;height:44px;border-radius:50%%;border:2px solid #1d2140;background:#fff;font-size:18px}
+.ib .n{position:absolute;top:-4px;right:-4px}
+.sheet{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:3px solid #1d2140;border-radius:22px 22px 0 0;padding:10px 16px 20px;box-shadow:0 -10px 30px rgba(0,0,0,.15)}
+.sheet .grab{width:44px;height:5px;border-radius:9px;background:#ccc;margin:0 auto 10px}
+.sheet button{display:flex;width:100%%;align-items:center;gap:12px;min-height:52px;border:0;background:none;font:inherit;font-weight:700;border-bottom:1px solid #eee;text-align:left}
+.sheet button .n{margin-left:auto}main{padding-bottom:280px}
+
+</style></head><body>
+<header class="top"><div class="nm"><b>Unificador ▾</b><small>84 de 100 pasos · 84%%</small></div>
+<button class="ib" aria-label="Decisiones">📥<span class="n">4</span></button><button class="ib" aria-label="Menú">☰<span class="n a">2</span></button></header>
+<main>
+<section class="card"><div class="bh"><span class="key">PM</span><h3>📜 Prompts maestros</h3><small>2 de 4 pasos</small><div class="bar"><i style="width:50%"></i></div></div>
+<div class="ph"><b>1 · Biblioteca</b>
+<div class="st"><span class="box d"></span>Carpeta de prompts con unos de serie</div>
+<div class="st"><span class="box d"></span>Verlos y copiarlos desde la web</div>
+<div class="wait">Fase terminada. El agente se ha parado a esperarte.<div style="margin-top:8px;display:flex;gap:8px"><button class="btn">✓ Aprobar</button><button class="btn g">Pedir cambios</button></div></div></div>
+<div class="ph"><b>2 · Cola</b><div class="st"><span class="box"></span>Poner un prompt en cola sobre una rama o fase</div></div></section>
+<section class="card"><div class="bh o"><span class="key">IPM</span><h3>📱 Interfaz para móvil</h3><small>1 de 5 pasos</small><div class="bar"><i style="width:20%"></i></div></div>
+<div class="ph"><b>1 · Propuestas</b><div class="st"><span class="box d"></span>Qué falla hoy en el móvil</div><div class="st"><span class="box"></span>Propuestas de vista móvil</div></div></section>
+<section class="card"><div class="bh y"><span class="key">CDI</span><h3>💡 Caja de ideas</h3><small>3 de 6 pasos</small><div class="bar"><i style="width:50%"></i></div></div></section>
+</main>
+<div class="sheet" role="dialog" aria-label="Menú"><div class="grab"></div><button>📥 Decisiones <span class="n">4</span></button>
+<button>💡 Caja de ideas y encargos <span class="n a">2</span></button><button>⚙️ Filtrar por categoría</button><button>🗂️ Todos los proyectos</button><button>📲 Instalar app</button></div>
+</body></html>

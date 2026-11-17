@@ -3,6 +3,7 @@ import { app, el, getJSON, q, pctOf, setOffline, logout } from "./util.js";
 import { renderPlan, resetBoard, initBoard } from "./plan.js";
 import { icon } from "./icons.js";
 import { setupViewer } from "./decide.js";
+import { renderBox, resetBox, initBox } from "./box.js";
 
 const $ = (id) => document.getElementById(id);
 let events = null, homeTimer = null, pending = null, last = null, swRegistered = false;
@@ -110,6 +111,7 @@ function paint(plan) {
   if (typing()) { pending = plan; return; }
   pending = null;
   renderPlan(plan);
+  renderBox(plan);
 }
 app.onPlan = paint;
 app.rerender = () => last && renderPlan(last);
@@ -135,7 +137,7 @@ function closeEvents() {
 
 function showBoard(p) {
   clearInterval(homeTimer);
-  if (app.pid !== p.id) { resetBoard(); last = null; $("branches").replaceChildren(); $("inbox").hidden = true; }
+  if (app.pid !== p.id) { resetBoard(); resetBox(); last = null; $("branches").replaceChildren(); $("inbox").hidden = true; }
   app.pid = p.id;
   $("home").hidden = true;
   $("board").hidden = false;
@@ -195,4 +197,5 @@ window.addEventListener("online", route);
 window.addEventListener("hashchange", route);
 setupViewer();
 initBoard();
+initBox();
 route();

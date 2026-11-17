@@ -47,6 +47,7 @@
             <button type="button" id="filt-b" class="filt-b" aria-controls="legend" aria-expanded="false"><span id="filt-t">Filtrar</span></button>
             <div id="legend" class="legend" role="group" aria-label="Filtrar por categoría" hidden></div>
           </div>
+          <button type="button" id="boxb" class="decb boxb" aria-controls="box" aria-expanded="false"></button>
           <button type="button" id="decb" class="decb" aria-controls="drawer" aria-expanded="false"></button>
           <button type="button" id="install-board" class="pill install-btn" hidden>📲 Instalar app</button>
           <button type="button" id="logout-board" class="pill logout-btn" hidden>Cerrar sesión</button>
@@ -71,6 +72,11 @@
             <section id="inbox" class="inbox" aria-label="Te toca" hidden></section>
             <div id="decided"></div>
           </div>
+        </aside>
+        <div id="box-scrim" class="scrim" hidden></div>
+        <aside id="box" class="drawer box" role="dialog" aria-label="Caja de ideas y encargos" hidden>
+          <div class="dh"><h2>Caja</h2><button type="button" id="box-close" class="x" aria-label="Cerrar la caja"></button></div>
+          <div class="dbody" id="box-body"></div>
         </aside>
       </section>
     </main>

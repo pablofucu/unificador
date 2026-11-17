@@ -24,7 +24,19 @@ navegador  ⇄  unificador/app.py (127.0.0.1)
 branches[]   rama: key, name, goal, icon, color, archived?
   phases[]   fase: name, icon
     steps[]  paso: id, title, desc, state (pending | doing | done), change?, result?, notes[], updated
+ideas[]      idea: id (I-n), text, by, at, state (open | planned | dropped), branch?, note?, seen
+queue[]      encargo: id (C-n), title, text, prompt?, branch?, phase?, state (pending | done), result?, seen
+tweaks[]     retoque: id (R-n), title, cat?, commits[], at
 ```
+
+- **Ideas** (`uni.py idea`, `ideas plan|drop|reopen`, `branch … --ideas I-1,I-2`): la caja de cosas que no tocan
+  ahora. Las que deja la persona en la web llegan al agente por `inbox` (`seen: false`).
+- **Prompts maestros**: los de serie viven en `plan.py` (`BUILTIN_PROMPTS`, viajan con `uni.py`); los del proyecto,
+  en `.unificador/prompts/*.md` (primera línea `# Título`) y tapan al de serie con el mismo nombre.
+- **Cola de encargos** (`uni.py queue add|done|drop`): un prompt maestro o texto libre sobre el proyecto, una rama
+  o una fase. El agente los recoge por `inbox` y los cierra con `queue done C-1 -m`.
+- **Retoques** (`uni.py tweak "…" --commit HEAD`): cambios rápidos sin rama. `commits` lista los commits que no
+  están enlazados a ningún paso ni retoque (`--from-now` marca el punto de partida).
 
 - El estado de fases y ramas se calcula a partir de sus pasos; no se guarda.
 - `change` es una corrección pedida por la persona: reabre el paso hasta que la IA lo termina otra vez.
@@ -44,7 +56,7 @@ branches[]   rama: key, name, goal, icon, color, archived?
 | `agents.py` | Localiza el ejecutable de `claude`, `agy` y `codex` (PATH y carpetas habituales); lo usa `doctor`. |
 | `kanvas_import.py` | Convierte un `kanvas.json` antiguo en plan. |
 | `projects.py` | Registro de proyectos (`~/.unificador/proyectos.json`) y proyecto activo (`active.json`, o `UNIFICADOR_HOME`). |
-| `web/` | La página, JavaScript sin librerías en módulos ES: `index.html`, `app.css`, `app.js` (portada con todos los proyectos o tablero de uno, `#p=<id>`, y eventos en vivo), `util.js` (nodos, peticiones, borradores, modo sin conexión y cierre de sesión), `plan.js` (carriles por rama con fases en tarjetas y sus pasos), `decide.js` (bandeja «Te toca», revisar fases, preguntas, propuestas en miniatura y visor a pantalla completa), `sw.js`, `manifest.webmanifest` e `icon.svg` (PWA y caché de solo lectura en remoto). |
+| `web/` | La página, JavaScript sin librerías en módulos ES: `index.html`, `app.css`, `app.js` (portada con todos los proyectos o tablero de uno, `#p=<id>`, y eventos en vivo), `util.js` (nodos, peticiones, borradores, modo sin conexión y cierre de sesión), `plan.js` (carriles por rama con fases en tarjetas y sus pasos), `box.js` (cajón «Caja»: ideas, prompts maestros, cola de encargos y retoques), `decide.js` (bandeja «Te toca», revisar fases, preguntas, propuestas en miniatura y visor a pantalla completa), `sw.js`, `manifest.webmanifest` e `icon.svg` (PWA y caché de solo lectura en remoto). |
 
 ## API
 
@@ -61,6 +73,11 @@ arrancó el servidor. Un id que no esté en el registro da 404: nunca se sirve u
 | `POST /api/plan/phases/review` | Revisar una fase: `{branch, phase, verdict: approved\|changes, text}`. |
 | `POST /api/plan/asks/<id>/answer` | Responder: `{option: 1..n \| null, text}`. |
 | `POST /api/plan/branches/<key>/nonstop` | Rama sin paradas: `{on: true\|false}`. |
+| `POST /api/plan/ideas` | Idea nueva de la persona: `{text}`. |
+| `POST /api/plan/ideas/<id>/drop` · `/reopen` | Descartar (`{text}` opcional) o recuperar una idea. |
+| `GET /api/prompts` | Prompts maestros (de serie y del proyecto): `name, title, text, source`. |
+| `POST /api/plan/queue` | Encargar: `{prompt?, text?, branch?, phase?}`. |
+| `POST /api/plan/queue/<id>/drop` | Quitar un encargo pendiente. |
 | `GET /propuestas/<P-n>/<n>.html` | Un mockup de `.unificador/propuestas/` (solo esa forma de ruta), con CSP `sandbox`. |
 | `GET /api/events` | Eventos en vivo (SSE) del proyecto que se ve: `plan` cuando cambia su fichero. |
 | `POST /auth/login` | Inicia sesión remota por Funnel con `{key}` y emite la cookie firmada `uni_session`. |

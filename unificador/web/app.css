@@ -418,3 +418,31 @@ body, main { background-color: #fff4dc; background-image: radial-gradient(#efd29
 .legend { border: 3px solid #1b1b1b; box-shadow: 5px 5px 0 #1b1b1b; }
 .pick select, .tb .total { background: #fff; border: 3px solid #1b1b1b; box-shadow: 4px 4px 0 #1b1b1b; }
 .zoom { border: 3px solid #1b1b1b; box-shadow: 4px 4px 0 #1b1b1b; }
+
+/* Caja: ideas, prompts maestros, cola de encargos y retoques */
+.boxb { background: var(--soft); color: var(--ink); }
+.boxb .n { background: #e8930c; color: #fff; }
+.boxb.zero .n { background: rgba(0, 0, 0, .12); color: var(--ink); }
+.box .dbody { gap: 18px; }
+.bx-sec { display: grid; gap: 8px; }
+.bx-h { margin: 0; font-size: 1rem; }
+.bx-form { display: grid; gap: 6px; }
+.bx-form textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 10px; border-radius: 12px; border: 1px solid var(--line, rgba(0,0,0,.15)); background: var(--panel); color: inherit; resize: vertical; }
+.bx-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bx-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.bx-item { padding: 10px 12px; border-radius: 14px; background: var(--soft); display: grid; gap: 6px; min-width: 0; }
+.bx-item.dropped, .bx-item.done { opacity: .7; }
+.bx-top { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: .9rem; }
+.bx-id { font-size: .8rem; }
+.bx-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bx-tag { margin: 0; font-size: .85rem; opacity: .8; overflow-wrap: anywhere; }
+.bx-tag.mono { font-family: ui-monospace, Consolas, monospace; }
+.bx-empty { padding: 4px 2px; }
+.bx-hint { margin: 0; font-size: .85rem; }
+.bx-ph { all: unset; cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.bx-ph:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 3px; border-radius: 6px; }
+.bx-pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: .85rem/1.45 ui-monospace, Consolas, monospace; max-height: 260px; overflow: auto; background: var(--panel); padding: 10px; border-radius: 10px; }
+.bx-sel { max-width: 100%; min-height: 36px; border-radius: 99px; padding: 0 10px; font: inherit; background: var(--panel); color: inherit; border: 1px solid var(--line, rgba(0,0,0,.15)); }
+.bx-more summary { cursor: pointer; font-size: .9rem; padding: 4px 0; }
+.bx-more .bx-list { margin-top: 6px; }
+@media (max-width: 640px) { .boxb .decb-t { display: none; } }

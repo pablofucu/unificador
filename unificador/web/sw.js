@@ -1,7 +1,7 @@
 // Caché de solo lectura para acceder al último plan visto cuando el ordenador está apagado.
 // Solo se registra tras autenticarse; un 401/403 o la pantalla de login borran toda la caché.
 
-const CACHE = "unificador-v2";
+const CACHE = "unificador-v3";
 const SHELL = [
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const SHELL = [
   "./util.js",
   "./plan.js",
   "./decide.js",
+  "./box.js",
   "./icons.js",
   "./audit.js",
   "./manifest.webmanifest",
