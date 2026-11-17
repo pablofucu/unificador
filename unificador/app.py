@@ -458,6 +458,17 @@ def get_prompts(project, args, query, body):
     return {"prompts": P.list_prompts(project.plan_path.resolve().parent)}
 
 
+@route("GET", "/api/versions")
+def get_versions(project, args, query, body):
+    """Próxima versión (SemVer), sus novedades, lo comiteado sin publicar y el historial."""
+    plan = P.load(project.plan_path)
+    commits = P.unreleased_commits(plan, project.plan_path.resolve().parent) or []
+    return {"next": P.next_version(plan), "last": P.last_version(plan), "news": plan.get("news") or [],
+            "versions": list(reversed(plan.get("versions") or [])),
+            "unreleased": [{"sha": c["sha"][:7], "subject": c["subject"], "date": c["date"],
+                            "refs": P.commit_refs(plan, c)} for c in commits]}
+
+
 @route("POST", "/api/plan/queue")
 def post_job(project, args, query, body):
     """Encargar un prompt maestro (o un texto) al agente, sobre una rama o fase si se dice."""

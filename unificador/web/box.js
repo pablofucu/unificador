@@ -8,6 +8,8 @@ let from = null;
 let prompts = null;        // caché de /api/prompts (por proyecto)
 let promptsPid = null;
 const shown = new Set();   // prompts desplegados
+let versions = null;       // caché de /api/versions (se pide al abrir la caja)
+let versionsSig = "";
 
 function box(open) {
   const d = $("box");
@@ -19,6 +21,7 @@ function box(open) {
     from = document.activeElement;
     $("box-close").focus();
     loadPrompts();
+    loadVersions();
   } else {
     const f = from; from = null;
     (f && f.isConnected ? f : $("boxb")).focus?.();
@@ -35,6 +38,16 @@ async function loadPrompts() {
     promptsPid = pid;
     if (app.plan) renderBox(app.plan);
   } catch { /* sin conexión: se reintenta al abrir otra vez */ }
+}
+
+async function loadVersions() {
+  try {
+    const pid = app.pid;
+    const data = await getJSON(q("/api/versions"));
+    if (pid !== app.pid) return;
+    versions = data;
+    if (app.plan) renderBox(app.plan);
+  } catch { /* sin conexión: se queda lo último que hubo */ }
 }
 
 async function copy(text) {
@@ -198,6 +211,56 @@ function jobItem(j, plan) {
   return li;
 }
 
+// ── Versiones ─────────────────────────────────────────────────────────
+
+const KINDS = { nuevo: "✨", arreglo: "🐛", cambio: "🔧", fase: "🏁" };
+
+function newsList(news) {
+  const ul = el("ul", "bx-news");
+  for (const n of news) ul.append(el("li", "", `${KINDS[n.kind] || "·"} ${n.text}`));
+  return ul;
+}
+
+function versionsSection() {
+  if (!versions) return section("🏷️ Versiones", el("p", "muted bx-empty", "Cargando…"));
+  const v = versions;
+  const next = el("li", "bx-item version next");
+  const top = el("div", "bx-top");
+  top.append(el("strong", "bx-id", `v${v.next}`), el("span", "", "Próxima versión"),
+    el("span", "muted", v.last ? `la última es v${v.last}` : "será la primera"));
+  next.append(top);
+  next.append(v.news.length ? newsList(v.news) : el("p", "muted bx-text", "Sin novedades apuntadas todavía."));
+  if (v.unreleased.length) {
+    const det = el("details", "bx-more");
+    det.append(el("summary", "", `Comiteado sin publicar (${v.unreleased.length})`));
+    const ul = el("ul", "bx-news mono");
+    for (const c of v.unreleased.slice(0, 30)) {
+      ul.append(el("li", c.refs.length ? "" : "unlogged", `${c.sha}  ${c.subject}`));
+    }
+    det.append(ul);
+    next.append(det);
+  }
+  const list = el("ul", "bx-list");
+  list.append(next);
+  const kids = [list];
+  if (v.versions.length) {
+    const det = el("details", "bx-more");
+    det.append(el("summary", "", `Historial (${v.versions.length})`));
+    const l2 = el("ul", "bx-list");
+    for (const old of v.versions) {
+      const li = el("li", "bx-item version");
+      const t = el("div", "bx-top");
+      t.append(el("strong", "bx-id", `v${old.version}`), el("span", "muted", when(old.at)));
+      li.append(t, newsList(old.news || []));
+      l2.append(li);
+    }
+    det.append(l2);
+    kids.push(det);
+  }
+  kids.push(el("p", "muted bx-hint", "Tu agente la publica cuando se lo pidas (uni.py release)."));
+  return section("🏷️ Versiones", ...kids);
+}
+
 // ── Retoques ──────────────────────────────────────────────────────────
 
 function tweaksSection(plan) {
@@ -228,15 +291,19 @@ export function renderBox(plan) {
   btn.setAttribute("aria-label", `Caja: ${openIdeas} ideas abiertas, ${pending} encargos en cola`);
   btn.replaceChildren(icon("bulb"), el("span", "decb-t", "Caja"), cnt);
   if ($("box").hidden) return;
+  const sig = `${app.pid}:${(plan.news || []).length}:${(plan.versions || []).length}`;
+  if (versions && sig !== versionsSig) loadVersions();
+  versionsSig = sig;
   const body = $("box-body");
   const keep = body.scrollTop;
-  body.replaceChildren(ideasSection(plan), promptsSection(plan), queueSection(plan), tweaksSection(plan));
+  body.replaceChildren(ideasSection(plan), promptsSection(plan), queueSection(plan), versionsSection(), tweaksSection(plan));
   body.scrollTop = keep;
 }
 
 export function resetBox() {
   prompts = null;
   promptsPid = null;
+  versions = null;
   shown.clear();
   if ($("box") && !$("box").hidden) box(false);
 }

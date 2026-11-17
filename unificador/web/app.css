@@ -437,6 +437,9 @@ body, main { background-color: #fff4dc; background-image: radial-gradient(#efd29
 .bx-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bx-tag { margin: 0; font-size: .85rem; opacity: .8; overflow-wrap: anywhere; }
 .bx-tag.mono { font-family: ui-monospace, Consolas, monospace; }
+.bx-news { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 3px; font-size: .9rem; overflow-wrap: anywhere; }
+.bx-news.mono { font-family: ui-monospace, Consolas, monospace; font-size: .8rem; }
+.bx-news .unlogged { opacity: .65; }
 .bx-empty { padding: 4px 2px; }
 .bx-hint { margin: 0; font-size: .85rem; }
 .bx-ph { all: unset; cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }

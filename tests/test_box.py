@@ -106,6 +106,19 @@ class BoxApi(ServerCase):
         status, plan, _ = self.call("POST", "/api/plan/queue/C-1/drop", {})
         self.assertEqual(plan["queue"], [])
 
+    def test_versiones(self):
+        path = self.root / P.PLAN_FILE
+        run(path, "news", "Algo nuevo")
+        status, data, _ = self.call("GET", "/api/versions")
+        self.assertEqual(status, 200)
+        self.assertEqual((data["next"], data["last"], data["versions"]), ("0.1.0", "", []))
+        self.assertEqual(data["news"][0]["text"], "Algo nuevo")
+        self.assertIsInstance(data["unreleased"], list)
+        run(path, "release", "--no-tag")
+        data = self.call("GET", "/api/versions")[1]
+        self.assertEqual((data["last"], data["news"]), ("0.1.0", []))
+        self.assertEqual(data["versions"][0]["news"][0]["text"], "Algo nuevo")
+
 
 if __name__ == "__main__":
     unittest.main()

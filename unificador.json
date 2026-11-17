@@ -3832,10 +3832,10 @@
             }
           ],
           "review": {
-            "state": "waiting",
+            "state": "approved",
             "text": "",
-            "by": "claude",
-            "at": "2026-11-17T15:35:03+01:00",
+            "by": "persona",
+            "at": "2026-11-17T15:37:00+01:00",
             "seen": true
           }
         },
@@ -3847,11 +3847,33 @@
               "id": "VYN-6",
               "title": "Próxima versión e historial en la web",
               "desc": "",
-              "state": "pending",
-              "notes": [],
-              "cat": "interfaz"
+              "state": "done",
+              "notes": [
+                {
+                  "at": "2026-11-17T15:37:00+01:00",
+                  "by": "claude",
+                  "kind": "start",
+                  "text": "Empezado."
+                },
+                {
+                  "at": "2026-11-17T15:38:36+01:00",
+                  "by": "claude",
+                  "kind": "done",
+                  "text": "GET /api/versions y sección «Versiones» en la Caja: próxima versión con sus novedades, lo comiteado sin publicar y el historial; se refresca al cambiar. Probado con test_versiones (API) y en el navegador con este proyecto (v0.1.0, 41 commits)."
+                }
+              ],
+              "cat": "interfaz",
+              "updated": "2026-11-17T15:38:36+01:00",
+              "result": "GET /api/versions y sección «Versiones» en la Caja: próxima versión con sus novedades, lo comiteado sin publicar y el historial; se refresca al cambiar. Probado con test_versiones (API) y en el navegador con este proyecto (v0.1.0, 41 commits)."
             }
-          ]
+          ],
+          "review": {
+            "state": "waiting",
+            "text": "",
+            "by": "claude",
+            "at": "2026-11-17T15:38:36+01:00",
+            "seen": true
+          }
         }
       ]
     }
@@ -4090,6 +4112,13 @@
       "by": "claude",
       "at": "2026-11-17T15:35:03+01:00",
       "ref": "VYN/Publicar"
+    },
+    {
+      "text": "🏷️ Versiones y novedades: Web",
+      "kind": "fase",
+      "by": "claude",
+      "at": "2026-11-17T15:38:36+01:00",
+      "ref": "VYN/Web"
     }
   ]
 }

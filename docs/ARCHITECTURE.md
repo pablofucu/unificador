@@ -45,6 +45,7 @@ versions[]   versión publicada: version (SemVer, sin «v»), at, by, news[], sh
   `news` enseña también lo comiteado desde la última versión (desde su `sha` o su tag; sin los commits que solo
   tocan el plan). `release [X.Y.Z] [--bump …] [--no-tag]` valida, crea el tag anotado `vX.Y.Z` en HEAD con las
   novedades como mensaje y después pasa las novedades al historial.
+  En la web, la Caja tiene una sección «Versiones» que lee `GET /api/versions` (próxima, novedades, sin publicar, historial).
 
 - El estado de fases y ramas se calcula a partir de sus pasos; no se guarda.
 - `change` es una corrección pedida por la persona: reabre el paso hasta que la IA lo termina otra vez.
