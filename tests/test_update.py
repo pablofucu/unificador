@@ -88,3 +88,13 @@ def test_refresh_all_updates_only_projects_using_unificador(tmp_path):
     assert "copia vieja" not in (used / ".unificador" / "uni.py").read_text(encoding="utf-8")
     assert not (other / ".unificador").exists()
     assert U.refresh_all() == {}  # repetirlo no cambia nada
+
+
+def test_home_port_follows_funnel_not_server_json():
+    from unificador import funnel
+    funnel.save_server({"port": 8768, "pid": 1})  # un servidor de pruebas que se apuntó en otro puerto
+    assert funnel.home_port() == 8766
+    cfg = funnel.load_config()
+    cfg.update(enabled=True, server_port=8770)
+    funnel.save_config(cfg)
+    assert funnel.home_port() == 8770

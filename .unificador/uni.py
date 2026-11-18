@@ -1989,7 +1989,11 @@ def _ensure_daemon(project_root: Path, srv: Dict[str, Any]) -> None:
     if not (srv.get("autostart") or os.environ.get("UNI_AUTOSTART") == "1"):
         return
     fcfg = _read_home_json("funnel.json")
-    port = int(srv.get("port") or fcfg.get("server_port") or DEFAULT_SERVER_PORT)
+    # El puerto oficial: el de Funnel si está activado (así Funnel y el autoarranque coinciden).
+    if fcfg.get("enabled") and fcfg.get("server_port"):
+        port = int(fcfg["server_port"])
+    else:
+        port = DEFAULT_SERVER_PORT
     if _health_ok(port):
         return
     home = _uni_home()

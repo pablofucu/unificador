@@ -51,10 +51,15 @@ def serve(root: Path, port: int, open_browser: bool, host: str = "127.0.0.1",
     from unificador import update
     update.on_start(root, port=actual_port)
     pid = os.getpid()
-    try:
-        funnel.register_runtime(actual_port, pid=pid)
-    except OSError:
-        pass
+    official = funnel.home_port()
+    if actual_port == official:
+        try:
+            funnel.register_runtime(actual_port, pid=pid)
+        except OSError:
+            pass
+    elif daemon:
+        print(f"Aviso: el puerto {official} está ocupado; este servidor queda en {actual_port} y Funnel no llega aquí.",
+              file=sys.stderr, flush=True)
     url = f"http://127.0.0.1:{actual_port}/"
     if not daemon:
         print(f"Unificador · {root.name}")
@@ -204,7 +209,7 @@ def funnel_command(argv: List[str]) -> int:
         if action == "status":
             cfg = funnel.load_config()
             srv = funnel.load_server()
-            local_port = int(srv.get("port") or cfg.get("server_port") or 8766)
+            local_port = funnel.home_port()
             alive = funnel.is_server_alive(local_port)
             ts = funnel.tailscale_exe()
             active = projects.active_id()
@@ -332,10 +337,6 @@ def restart_command(root: Path, delay: float, refresh: bool, pid: Optional[int] 
         changed = update.refresh_all()
         if changed:
             print(f"Puestos al día {len(changed)} proyecto(s): " + ", ".join(Path(p).name for p in changed))
-    srv = funnel.load_server()
-    if not (port or srv.get("port")):
-        print("No hay servidor de fondo apuntado; ábrelo con: unificador")
-        return 0
     ok = update.restart(root, delay=delay, pid=pid, port=port)
     print("Servidor reiniciado." if ok else "El servidor no ha vuelto a arrancar; ábrelo con: unificador")
     return 0 if ok else 1

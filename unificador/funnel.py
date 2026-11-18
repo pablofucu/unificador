@@ -432,6 +432,21 @@ def load_server() -> Dict[str, Any]:
         return {}
 
 
+def home_port() -> int:
+    """El puerto oficial del servidor de fondo: el de Funnel si está activado; si no, 8766.
+
+    Es el único que se apunta en ``server.json``: un servidor de pruebas en otro puerto no lo pisa,
+    y así el autoarranque, ``server.json`` y Funnel van siempre al mismo sitio.
+    """
+    cfg = load_config()
+    if cfg.get("enabled"):
+        try:
+            return int(cfg.get("server_port") or 8766)
+        except (TypeError, ValueError):
+            return 8766
+    return 8766
+
+
 def save_server(info: Dict[str, Any]) -> Dict[str, Any]:
     target = server_path()
     projects._write_json(target, info)
@@ -497,7 +512,7 @@ def start_daemon(project_root: Path, port: Optional[int] = None, python_exe: Opt
                  wait_seconds: float = 3.0) -> bool:
     """Arranca el servidor de Unificador en segundo plano si no estaba vivo."""
     srv = load_server()
-    target_port = int(port or srv.get("port") or 8766)
+    target_port = int(port or home_port())
     if is_server_alive(target_port):
         return True
     exe = python_exe or srv.get("python") or sys.executable

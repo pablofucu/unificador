@@ -252,7 +252,8 @@ def restart(project_root: Path, delay: float = 0.0, pid: Optional[int] = None, p
     if delay:
         time.sleep(delay)
     srv = funnel.load_server()
-    port = int(port or srv.get("port") or 0)
+    old_port = int(srv.get("port") or 0)
+    port = int(port or funnel.home_port())
     pid = pid or srv.get("pid")
     if isinstance(pid, int) and pid != os.getpid() and _pid_alive(pid):
         try:
@@ -265,7 +266,7 @@ def restart(project_root: Path, delay: float = 0.0, pid: Optional[int] = None, p
         except (OSError, subprocess.SubprocessError):
             pass
         deadline = time.time() + 10
-        while time.time() < deadline and port and funnel.is_server_alive(port, timeout=0.2):
+        while time.time() < deadline and any(funnel.is_server_alive(p, timeout=0.2) for p in {port, old_port} if p):
             time.sleep(0.2)
     if not port:
         return False
